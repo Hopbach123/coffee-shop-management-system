@@ -7,8 +7,9 @@ Route::get('/', function () {
     return view('public.home.index');
 });
 
-require __DIR__.'/admin.php';
-require __DIR__.'/staff.php';
+Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'role:admin'])->group(base_path('routes/admin.php'));
+
+Route::prefix('staff')->name('staff.')->middleware(['auth:web', 'role:admin,staff'])->group(base_path('routes/staff.php'));
 
 Route::middleware('guest:web')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
