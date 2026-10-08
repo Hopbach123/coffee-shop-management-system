@@ -3,17 +3,19 @@
         <div class="coffee-container utility-bar__inner">
             <p>Roasted with patience · Served with warmth</p>
             <a href="#contact">Open daily · 07:00–21:00</a>
+            @auth('web')
+                <form class="auth-logout" method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit">Đăng xuất</button>
+                </form>
+            @else
+                <a href="{{ route('login') }}">Đăng nhập nội bộ</a>
+            @endauth
         </div>
     </div>
 
     <nav class="site-nav coffee-container" aria-label="Primary navigation">
-        <a class="brand-mark" href="#home" aria-label="Maison du Café home">
-            <span class="brand-mark__seal" aria-hidden="true">M</span>
-            <span class="brand-mark__copy">
-                <strong>Maison du Café</strong>
-                <small>Slow coffee · Saigon</small>
-            </span>
-        </a>
+        <x-public.brand href="#home" />
 
         <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-menu" data-nav-toggle>
             <span class="sr-only">Toggle navigation</span>

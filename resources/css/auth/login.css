@@ -1,0 +1,125 @@
+.auth-page {
+    min-height: 100svh;
+}
+
+.auth-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding-block: var(--space-lg);
+}
+
+.auth-header > a:last-child {
+    min-height: 3rem;
+    display: inline-flex;
+    align-items: center;
+}
+
+.auth-main {
+    display: grid;
+    justify-items: center;
+    padding-block: var(--space-xl);
+}
+
+.auth-panel {
+    width: 100%;
+    max-width: 30rem;
+    padding: var(--space-xl);
+    border: 1px solid var(--coffee-border);
+    border-radius: var(--radius-md);
+    background: var(--coffee-surface);
+}
+
+.auth-panel h1 {
+    margin-bottom: var(--space-md);
+    font-size: var(--text-h2);
+}
+
+.auth-intro {
+    color: var(--coffee-text-muted);
+    margin-bottom: var(--space-lg);
+}
+
+.auth-form {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.auth-field label {
+    display: block;
+    margin-bottom: var(--space-xs);
+    font-weight: 600;
+}
+
+.auth-field input {
+    width: 100%;
+    min-width: 0;
+    min-height: 3rem;
+    padding: var(--space-sm);
+    border: 1px solid var(--coffee-border);
+    border-radius: var(--radius-sm);
+    background: var(--coffee-bg);
+}
+
+.auth-field input[aria-invalid='true'] {
+    border-color: var(--coffee-danger);
+}
+
+.auth-error,
+.auth-alert {
+    color: var(--coffee-danger);
+    overflow-wrap: anywhere;
+}
+
+.auth-error {
+    margin: var(--space-xs) 0 0;
+    font-size: var(--text-small);
+}
+
+.auth-alert {
+    margin-bottom: var(--space-lg);
+    padding: var(--space-md);
+    border: 1px solid var(--coffee-danger);
+    border-radius: var(--radius-sm);
+}
+
+.auth-alert p {
+    margin: var(--space-xs) 0 0;
+}
+
+.auth-submit {
+    width: 100%;
+    color: var(--coffee-on-dark);
+    background: var(--coffee-cocoa);
+}
+
+.auth-logout {
+    margin: 0;
+}
+
+.auth-logout button {
+    min-height: 3rem;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--coffee-on-dark-muted);
+    border-radius: var(--radius-sm);
+    color: var(--coffee-on-dark);
+    background: transparent;
+    cursor: pointer;
+}
+
+@media (max-width: 36rem) {
+    .auth-main {
+        padding-block: var(--space-lg);
+    }
+
+    .auth-panel {
+        padding: var(--space-md);
+    }
+
+    .utility-bar__inner {
+        flex-wrap: wrap;
+        padding-block: var(--space-xs);
+    }
+}
