@@ -100,7 +100,7 @@ class AuthenticationTest extends TestCase
         $session->start();
         $previousId = $session->getId();
 
-        $this->post('/login', ['email' => $user->email, 'password' => 'test-password'])->assertRedirect('/');
+        $this->post('/login', ['email' => $user->email, 'password' => 'test-password'])->assertRedirect(route($user->role === 'admin' ? 'admin.home' : 'staff.home'));
         $this->assertAuthenticatedAs($user, 'web');
         $this->assertNotSame($previousId, $session->getId());
         $this->assertTrue(now()->equalTo($user->fresh()->last_login_at));
@@ -159,7 +159,7 @@ class AuthenticationTest extends TestCase
 
     public function test_authenticated_user_is_redirected_away_from_login(): void
     {
-        $this->actingAs($this->user(), 'web')->get('/login')->assertRedirect('/');
+        $this->actingAs($this->user(), 'web')->get('/login')->assertRedirect(route('staff.home'));
     }
 
     public function test_login_and_logout_require_csrf_tokens(): void

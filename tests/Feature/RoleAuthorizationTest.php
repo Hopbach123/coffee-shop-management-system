@@ -55,7 +55,7 @@ class RoleAuthorizationTest extends TestCase
     public function test_staff_is_forbidden_from_admin_without_losing_session(): void
     {
         $user = $this->user('staff');
-        $this->post('/login', ['email' => $user->email, 'password' => 'test-password'])->assertRedirect('/');
+        $this->post('/login', ['email' => $user->email, 'password' => 'test-password'])->assertRedirect(route('staff.home'));
         $this->withSession(['role-test-marker' => 'preserved'])->get('/role-test/admin')
             ->assertForbidden()->assertSessionHas('role-test-marker', 'preserved');
         $this->assertAuthenticatedAs($user, 'web');
@@ -95,5 +95,28 @@ class RoleAuthorizationTest extends TestCase
     public function test_role_checks_do_not_protect_public_home(): void
     {
         $this->get('/')->assertOk();
+    }
+
+    public function test_real_internal_pages_require_login(): void
+    {
+        $this->get('/admin')->assertRedirect('/login');
+        $this->get('/staff')->assertRedirect('/login');
+    }
+
+    public function test_admin_can_use_both_interfaces(): void
+    {
+        $this->actingAs($this->user('admin'), 'web');
+        $this->get('/admin')->assertOk()->assertSee(route('staff.home'));
+        $this->get('/staff')->assertOk()->assertSee(route('admin.home'));
+        $this->get('/login')->assertRedirect(route('admin.home'));
+    }
+
+    public function test_staff_interface_hides_admin_navigation_and_enforces_access(): void
+    {
+        $this->actingAs($this->user('staff'), 'web');
+        $this->get('/staff')->assertOk()->assertSee(route('logout'))->assertDontSee(route('admin.home'));
+        $this->get('/admin')->assertForbidden();
+        $this->post('/logout')->assertRedirect('/login');
+        $this->get('/staff')->assertRedirect('/login');
     }
 }
