@@ -1,3 +1,5 @@
 <?php
 
-// Staff routes will be registered in a future implementation task.
+use Illuminate\Support\Facades\Route;
+
+Route::view('/', 'staff.home')->name('home');

@@ -27,7 +27,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
         $request->user('web')->forceFill(['last_login_at' => now()])->save();
 
-        return redirect()->intended('/');
+        return redirect()->intended(route($request->user('web')->role === 'admin' ? 'admin.home' : 'staff.home'));
     }
 
     public function destroy(Request $request): RedirectResponse

@@ -1,3 +1,5 @@
 <?php
 
-// Admin routes will be registered in a future implementation task.
+use Illuminate\Support\Facades\Route;
+
+Route::view('/', 'admin.home')->name('home');
