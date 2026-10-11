@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\MessageBag;
+use Illuminate\Support\ViewErrorBag;
 use Illuminate\View\View as BladeView;
 use Mockery;
 use Tests\TestCase;
@@ -294,7 +296,61 @@ class CategoryManagementTest extends TestCase
         });
     }
 
-    /** Test backend query data without claiming that the blocked Blade UI renders. */
+    public function test_admin_can_render_category_pages_with_existing_internal_layout(): void
+    {
+        $this->withoutVite();
+        $category = $this->category(['name' => 'Coffee']);
+        $this->actingAs($this->user(), 'web');
+
+        $this->get('/admin/categories')->assertOk()->assertViewIs('admin.categories.index')
+            ->assertSee('Coffee')->assertSee('Danh mục')->assertSee('Khu vực Admin');
+        $this->get('/admin/categories/create')->assertOk()->assertViewIs('admin.categories.create')
+            ->assertSee('name="name"', false)->assertSee('name="status"', false);
+        $this->get('/admin/categories/'.$category->id.'/edit')->assertOk()->assertViewIs('admin.categories.edit')
+            ->assertSee('value="Coffee"', false)->assertSee('name="_method" value="PUT"', false);
+    }
+
+    public function test_list_renders_empty_states_search_actions_and_pagination_links(): void
+    {
+        $this->withoutVite();
+        $this->actingAs($this->user(), 'web');
+
+        $this->get('/admin/categories')->assertOk()->assertSee('Chưa có danh mục');
+        $this->get('/admin/categories?search=Missing')->assertOk()->assertSee('Không tìm thấy danh mục')
+            ->assertSee('value="Missing"', false);
+
+        for ($index = 1; $index <= 16; $index++) {
+            $this->category(['name' => 'Coffee '.$index]);
+        }
+
+        $this->get('/admin/categories?search=Coffee')->assertOk()
+            ->assertSee('search=Coffee&amp;page=2', false)
+            ->assertSee('name="_method" value="PATCH"', false)
+            ->assertSee('name="_method" value="DELETE"', false)
+            ->assertSee('Bạn có chắc muốn xóa danh mục này?', false);
+    }
+
+    public function test_form_renders_validation_feedback_and_old_input(): void
+    {
+        $this->withoutVite();
+        $this->actingAs($this->user(), 'web');
+
+        $this->from('/admin/categories/create')->post('/admin/categories', $this->payload([
+            'name' => '',
+            'description' => 'Mô tả đã nhập',
+        ]))->assertRedirect('/admin/categories/create')->assertSessionHasErrors('name');
+
+        $errors = new ViewErrorBag;
+        $errors->put('default', new MessageBag(['name' => ['Vui lòng nhập tên danh mục.']]));
+
+        $this->get('/admin/categories/create')->assertOk()->assertSee('Mô tả đã nhập');
+
+        $html = view('admin.categories.create', ['errors' => $errors])->render();
+        $this->assertStringContainsString('name-error', $html);
+        $this->assertStringContainsString('aria-invalid="true"', $html);
+    }
+
+    /** Inspect query data directly for sort and search edge cases. */
     private function inspectListData(array $query, callable $assertions): void
     {
         $request = Request::create('/admin/categories', 'GET', $query);
