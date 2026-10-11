@@ -16,6 +16,7 @@
                         <a href="{{ route('admin.home') }}" @if(request()->routeIs('admin.home')) aria-current="page" @endif>Khu vực Admin</a>
                         <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
                         <a href="{{ route('admin.products.index') }}" @if(request()->routeIs('admin.products.*')) aria-current="page" @endif>Sản phẩm</a>
+                        <a href="{{ route('admin.product-variants.index') }}" @if(request()->routeIs('admin.product-variants.*')) aria-current="page" @endif>Biến thể</a>
                     @endif
                     <a href="{{ route('staff.home') }}" @if(request()->routeIs('staff.*')) aria-current="page" @endif>Khu vực Staff</a>
                     <a href="{{ url('/') }}">Trang công khai</a>
