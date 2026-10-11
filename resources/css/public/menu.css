@@ -47,6 +47,9 @@
     background: var(--coffee-surface);
 }
 
+.public-menu-card[hidden], .public-menu-load-more[hidden] { display: none; }
+.public-menu-load-more { margin-top: var(--space-lg); }
+
 .public-menu-card__media, .public-menu-detail__media {
     display: grid;
     place-items: center;
