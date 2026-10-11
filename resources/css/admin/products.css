@@ -1,0 +1,10 @@
+.product-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+@media (min-width: 62.001rem) {
+    .product-table {
+        min-width: 65rem;
+    }
+}
