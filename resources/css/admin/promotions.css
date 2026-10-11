@@ -1,0 +1,2 @@
+.promotion-table-wrap { overflow-x: auto; }
+[data-promotion-max-discount][hidden] { display: none; }

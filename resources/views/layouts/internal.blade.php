@@ -18,6 +18,7 @@
                         <a href="{{ route('admin.products.index') }}" @if(request()->routeIs('admin.products.*')) aria-current="page" @endif>Sản phẩm</a>
                         <a href="{{ route('admin.product-variants.index') }}" @if(request()->routeIs('admin.product-variants.*')) aria-current="page" @endif>Biến thể</a>
                         <a href="{{ route('admin.toppings.index') }}" @if(request()->routeIs('admin.toppings.*')) aria-current="page" @endif>Topping</a>
+                        <a href="{{ route('admin.promotions.index') }}" @if(request()->routeIs('admin.promotions.*')) aria-current="page" @endif>Khuyến mãi</a>
                     @endif
                     <a href="{{ route('staff.home') }}" @if(request()->routeIs('staff.*')) aria-current="page" @endif>Khu vực Staff</a>
                     <a href="{{ url('/') }}">Trang công khai</a>
