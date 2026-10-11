@@ -1,3 +1,5 @@
+import { initializeMenuSearch } from './public/menu-search.js';
+
 const navToggle = document.querySelector('[data-nav-toggle]');
 const navMenu = document.querySelector('[data-nav-menu]');
 
@@ -53,6 +55,8 @@ document.querySelectorAll('[data-menu-category]').forEach((category) => {
         loadMore.hidden = visibleCount >= products.length;
     });
 });
+
+initializeMenuSearch();
 
 const promotionType = document.querySelector('[data-promotion-discount-type]');
 const promotionMaximum = document.querySelector('[data-promotion-max-discount]');
