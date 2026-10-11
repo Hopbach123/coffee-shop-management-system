@@ -37,7 +37,38 @@ class AuthenticationTest extends TestCase
     {
         $this->get('/login')->assertOk()->assertSee('autocomplete="current-password"', false)
             ->assertSee('name="_token"', false)->assertSee('type="submit"', false);
-        $this->get('/')->assertOk()->assertSee('Maison du Café')->assertSee(route('login'));
+        $this->get('/')->assertOk()->assertSee('Maison du Café')->assertSee(route('login'))
+            ->assertDontSee('Trang quản trị')->assertDontSee('Khu vực nhân viên');
+    }
+
+    public function test_admin_can_return_to_admin_area_from_public_home_without_losing_session(): void
+    {
+        $user = $this->user('admin');
+        $this->post('/login', ['email' => $user->email, 'password' => 'test-password'])
+            ->assertRedirect(route('admin.home'));
+
+        $this->get('/')->assertOk()
+            ->assertSee('<a href="'.route('admin.home').'">Trang quản trị</a>', false)
+            ->assertDontSee('Khu vực nhân viên')
+            ->assertDontSee('Đăng nhập nội bộ')
+            ->assertSee(route('logout'));
+        $this->get(route('admin.home'))->assertOk();
+        $this->assertAuthenticatedAs($user, 'web');
+    }
+
+    public function test_staff_can_return_to_staff_area_from_public_home_without_losing_session(): void
+    {
+        $user = $this->user('staff');
+        $this->post('/login', ['email' => $user->email, 'password' => 'test-password'])
+            ->assertRedirect(route('staff.home'));
+
+        $this->get('/')->assertOk()
+            ->assertSee('<a href="'.route('staff.home').'">Khu vực nhân viên</a>', false)
+            ->assertDontSee('Trang quản trị')
+            ->assertDontSee('Đăng nhập nội bộ')
+            ->assertSee(route('logout'));
+        $this->get(route('staff.home'))->assertOk();
+        $this->assertAuthenticatedAs($user, 'web');
     }
 
     public function test_email_is_required(): void

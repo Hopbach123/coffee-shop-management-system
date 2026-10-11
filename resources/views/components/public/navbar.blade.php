@@ -4,6 +4,11 @@
             <p>Roasted with patience · Served with warmth</p>
             <a href="#contact">Open daily · 07:00–21:00</a>
             @auth('web')
+                @if (auth('web')->user()->role === 'admin')
+                    <a href="{{ route('admin.home') }}">Trang quản trị</a>
+                @elseif (auth('web')->user()->role === 'staff')
+                    <a href="{{ route('staff.home') }}">Khu vực nhân viên</a>
+                @endif
                 <form class="auth-logout" method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit">Đăng xuất</button>
