@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductVariantController;
+use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\ToppingController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,3 +25,7 @@ Route::resource('product-variants', ProductVariantController::class)->except('sh
 Route::patch('toppings/{topping}/toggle-status', [ToppingController::class, 'toggleStatus'])
     ->name('toppings.toggle-status');
 Route::resource('toppings', ToppingController::class)->except('show');
+
+Route::patch('promotions/{promotion}/toggle-status', [PromotionController::class, 'toggleStatus'])
+    ->name('promotions.toggle-status');
+Route::resource('promotions', PromotionController::class)->except('show');
