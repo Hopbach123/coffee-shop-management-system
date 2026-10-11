@@ -223,4 +223,142 @@ class PublicMenuTest extends TestCase
         $variantQueries = array_filter($queries, fn ($sql) => str_contains(strtolower($sql), 'from "product_variants"'));
         $this->assertCount(1, $variantQueries);
     }
+
+    public function test_search_is_public_read_only_and_preserves_admin_and_staff_sessions(): void
+    {
+        $category = $this->category();
+        $this->product($category);
+        $route = app('router')->getRoutes()->getByName('menu.search');
+        $this->assertNotNull($route);
+        $this->assertNotContains('auth:web', $route->gatherMiddleware());
+        $this->assertNotContains('role:admin', $route->gatherMiddleware());
+
+        $this->get(route('menu.search', ['q' => 'Cà phê sữa']))
+            ->assertOk()->assertSee('Cà phê sữa');
+        $this->post(route('menu.search'))->assertStatus(405);
+
+        foreach (['admin', 'staff'] as $role) {
+            $user = $this->user($role);
+            $this->actingAs($user, 'web');
+            $this->get(route('menu.search', ['q' => 'Cà phê']))->assertOk()->assertSee('Cà phê sữa');
+            $this->get(route($role.'.home'))->assertOk();
+            $this->assertAuthenticatedAs($user, 'web');
+        }
+
+        $this->assertDatabaseCount('products', 1);
+    }
+
+    public function test_search_matches_product_name_and_keeps_cards_prices_status_and_images(): void
+    {
+        Storage::fake('public');
+        $coffee = $this->category(['name' => 'Cà phê', 'display_order' => 1]);
+        $tea = $this->category(['name' => 'Trà', 'display_order' => 2]);
+        $path = UploadedFile::fake()->image('latte.jpg')->store('products', 'public');
+        $latte = $this->product($coffee, ['name' => 'Latte sữa', 'slug' => 'latte-sua', 'image' => $path, 'is_featured' => true]);
+        $this->variant($latte, ['price' => '29000.00']);
+        $this->product($tea, ['name' => 'Latte trà', 'slug' => 'latte-tra', 'status' => 'unavailable']);
+        $this->product($coffee, ['name' => 'Mocha', 'slug' => 'mocha', 'description' => 'Latte style']);
+
+        $exact = $this->get(route('menu.search', ['q' => 'Latte sữa']))->assertOk()
+            ->assertViewIs('public.menu._search-results')->assertSee('Latte sữa')
+            ->assertSee('Món nổi bật')->assertSee('29.000,00 ₫')
+            ->assertSee(Storage::disk('public')->url($path))
+            ->assertSee(route('menu.show', ['product' => 'latte-sua']))
+            ->assertDontSee('Latte trà')->assertDontSee('Mocha');
+        $this->assertStringNotContainsString('<html', $exact->getContent());
+
+        $partial = $this->get(route('menu.search', ['q' => 'Latte']))->assertOk()
+            ->assertSee('Latte sữa')->assertSee('Latte trà')->assertSee('Hết món')
+            ->assertSee('Chưa có giá bán')->assertSee('<span aria-hidden="true">M</span>', false)
+            ->assertDontSee('Mocha');
+        $this->assertTrue(strpos($partial->getContent(), 'Cà phê</h2>') < strpos($partial->getContent(), 'Trà</h2>'));
+        $this->assertDatabaseCount('products', 3);
+    }
+
+    public function test_search_excludes_hidden_records_and_deleted_variants(): void
+    {
+        $visible = $this->category();
+        $inactive = $this->category(['name' => 'Ẩn', 'status' => 'inactive']);
+        $deleted = $this->category(['name' => 'Đã xóa']);
+        $deleted->delete();
+        $product = $this->product($visible, ['name' => 'Latte còn bán', 'slug' => 'latte-con-ban']);
+        $this->variant($product, ['price' => '25000.00']);
+        $removedVariant = $this->variant($product, ['name' => 'Lớn', 'price' => '99000.00']);
+        $removedVariant->delete();
+        $this->product($inactive, ['name' => 'Latte danh mục ẩn', 'slug' => 'latte-an']);
+        $this->product($deleted, ['name' => 'Latte danh mục xóa', 'slug' => 'latte-xoa']);
+        $removedProduct = $this->product($visible, ['name' => 'Latte đã xóa', 'slug' => 'latte-da-xoa']);
+        $removedProduct->delete();
+
+        $this->get(route('menu.search', ['q' => 'Latte']))->assertOk()
+            ->assertSee('Latte còn bán')->assertSee('25.000,00 ₫')
+            ->assertDontSee('Latte danh mục ẩn')->assertDontSee('Latte danh mục xóa')
+            ->assertDontSee('Latte đã xóa')->assertDontSee('99.000,00 ₫');
+    }
+
+    public function test_search_handles_empty_no_result_and_overlong_queries(): void
+    {
+        $category = $this->category();
+        $this->product($category);
+
+        $this->get(route('menu.search'))->assertOk()->assertSee('Nhập tên món để tìm kiếm.')
+            ->assertDontSee('Cà phê sữa');
+        $this->get(route('menu.search', ['q' => 'không tồn tại']))->assertOk()
+            ->assertSee('Không tìm thấy món phù hợp.')
+            ->assertDontSee('Thực đơn đang được cập nhật');
+        $this->get(route('menu.search', ['q' => '  Cà phê sữa  ']))->assertOk()->assertSee('Cà phê sữa');
+        $this->get(route('menu.search', ['q' => "' OR 1=1 --"]))->assertOk()
+            ->assertSee('Không tìm thấy món phù hợp.')->assertDontSee('Cà phê sữa');
+        $this->get(route('menu.search', ['q' => str_repeat('a', 101)]),
+            ['Accept' => 'application/json'])->assertUnprocessable()->assertJsonValidationErrors('q');
+        $this->assertDatabaseCount('products', 1);
+    }
+
+    public function test_full_page_search_works_without_javascript_and_default_reveal_remains(): void
+    {
+        $category = $this->category();
+        for ($index = 1; $index <= 4; $index++) {
+            $this->product($category, ['name' => 'Latte '.$index, 'slug' => 'latte-'.$index]);
+        }
+
+        $this->get('/menu')->assertOk()->assertSee('data-menu-search-form', false)
+            ->assertSee('data-menu-load-more', false)
+            ->assertSee('data-menu-default', false);
+        $searchPage = $this->get('/menu?search=Latte+4')->assertOk()
+            ->assertSee('value="Latte 4"', false)
+            ->assertSee('Latte 4')->assertSee('data-menu-search-results', false);
+        $this->assertMatchesRegularExpression('/<div data-menu-default\s+hidden\b/', $searchPage->getContent());
+        $this->get('/menu?search=')->assertOk()->assertSee('data-menu-default', false)
+            ->assertSee('Latte 1')->assertSee('data-menu-load-more', false);
+    }
+
+    public function test_search_eager_loads_variants_for_matches(): void
+    {
+        foreach (['Coffee', 'Tea'] as $name) {
+            $category = $this->category(['name' => $name]);
+            for ($index = 1; $index <= 3; $index++) {
+                $product = $this->product($category, ['name' => 'Latte '.$name.$index, 'slug' => strtolower($name).$index]);
+                $this->variant($product);
+            }
+        }
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->get(route('menu.search', ['q' => 'Latte']))->assertOk();
+        $queries = array_column(DB::getQueryLog(), 'query');
+        DB::disableQueryLog();
+        $variantQueries = array_filter($queries, fn ($sql) => str_contains(strtolower($sql), 'from "product_variants"'));
+        $this->assertCount(1, $variantQueries);
+    }
+
+    public function test_search_endpoint_does_not_shadow_product_slug_search(): void
+    {
+        $category = $this->category();
+        $this->product($category, ['name' => 'Search', 'slug' => 'search']);
+
+        $this->get('/menu/search')->assertOk()->assertViewIs('public.menu.show')
+            ->assertSee('Search');
+        $this->get(route('menu.search', ['q' => 'Search']))->assertOk()
+            ->assertViewIs('public.menu._search-results')->assertSee('Search');
+    }
 }
