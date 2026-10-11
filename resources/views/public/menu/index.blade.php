@@ -51,8 +51,8 @@
                         @foreach ($category->products as $product)
                             <article class="public-menu-card" data-menu-product>
                                 <div class="public-menu-card__media">
-                                    @if ($product->image)
-                                        <img src="{{ asset($product->image) }}" alt="{{ $product->name }}" loading="lazy">
+                                    @if ($imageUrl = $product->imageUrl())
+                                        <img src="{{ $imageUrl }}" alt="{{ $product->name }}" loading="lazy">
                                     @else
                                         <span aria-hidden="true">M</span>
                                     @endif

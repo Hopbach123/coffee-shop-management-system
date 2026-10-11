@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Base\Product as BaseProduct;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Product extends BaseProduct
@@ -38,6 +39,28 @@ class Product extends BaseProduct
     public function productVariants(): HasMany
     {
         return $this->hasMany(ProductVariant::class, 'product_id');
+    }
+
+    public static function isManagedImagePath(?string $path): bool
+    {
+        return $path !== null && preg_match('~\Aproducts/[a-zA-Z0-9_-]+\.(?:jpe?g|png|webp)\z~i', $path) === 1;
+    }
+
+    public function imageUrl(): ?string
+    {
+        if (static::isManagedImagePath($this->image)) {
+            return Storage::disk('public')->exists($this->image)
+                ? Storage::disk('public')->url($this->image)
+                : null;
+        }
+
+        // Preserve display of existing images stored under the public/images directory.
+        if (is_string($this->image) && str_starts_with($this->image, 'images/') &&
+            ! str_contains($this->image, '..') && is_file(public_path($this->image))) {
+            return asset($this->image);
+        }
+
+        return null;
     }
 
     public static function uniqueSlugForName(string $name): string
