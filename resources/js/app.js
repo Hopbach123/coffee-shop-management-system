@@ -34,6 +34,26 @@ if (navToggle && navMenu) {
     });
 }
 
+document.querySelectorAll('[data-menu-category]').forEach((category) => {
+    const products = Array.from(category.querySelectorAll('[data-menu-product]'));
+    const loadMore = category.querySelector('[data-menu-load-more]');
+
+    if (!loadMore || products.length <= 3) {
+        return;
+    }
+
+    let visibleCount = 3;
+    products.slice(visibleCount).forEach((product) => { product.hidden = true; });
+    loadMore.hidden = false;
+
+    loadMore.addEventListener('click', () => {
+        const nextCount = Math.min(visibleCount + 3, products.length);
+        products.slice(visibleCount, nextCount).forEach((product) => { product.hidden = false; });
+        visibleCount = nextCount;
+        loadMore.hidden = visibleCount >= products.length;
+    });
+});
+
 const promotionType = document.querySelector('[data-promotion-discount-type]');
 const promotionMaximum = document.querySelector('[data-promotion-max-discount]');
 

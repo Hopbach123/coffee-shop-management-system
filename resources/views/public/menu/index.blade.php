@@ -33,7 +33,7 @@
         @endif
 
         @foreach ($categories as $category)
-            <section class="public-menu-category" id="category-{{ $loop->iteration }}" aria-labelledby="category-title-{{ $loop->iteration }}">
+            <section class="public-menu-category" id="category-{{ $loop->iteration }}" aria-labelledby="category-title-{{ $loop->iteration }}" data-menu-category>
                 <div class="public-menu-category__heading">
                     <div>
                         <p class="section-heading__eyebrow">Danh mục {{ str_pad((string) $loop->iteration, 2, '0', STR_PAD_LEFT) }}</p>
@@ -47,9 +47,9 @@
                 @if ($category->products->isEmpty())
                     <p class="public-menu-category__empty">Danh mục này chưa có món để hiển thị.</p>
                 @else
-                    <div class="public-menu-grid">
+                    <div class="public-menu-grid" id="category-products-{{ $loop->iteration }}">
                         @foreach ($category->products as $product)
-                            <article class="public-menu-card">
+                            <article class="public-menu-card" data-menu-product>
                                 <div class="public-menu-card__media">
                                     @if ($product->image)
                                         <img src="{{ asset($product->image) }}" alt="{{ $product->name }}" loading="lazy">
@@ -87,6 +87,9 @@
                             </article>
                         @endforeach
                     </div>
+                    @if ($category->products->count() > 3)
+                        <x-public.button variant="outline" type="button" class="public-menu-load-more" data-menu-load-more aria-controls="category-products-{{ $loop->iteration }}" aria-label="Xem thêm món trong danh mục {{ $category->name }}" hidden>Xem thêm</x-public.button>
+                    @endif
                 @endif
             </section>
         @endforeach
