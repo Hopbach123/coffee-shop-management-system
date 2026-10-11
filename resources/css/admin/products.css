@@ -3,6 +3,21 @@
     overflow-x: auto;
 }
 
+.product-image-preview img {
+    display: block;
+    width: min(100%, 18rem);
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border: 1px solid var(--coffee-border);
+    border-radius: var(--radius-sm);
+}
+
+.product-image-preview p, .product-image-help {
+    margin: 0;
+    color: var(--coffee-text-muted);
+    font-size: var(--text-small);
+}
+
 @media (min-width: 62.001rem) {
     .product-table {
         min-width: 65rem;

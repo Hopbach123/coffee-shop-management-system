@@ -7,8 +7,10 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PublicMenuTest extends TestCase
@@ -170,6 +172,26 @@ class PublicMenuTest extends TestCase
         $product->image = 'images/coffeehouse/artisan-espresso.png';
         $product->save();
         $this->get('/menu/ca-phe-sua')->assertOk()->assertSee(asset($product->image));
+    }
+
+    public function test_menu_uses_public_disk_image_and_falls_back_when_file_is_missing(): void
+    {
+        Storage::fake('public');
+        $category = $this->category();
+        $path = UploadedFile::fake()->image('latte.jpg')->store('products', 'public');
+        $product = $this->product($category, ['image' => $path]);
+        $url = Storage::disk('public')->url($path);
+
+        $this->get('/menu')->assertOk()->assertSee($url)
+            ->assertSee('data-menu-product', false);
+        $this->get('/menu/ca-phe-sua')->assertOk()->assertSee($url);
+
+        Storage::disk('public')->delete($path);
+        $this->get('/menu')->assertOk()->assertDontSee($url)
+            ->assertSee('<span aria-hidden="true">M</span>', false);
+        $this->get('/menu/ca-phe-sua')->assertOk()->assertDontSee($url)
+            ->assertSee('<span aria-hidden="true">M</span>', false);
+        $this->assertSame($path, $product->fresh()->image);
     }
 
     public function test_empty_states_and_category_navigation_render(): void

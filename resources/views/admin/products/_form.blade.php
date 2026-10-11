@@ -39,6 +39,19 @@
     </div>
 
     <div class="category-field">
+        <label for="image">Ảnh sản phẩm</label>
+        @if ($product && $imageUrl)
+            <div class="product-image-preview">
+                <img src="{{ $imageUrl }}" alt="Ảnh hiện tại của {{ $product->name }}">
+                <p>Ảnh hiện tại. Chọn ảnh mới để thay thế.</p>
+            </div>
+        @endif
+        <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" @error('image') aria-invalid="true" aria-describedby="image-error" @enderror>
+        <p class="product-image-help">JPG, PNG hoặc WebP; tối đa 5 MB. Để trống khi không muốn đổi ảnh.</p>
+        @error('image') <p class="category-field__error" id="image-error">{{ $message }}</p> @enderror
+    </div>
+
+    <div class="category-field">
         <label for="status">Trạng thái <span aria-hidden="true">*</span></label>
         <select id="status" name="status" required @error('status') aria-invalid="true" aria-describedby="status-error" @enderror>
             <option value="available" @selected(old('status', $product?->status ?? 'available') === 'available')>Có sẵn</option>

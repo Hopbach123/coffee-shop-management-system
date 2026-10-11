@@ -125,7 +125,6 @@ class ProductManagementTest extends TestCase
             'status' => 'unavailable',
             'is_featured' => '1',
             'slug' => 'client-override',
-            'image' => 'unapproved.jpg',
             'id' => 9999,
             'deleted_at' => '2000-01-01',
         ]))->assertRedirect(route('admin.products.index'))->assertSessionHas('success')->assertSessionHasNoErrors();
@@ -214,7 +213,6 @@ class ProductManagementTest extends TestCase
             'description' => null,
             'status' => 'unavailable',
             'is_featured' => '1',
-            'image' => 'unapproved.jpg',
             'id' => 9999,
             'created_at' => '2000-01-01',
             'deleted_at' => '2000-01-01',

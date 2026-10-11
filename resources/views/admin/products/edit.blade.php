@@ -5,7 +5,7 @@
         <p class="section-heading__eyebrow">Maison du Café · Quản trị</p>
         <h1 id="page-title">Sửa sản phẩm</h1>
         <p>Chỉnh sửa thông tin của {{ $product->name }}.</p>
-        <form method="POST" action="{{ route('admin.products.update', $product) }}" class="category-panel category-form">
+        <form method="POST" action="{{ route('admin.products.update', $product) }}" class="category-panel category-form" enctype="multipart/form-data">
             @csrf
             @method('PUT')
             @include('admin.products._form', ['product' => $product])

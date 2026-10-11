@@ -13,8 +13,8 @@
 
             <div class="public-menu-detail__grid">
                 <div class="public-menu-detail__media">
-                    @if ($product->image)
-                        <img src="{{ asset($product->image) }}" alt="{{ $product->name }}">
+                    @if ($imageUrl = $product->imageUrl())
+                        <img src="{{ $imageUrl }}" alt="{{ $product->name }}">
                     @else
                         <span aria-hidden="true">M</span>
                     @endif

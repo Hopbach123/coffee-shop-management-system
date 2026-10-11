@@ -5,7 +5,7 @@
         <p class="section-heading__eyebrow">Maison du Café · Quản trị</p>
         <h1 id="page-title">Thêm sản phẩm</h1>
         <p>Nhập thông tin cho sản phẩm mới.</p>
-        <form method="POST" action="{{ route('admin.products.store') }}" class="category-panel category-form">
+        <form method="POST" action="{{ route('admin.products.store') }}" class="category-panel category-form" enctype="multipart/form-data">
             @csrf
             @include('admin.products._form', ['product' => null])
         </form>
