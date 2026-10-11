@@ -1,11 +1,15 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Public\MenuController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('public.home.index');
 });
+
+Route::get('/menu', [MenuController::class, 'index'])->name('menu.index');
+Route::get('/menu/{product:slug}', [MenuController::class, 'show'])->name('menu.show');
 
 Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'role:admin'])->group(base_path('routes/admin.php'));
 
