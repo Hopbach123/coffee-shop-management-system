@@ -33,3 +33,18 @@ if (navToggle && navMenu) {
         }
     });
 }
+
+const promotionType = document.querySelector('[data-promotion-discount-type]');
+const promotionMaximum = document.querySelector('[data-promotion-max-discount]');
+
+if (promotionType && promotionMaximum) {
+    const maximumInput = promotionMaximum.querySelector('input');
+    const updateMaximum = () => {
+        const isPercentage = promotionType.value === 'percentage';
+        promotionMaximum.hidden = !isPercentage;
+        maximumInput.disabled = !isPercentage;
+    };
+
+    promotionType.addEventListener('change', updateMaximum);
+    updateMaximum();
+}

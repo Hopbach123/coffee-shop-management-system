@@ -1,2 +1,8 @@
 @import './public/coffee-theme.css';
 @import './public/components.css';
+@import './auth/login.css';
+@import './auth/internal.css';
+@import './admin/categories.css';
+@import './admin/products.css';
+@import './admin/promotions.css';
+@import './public/menu.css';
