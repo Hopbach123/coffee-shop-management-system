@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\IngredientController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductVariantController;
@@ -14,6 +15,14 @@ Route::view('/', 'admin.home')->name('home');
 Route::patch('ingredients/{ingredient}/toggle-status', [IngredientController::class, 'toggleStatus'])
     ->name('ingredients.toggle-status');
 Route::resource('ingredients', IngredientController::class)->except('show');
+
+Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
+Route::get('customers/create', [CustomerController::class, 'create'])->name('customers.create');
+Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');
+Route::get('customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
+Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+Route::patch('customers/{customer}/status', [CustomerController::class, 'setStatus'])->name('customers.status');
+Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
 
 Route::get('users', [UserController::class, 'index'])->name('users.index');
 Route::get('users/create', [UserController::class, 'create'])->name('users.create');
