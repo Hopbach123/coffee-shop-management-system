@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AreaController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\IngredientController;
@@ -11,6 +12,14 @@ use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'admin.home')->name('home');
+
+Route::get('areas', [AreaController::class, 'index'])->name('areas.index');
+Route::get('areas/create', [AreaController::class, 'create'])->name('areas.create');
+Route::post('areas', [AreaController::class, 'store'])->name('areas.store');
+Route::get('areas/{area}/edit', [AreaController::class, 'edit'])->name('areas.edit');
+Route::put('areas/{area}', [AreaController::class, 'update'])->name('areas.update');
+Route::patch('areas/{area}/status', [AreaController::class, 'setStatus'])->name('areas.status');
+Route::delete('areas/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
 
 Route::patch('ingredients/{ingredient}/toggle-status', [IngredientController::class, 'toggleStatus'])
     ->name('ingredients.toggle-status');
