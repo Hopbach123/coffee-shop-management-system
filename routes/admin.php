@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\IngredientController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\Admin\PromotionController;
@@ -8,6 +9,10 @@ use App\Http\Controllers\Admin\ToppingController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'admin.home')->name('home');
+
+Route::patch('ingredients/{ingredient}/toggle-status', [IngredientController::class, 'toggleStatus'])
+    ->name('ingredients.toggle-status');
+Route::resource('ingredients', IngredientController::class)->except('show');
 
 // Loaded by web.php inside the existing auth:web + role:admin group.
 Route::patch('categories/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])
