@@ -14,6 +14,7 @@
                 <nav class="internal-nav" aria-label="Khu vực nội bộ">
                     @if (auth('web')->user()->role === 'admin')
                         <a href="{{ route('admin.home') }}" @if(request()->routeIs('admin.home')) aria-current="page" @endif>Khu vực Admin</a>
+                        <a href="{{ route('admin.ingredients.index') }}" @if(request()->routeIs('admin.ingredients.*')) aria-current="page" @endif>Nguyên liệu</a>
                         <a href="{{ route('admin.categories.index') }}" @if(request()->routeIs('admin.categories.*')) aria-current="page" @endif>Danh mục</a>
                         <a href="{{ route('admin.products.index') }}" @if(request()->routeIs('admin.products.*')) aria-current="page" @endif>Sản phẩm</a>
                         <a href="{{ route('admin.product-variants.index') }}" @if(request()->routeIs('admin.product-variants.*')) aria-current="page" @endif>Biến thể</a>

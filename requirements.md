@@ -100,6 +100,10 @@ Mục tiêu của domain Promotion là hỗ trợ giảm theo phần trăm hoặ
 
 Mục tiêu của domain Inventory là quản lý nguyên liệu, tồn hiện tại, định mức tối thiểu, công thức theo biến thể và lịch sử biến động `import`, `consume`, `adjustment`, `waste`. Tồn kho chỉ bị trừ trong transaction khi Order Item chuyển `pending` sang `preparing`; mọi thay đổi tồn phải có log và không được làm tồn âm. Nhà cung cấp, mua hàng và ERP kho nằm ngoài phạm vi.
 
+Phạm vi rà soát nhập liệu nguyên liệu ngày 13/10/2026 theo yêu cầu user: dùng danh sách đơn vị chuẩn `g`, `kg`, `ml`, `l`, `cái` tại cấu hình ứng dụng, không thêm bảng hoặc enum database. Số lượng và giá vốn tính theo cùng đơn vị; chỉ cho đổi đơn vị khi tồn bằng 0 và chưa có công thức hoặc lịch sử kho. Không tự động quy đổi số lượng. CRUD không được sửa tồn kho. Tên bắt buộc, tối đa 255 ký tự; ngưỡng tồn và giá vốn không âm, đúng độ chính xác và giới hạn migration. Tên trùng không bị cấm bởi baseline hiện tại.
+
+Điều chỉnh theo yêu cầu user: đơn vị nguyên liệu có thêm lựa chọn `other` (Khác). Admin nhập tên đơn vị cụ thể tối đa 50 ký tự, có ít nhất một chữ cái; cho phép chữ Unicode, số, khoảng trắng, dấu chấm, gạch ngang và `/`. Chuẩn hóa chữ thường và khoảng trắng trước khi lưu vào cột `unit` hiện có. Giá trị `other` không được lưu làm đơn vị; tên mới vẫn chịu quy tắc khóa đơn vị khi nguyên liệu đã sử dụng. Danh sách chuẩn là gợi ý lựa chọn, không còn là danh sách đóng.
+
 ### 5.9 Dashboard
 
 Mục tiêu của domain Dashboard là cung cấp cái nhìn tổng quan cho quản lý. Phạm vi gồm tổng quan doanh thu, thống kê đơn hàng, chỉ số bán sản phẩm và thống kê vận hành cơ bản.

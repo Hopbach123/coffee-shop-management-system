@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\IngredientController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\Admin\PromotionController;
@@ -9,6 +10,10 @@ use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'admin.home')->name('home');
+
+Route::patch('ingredients/{ingredient}/toggle-status', [IngredientController::class, 'toggleStatus'])
+    ->name('ingredients.toggle-status');
+Route::resource('ingredients', IngredientController::class)->except('show');
 
 Route::get('users', [UserController::class, 'index'])->name('users.index');
 Route::get('users/create', [UserController::class, 'create'])->name('users.create');
