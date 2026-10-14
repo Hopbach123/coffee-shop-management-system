@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AreaController;
+use App\Http\Controllers\Admin\CafeTableController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\IngredientController;
@@ -12,6 +13,14 @@ use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'admin.home')->name('home');
+
+Route::get('tables', [CafeTableController::class, 'index'])->name('tables.index');
+Route::get('tables/create', [CafeTableController::class, 'create'])->name('tables.create');
+Route::post('tables', [CafeTableController::class, 'store'])->name('tables.store');
+Route::get('tables/{cafe_table}/edit', [CafeTableController::class, 'edit'])->name('tables.edit');
+Route::put('tables/{cafe_table}', [CafeTableController::class, 'update'])->name('tables.update');
+Route::delete('tables/{cafe_table}', [CafeTableController::class, 'destroy'])->name('tables.destroy');
+Route::patch('tables/{cafe_table}/status', [CafeTableController::class, 'setStatus'])->name('tables.status');
 
 Route::get('areas', [AreaController::class, 'index'])->name('areas.index');
 Route::get('areas/create', [AreaController::class, 'create'])->name('areas.create');
