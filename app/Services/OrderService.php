@@ -7,8 +7,10 @@ use App\Models\CafeTable;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderItemTopping;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Topping;
 use App\Models\User;
 use DomainException;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -184,6 +186,95 @@ class OrderService
         }, 3);
     }
 
+    public function addItemTopping(Order $order, OrderItem $item, array $attributes, User $actor): OrderItemTopping
+    {
+        return DB::transaction(function () use ($order, $item, $attributes, $actor): OrderItemTopping {
+            $this->assertActiveStaff($actor);
+            $lockedOrder = $this->lockedPendingOrder($order);
+            $lockedItem = $this->lockedPendingItem($lockedOrder, $item);
+
+            $topping = Topping::query()->lockForUpdate()->find($attributes['topping_id']);
+            if ($topping === null || $topping->status !== 'available') {
+                throw ValidationException::withMessages(['topping_id' => 'Topping không hợp lệ hoặc hiện không sẵn sàng.']);
+            }
+
+            $quantity = (int) $attributes['quantity'];
+            $itemTopping = OrderItemTopping::query()
+                ->where('order_item_id', $lockedItem->getKey())
+                ->where('topping_id', $topping->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if ($itemTopping === null) {
+                $itemTopping = new OrderItemTopping();
+                $itemTopping->forceFill([
+                    'order_item_id' => $lockedItem->getKey(),
+                    'topping_id' => $topping->getKey(),
+                    'topping_name' => $topping->name,
+                    'price' => $this->normalizeMoney($topping->getRawOriginal('price')),
+                    'quantity' => $quantity,
+                ]);
+            } else {
+                if ($quantity > 2147483647 - $itemTopping->quantity) {
+                    throw ValidationException::withMessages(['quantity' => 'Số lượng topping vượt quá giới hạn cho phép.']);
+                }
+
+                // Preserve the original name and price snapshot after a topping is sold.
+                $itemTopping->quantity += $quantity;
+            }
+
+            $itemTopping->saveOrFail();
+            $this->recalculateItemAndOrderTotals($lockedOrder, $lockedItem);
+
+            return $itemTopping;
+        }, 3);
+    }
+
+    public function removeItemTopping(Order $order, OrderItem $item, OrderItemTopping $itemTopping, User $actor): void
+    {
+        DB::transaction(function () use ($order, $item, $itemTopping, $actor): void {
+            $this->assertActiveStaff($actor);
+            $lockedOrder = $this->lockedPendingOrder($order);
+            $lockedItem = $this->lockedPendingItem($lockedOrder, $item);
+            $lockedItemTopping = OrderItemTopping::query()
+                ->whereKey($itemTopping->getKey())
+                ->where('order_item_id', $lockedItem->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if ($lockedItemTopping === null) {
+                throw ValidationException::withMessages(['order_item_topping' => 'Topping không thuộc món trong đơn hàng này.']);
+            }
+
+            $lockedItemTopping->deleteOrFail();
+            $this->recalculateItemAndOrderTotals($lockedOrder, $lockedItem);
+        }, 3);
+    }
+
+    public function updateItemToppingQuantity(Order $order, OrderItem $item, OrderItemTopping $itemTopping, array $attributes, User $actor): OrderItemTopping
+    {
+        return DB::transaction(function () use ($order, $item, $itemTopping, $attributes, $actor): OrderItemTopping {
+            $this->assertActiveStaff($actor);
+            $lockedOrder = $this->lockedPendingOrder($order);
+            $lockedItem = $this->lockedPendingItem($lockedOrder, $item);
+            $lockedItemTopping = OrderItemTopping::query()
+                ->whereKey($itemTopping->getKey())
+                ->where('order_item_id', $lockedItem->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if ($lockedItemTopping === null) {
+                throw ValidationException::withMessages(['order_item_topping' => 'Topping không thuộc món trong đơn hàng này.']);
+            }
+
+            $lockedItemTopping->forceFill(['quantity' => (int) $attributes['quantity']]);
+            $lockedItemTopping->saveOrFail();
+            $this->recalculateItemAndOrderTotals($lockedOrder, $lockedItem);
+
+            return $lockedItemTopping;
+        }, 3);
+    }
+
     private function assertActiveStaff(User $actor): void
     {
         $currentActor = User::query()->lockForUpdate()->find($actor->getKey());
@@ -255,6 +346,42 @@ class OrderService
             'total_amount' => $this->moneyFromCents($subtotalInCents - $discountInCents + $taxInCents),
         ]);
         $order->saveOrFail();
+    }
+
+    private function recalculateItemAndOrderTotals(Order $order, OrderItem $item): void
+    {
+        $toppingAmountInCents = 0;
+        $maximumToppingAmountInCents = 999999999999;
+
+        OrderItemTopping::query()
+            ->where('order_item_id', $item->getKey())
+            ->lockForUpdate()
+            ->get(['price', 'quantity'])
+            ->each(function (OrderItemTopping $itemTopping) use (&$toppingAmountInCents, $maximumToppingAmountInCents): void {
+                $lineAmountInCents = $this->moneyToCents($this->multiplyMoney(
+                    $itemTopping->getRawOriginal('price'),
+                    $itemTopping->quantity,
+                ));
+
+                if ($lineAmountInCents > $maximumToppingAmountInCents - $toppingAmountInCents) {
+                    throw ValidationException::withMessages(['quantity' => 'Tổng tiền topping vượt quá giới hạn cho phép.']);
+                }
+
+                $toppingAmountInCents += $lineAmountInCents;
+            });
+
+        $toppingAmount = $this->moneyFromCents($toppingAmountInCents);
+        $item->forceFill([
+            'topping_amount' => $toppingAmount,
+            'subtotal' => $this->lineSubtotal(
+                $item->getRawOriginal('unit_price'),
+                $item->quantity,
+                $toppingAmount,
+            ),
+        ]);
+        $item->saveOrFail();
+
+        $this->recalculateTotals($order);
     }
 
     private function multiplyMoney(string $amount, int $quantity): string

@@ -5,12 +5,16 @@ namespace App\Http\Controllers\Staff;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\StoreOrderRequest;
 use App\Http\Requests\Order\StoreOrderItemRequest;
+use App\Http\Requests\Order\StoreOrderItemToppingRequest;
 use App\Http\Requests\Order\UpdateOrderItemQuantityRequest;
+use App\Http\Requests\Order\UpdateOrderItemToppingQuantityRequest;
 use App\Models\CafeTable;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderItemTopping;
 use App\Models\ProductVariant;
+use App\Models\Topping;
 use App\Services\OrderService;
 use DomainException;
 use Illuminate\Database\QueryException;
@@ -73,7 +77,7 @@ class OrderController extends Controller
             'cafeTable:id,table_code,table_name',
             'customer:id,name,phone',
             'creator:id,name',
-            'orderItems' => fn ($query) => $query->orderBy('id'),
+            'orderItems' => fn ($query) => $query->with('orderItemToppings')->orderBy('id'),
         ]);
 
         $variants = ProductVariant::query()
@@ -84,7 +88,13 @@ class OrderController extends Controller
             ->orderBy('id')
             ->get(['id', 'product_id', 'name', 'price']);
 
-        return view('staff.orders.show', compact('order', 'variants'));
+        $toppings = Topping::query()
+            ->where('status', 'available')
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get(['id', 'name', 'price']);
+
+        return view('staff.orders.show', compact('order', 'variants', 'toppings'));
     }
 
     public function storeItem(StoreOrderItemRequest $request, Order $order, OrderService $service): RedirectResponse
@@ -138,6 +148,59 @@ class OrderController extends Controller
         }
 
         return redirect()->route('staff.orders.show', $order)->with('success', 'Đã xóa món khỏi đơn hàng.');
+    }
+
+    public function storeItemTopping(StoreOrderItemToppingRequest $request, Order $order, OrderItem $orderItem, OrderService $service): RedirectResponse
+    {
+        try {
+            $service->addItemTopping($order, $orderItem, $request->safe()->only(['topping_id', 'quantity']), $request->user('web'));
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['order' => $exception->getMessage()]);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors(['order' => 'Không thể thêm topping. Vui lòng thử lại.'])->withInput();
+        }
+
+        return redirect()->route('staff.orders.show', $order)->with('success', 'Đã thêm topping vào món.');
+    }
+
+    public function destroyItemTopping(Request $request, Order $order, OrderItem $orderItem, OrderItemTopping $orderItemTopping, OrderService $service): RedirectResponse
+    {
+        $this->assertActiveStaff($request);
+
+        try {
+            $service->removeItemTopping($order, $orderItem, $orderItemTopping, $request->user('web'));
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['order' => $exception->getMessage()]);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors(['order' => 'Không thể xóa topping. Vui lòng thử lại.']);
+        }
+
+        return redirect()->route('staff.orders.show', $order)->with('success', 'Đã xóa topping khỏi món.');
+    }
+
+    public function updateItemTopping(UpdateOrderItemToppingQuantityRequest $request, Order $order, OrderItem $orderItem, OrderItemTopping $orderItemTopping, OrderService $service): RedirectResponse
+    {
+        try {
+            $service->updateItemToppingQuantity($order, $orderItem, $orderItemTopping, $request->safe()->only(['quantity']), $request->user('web'));
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['order' => $exception->getMessage()]);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors(['order' => 'Không thể cập nhật topping. Vui lòng thử lại.'])->withInput();
+        }
+
+        return redirect()->route('staff.orders.show', $order)->with('success', 'Đã cập nhật số lượng topping.');
     }
 
     private function assertActiveStaff(Request $request): void

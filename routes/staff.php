@@ -19,6 +19,9 @@ Route::middleware('role:staff')->group(function (): void {
     Route::post('orders/{order}/items', [OrderController::class, 'storeItem'])->name('orders.items.store');
     Route::patch('orders/{order}/items/{orderItem}', [OrderController::class, 'updateItem'])->name('orders.items.update');
     Route::delete('orders/{order}/items/{orderItem}', [OrderController::class, 'destroyItem'])->name('orders.items.destroy');
+    Route::post('orders/{order}/items/{orderItem}/toppings', [OrderController::class, 'storeItemTopping'])->name('orders.items.toppings.store');
+    Route::patch('orders/{order}/items/{orderItem}/toppings/{orderItemTopping}', [OrderController::class, 'updateItemTopping'])->name('orders.items.toppings.update');
+    Route::delete('orders/{order}/items/{orderItem}/toppings/{orderItemTopping}', [OrderController::class, 'destroyItemTopping'])->name('orders.items.toppings.destroy');
 
     Route::get('/tables', [WorkspaceController::class, 'tables'])->name('tables.index');
     Route::get('/brewing', [WorkspaceController::class, 'brewing'])->name('brewing.index');

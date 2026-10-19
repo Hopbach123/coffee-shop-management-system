@@ -28,6 +28,7 @@ $menus = $isAdmin ? [
 ] : [
 ['label' => 'WORKSPACE', 'links' => [
 ['route' => 'staff.home', 'text' => 'Bán hàng / POS', 'icon' => 'bag'],
+['route' => 'staff.orders.index', 'text' => 'Đơn hàng', 'icon' => 'receipt'],
 ]],
 ];
 @endphp

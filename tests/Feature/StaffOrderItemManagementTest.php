@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderItemTopping;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Topping;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
@@ -22,6 +24,7 @@ class StaffOrderItemManagementTest extends TestCase
         $this->assertSame('sqlite', config('database.default'));
         (require database_path('migrations/0001_01_01_000000_create_users_table.php'))->up();
         (require database_path('migrations/2026_08_14_000003_create_categories_table.php'))->up();
+        (require database_path('migrations/2026_08_14_000004_create_toppings_table.php'))->up();
         (require database_path('migrations/2026_08_14_000007_create_products_table.php'))->up();
 
         // The production migrations add MySQL-only CHECK constraints after create.
@@ -70,6 +73,17 @@ class StaffOrderItemManagementTest extends TestCase
             $table->string('note', 500)->nullable();
             $table->string('status')->default('pending');
             $table->timestamps();
+        });
+
+        Schema::create('order_item_toppings', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('order_item_id')->constrained('order_items')->restrictOnDelete();
+            $table->foreignId('topping_id')->constrained('toppings')->restrictOnDelete();
+            $table->string('topping_name');
+            $table->decimal('price', 12, 2);
+            $table->integer('quantity')->default(1);
+            $table->timestamps();
+            $table->unique(['order_item_id', 'topping_id']);
         });
 
         $this->withoutVite();
@@ -143,6 +157,15 @@ class StaffOrderItemManagementTest extends TestCase
         [$whole, $fraction] = explode('.', $amount);
 
         return ((int) $whole * 100) + (int) str_pad($fraction, 2, '0');
+    }
+
+    private function topping(string $price = '2.00', string $status = 'available'): Topping
+    {
+        return Topping::forceCreate([
+            'name' => uniqid('Topping-', true),
+            'price' => $price,
+            'status' => $status,
+        ]);
     }
 
     public function test_active_staff_can_add_available_variant_with_snapshots_and_recalculated_totals(): void
@@ -367,5 +390,208 @@ class StaffOrderItemManagementTest extends TestCase
         } finally {
             Order::flushEventListeners();
         }
+    }
+
+    public function test_active_staff_can_add_topping_with_price_and_name_snapshots_and_recalculated_totals(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant(), 2);
+        $topping = $this->topping('2.50');
+
+        $this->actingAs($staff, 'web')->post(route('staff.orders.items.toppings.store', [$order, $item]), [
+            'topping_id' => $topping->id,
+            'quantity' => 3,
+            'price' => '999.99',
+            'topping_name' => 'Không được tin',
+            'subtotal' => '999.99',
+            'status' => 'served',
+            'order_id' => 999,
+        ])->assertRedirect(route('staff.orders.show', $order))->assertSessionHas('success');
+
+        $itemTopping = OrderItemTopping::sole();
+        $this->assertSame($item->id, $itemTopping->order_item_id);
+        $this->assertSame($topping->id, $itemTopping->topping_id);
+        $this->assertSame($topping->name, $itemTopping->topping_name);
+        $this->assertSame('2.50', $itemTopping->price);
+        $this->assertSame(3, $itemTopping->quantity);
+        $this->assertSame('7.50', $item->fresh()->topping_amount);
+        $this->assertSame('32.50', $item->fresh()->subtotal);
+        $this->assertSame('32.50', $order->fresh()->subtotal);
+        $this->assertSame('32.50', $order->fresh()->total_amount);
+    }
+
+    public function test_adding_same_topping_aggregates_its_quantity_without_duplicate_row_or_new_price_snapshot(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant());
+        $topping = $this->topping('2.00');
+
+        $this->actingAs($staff, 'web')->post(route('staff.orders.items.toppings.store', [$order, $item]), ['topping_id' => $topping->id, 'quantity' => 2]);
+        $topping->forceFill(['price' => '9.00', 'name' => 'Đã đổi tên'])->save();
+        $this->post(route('staff.orders.items.toppings.store', [$order, $item]), ['topping_id' => $topping->id, 'quantity' => 3])
+            ->assertRedirect(route('staff.orders.show', $order));
+
+        $this->assertDatabaseCount('order_item_toppings', 1);
+        $itemTopping = OrderItemTopping::sole();
+        $this->assertSame(5, $itemTopping->quantity);
+        $this->assertSame('2.00', $itemTopping->price);
+        $this->assertNotSame('Đã đổi tên', $itemTopping->topping_name);
+        $this->assertSame('10.00', $item->fresh()->topping_amount);
+        $this->assertSame('22.50', $item->fresh()->subtotal);
+    }
+
+    public function test_unavailable_topping_is_rejected_without_changes(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant());
+        $topping = $this->topping('2.00', 'unavailable');
+
+        $this->actingAs($staff, 'web')->postJson(route('staff.orders.items.toppings.store', [$order, $item]), ['topping_id' => $topping->id, 'quantity' => 1])
+            ->assertUnprocessable()->assertJsonValidationErrors('topping_id');
+
+        $this->assertDatabaseCount('order_item_toppings', 0);
+        $this->assertSame('0.00', $item->fresh()->topping_amount);
+    }
+
+    public function test_active_staff_can_remove_topping_and_recalculate_item_and_order_totals(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant());
+        $first = $this->topping('2.00');
+        $second = $this->topping('3.50');
+        $this->actingAs($staff, 'web');
+        $this->post(route('staff.orders.items.toppings.store', [$order, $item]), ['topping_id' => $first->id, 'quantity' => 2]);
+        $this->post(route('staff.orders.items.toppings.store', [$order, $item]), ['topping_id' => $second->id, 'quantity' => 1]);
+        $firstRow = OrderItemTopping::where('topping_id', $first->id)->sole();
+
+        $this->delete(route('staff.orders.items.toppings.destroy', [$order, $item, $firstRow]))
+            ->assertRedirect(route('staff.orders.show', $order))->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('order_item_toppings', ['id' => $firstRow->id]);
+        $this->assertSame('3.50', $item->fresh()->topping_amount);
+        $this->assertSame('16.00', $item->fresh()->subtotal);
+        $this->assertSame('16.00', $order->fresh()->total_amount);
+    }
+
+    public function test_topping_operations_are_rejected_for_non_pending_order_or_item_and_wrong_item_url(): void
+    {
+        $staff = $this->staff();
+        $variant = $this->sellableVariant();
+        $topping = $this->topping();
+        $pendingOrder = $this->order($staff);
+        $pendingItem = $this->item($pendingOrder, $variant);
+        $otherItem = $this->item($pendingOrder, $variant);
+        $otherRow = OrderItemTopping::forceCreate([
+            'order_item_id' => $otherItem->id,
+            'topping_id' => $topping->id,
+            'topping_name' => $topping->name,
+            'price' => '2.00',
+            'quantity' => 1,
+        ]);
+        $preparingItem = $this->item($pendingOrder, $variant, 1, '0.00', 'preparing');
+        $completedOrder = $this->order($staff, 'completed');
+        $completedItem = $this->item($completedOrder, $variant);
+
+        $this->actingAs($staff, 'web');
+        $this->postJson(route('staff.orders.items.toppings.store', [$pendingOrder, $preparingItem]), ['topping_id' => $topping->id, 'quantity' => 1])
+            ->assertUnprocessable()->assertJsonValidationErrors('order_item');
+        $this->postJson(route('staff.orders.items.toppings.store', [$completedOrder, $completedItem]), ['topping_id' => $topping->id, 'quantity' => 1])
+            ->assertUnprocessable()->assertJsonValidationErrors('order');
+        $this->deleteJson(route('staff.orders.items.toppings.destroy', [$pendingOrder, $pendingItem, $otherRow]))
+            ->assertUnprocessable()->assertJsonValidationErrors('order_item_topping');
+
+        $this->assertDatabaseHas('order_item_toppings', ['id' => $otherRow->id]);
+    }
+
+    public function test_guest_admin_and_inactive_staff_cannot_manage_toppings(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant());
+        $topping = $this->topping();
+        $storeRoute = route('staff.orders.items.toppings.store', [$order, $item]);
+
+        $this->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertRedirect(route('login'));
+        $this->actingAs($this->staff('active', 'admin'), 'web')->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertForbidden();
+        $this->actingAs($this->staff('inactive'), 'web')->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertForbidden();
+        $this->assertDatabaseCount('order_item_toppings', 0);
+    }
+
+    public function test_topping_changes_roll_back_when_order_total_save_fails(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant());
+        $topping = $this->topping();
+        Order::saving(fn () => throw new QueryException('sqlite', 'private SQL', [], new \RuntimeException('private failure')));
+
+        try {
+            $this->actingAs($staff, 'web')->from(route('staff.orders.show', $order))
+                ->post(route('staff.orders.items.toppings.store', [$order, $item]), ['topping_id' => $topping->id, 'quantity' => 1])
+                ->assertRedirect(route('staff.orders.show', $order))->assertSessionHasErrors('order');
+            $this->assertDatabaseCount('order_item_toppings', 0);
+            $this->assertSame('0.00', $item->fresh()->topping_amount);
+        } finally {
+            Order::flushEventListeners();
+        }
+    }
+
+    public function test_topping_removal_rolls_back_when_order_total_save_fails(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant(), 1, '2.00');
+        $order->forceFill(['subtotal' => '14.50', 'total_amount' => '14.50'])->save();
+        $topping = $this->topping('2.00');
+        $itemTopping = OrderItemTopping::forceCreate([
+            'order_item_id' => $item->id,
+            'topping_id' => $topping->id,
+            'topping_name' => $topping->name,
+            'price' => '2.00',
+            'quantity' => 1,
+        ]);
+        Order::saving(fn () => throw new QueryException('sqlite', 'private SQL', [], new \RuntimeException('private failure')));
+
+        try {
+            $this->actingAs($staff, 'web')->from(route('staff.orders.show', $order))
+                ->delete(route('staff.orders.items.toppings.destroy', [$order, $item, $itemTopping]))
+                ->assertRedirect(route('staff.orders.show', $order))->assertSessionHasErrors('order');
+            $this->assertDatabaseHas('order_item_toppings', ['id' => $itemTopping->id]);
+            $this->assertSame('2.00', $item->fresh()->topping_amount);
+        } finally {
+            Order::flushEventListeners();
+        }
+    }
+
+    public function test_active_staff_can_update_a_pending_topping_quantity_and_recalculate_totals(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant(), 2, '2.00');
+        $order->forceFill(['subtotal' => '27.00', 'total_amount' => '27.00'])->save();
+        $topping = $this->topping('2.00');
+        $itemTopping = OrderItemTopping::forceCreate([
+            'order_item_id' => $item->id,
+            'topping_id' => $topping->id,
+            'topping_name' => $topping->name,
+            'price' => '2.00',
+            'quantity' => 1,
+        ]);
+
+        $this->actingAs($staff, 'web')->patch(route('staff.orders.items.toppings.update', [$order, $item, $itemTopping]), [
+            'quantity' => 3,
+            'price' => '999.99',
+            'topping_id' => 999,
+        ])->assertRedirect(route('staff.orders.show', $order))->assertSessionHas('success');
+
+        $this->assertSame(3, $itemTopping->fresh()->quantity);
+        $this->assertSame('2.00', $itemTopping->fresh()->price);
+        $this->assertSame('6.00', $item->fresh()->topping_amount);
+        $this->assertSame('31.00', $item->fresh()->subtotal);
+        $this->assertSame('31.00', $order->fresh()->total_amount);
     }
 }
