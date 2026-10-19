@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\IngredientController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProductRecipeController;
 use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\ToppingController;
@@ -10,6 +11,13 @@ use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'admin.home')->name('home');
+
+Route::prefix('product-variants/{product_variant}/recipes')->name('product-recipes.')->scopeBindings()->group(function () {
+    Route::get('/', [ProductRecipeController::class, 'index'])->name('index');
+    Route::post('/', [ProductRecipeController::class, 'store'])->name('store');
+    Route::put('{product_recipe}', [ProductRecipeController::class, 'update'])->name('update');
+    Route::delete('{product_recipe}', [ProductRecipeController::class, 'destroy'])->name('destroy');
+});
 
 Route::patch('ingredients/{ingredient}/toggle-status', [IngredientController::class, 'toggleStatus'])
     ->name('ingredients.toggle-status');
