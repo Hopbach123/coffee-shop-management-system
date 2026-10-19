@@ -148,12 +148,77 @@ class OrderService
         }, 3);
     }
 
+    public function updateItemQuantity(Order $order, OrderItem $item, array $attributes, User $actor): OrderItem
+    {
+        return DB::transaction(function () use ($order, $item, $attributes, $actor): OrderItem {
+            $this->assertActiveStaff($actor);
+            $lockedOrder = $this->lockedPendingOrder($order);
+            $lockedItem = $this->lockedPendingItem($lockedOrder, $item);
+            $quantity = (int) $attributes['quantity'];
+
+            $lockedItem->forceFill([
+                'quantity' => $quantity,
+                'subtotal' => $this->lineSubtotal(
+                    $lockedItem->getRawOriginal('unit_price'),
+                    $quantity,
+                    $lockedItem->getRawOriginal('topping_amount'),
+                ),
+            ]);
+            $lockedItem->saveOrFail();
+
+            $this->recalculateTotals($lockedOrder);
+
+            return $lockedItem;
+        }, 3);
+    }
+
+    public function removeItem(Order $order, OrderItem $item, User $actor): void
+    {
+        DB::transaction(function () use ($order, $item, $actor): void {
+            $this->assertActiveStaff($actor);
+            $lockedOrder = $this->lockedPendingOrder($order);
+            $lockedItem = $this->lockedPendingItem($lockedOrder, $item);
+
+            $lockedItem->deleteOrFail();
+            $this->recalculateTotals($lockedOrder);
+        }, 3);
+    }
+
     private function assertActiveStaff(User $actor): void
     {
         $currentActor = User::query()->lockForUpdate()->find($actor->getKey());
         if ($currentActor === null || $currentActor->role !== 'staff' || $currentActor->status !== 'active') {
             throw new DomainException('Chỉ nhân viên đang hoạt động mới được tạo đơn hàng.');
         }
+    }
+
+    private function lockedPendingOrder(Order $order): Order
+    {
+        $lockedOrder = Order::query()->lockForUpdate()->find($order->getKey());
+        if ($lockedOrder === null || $lockedOrder->status !== 'pending') {
+            throw ValidationException::withMessages(['order' => 'Chỉ có thể chỉnh sửa món trong đơn đang chờ xử lý.']);
+        }
+
+        return $lockedOrder;
+    }
+
+    private function lockedPendingItem(Order $order, OrderItem $item): OrderItem
+    {
+        $lockedItem = OrderItem::query()
+            ->whereKey($item->getKey())
+            ->where('order_id', $order->getKey())
+            ->lockForUpdate()
+            ->first();
+
+        if ($lockedItem === null) {
+            throw ValidationException::withMessages(['order_item' => 'Món không thuộc đơn hàng này.']);
+        }
+
+        if ($lockedItem->status !== 'pending') {
+            throw ValidationException::withMessages(['order_item' => 'Chỉ có thể chỉnh sửa món đang chờ pha chế.']);
+        }
+
+        return $lockedItem;
     }
 
     private function newOrderCode(): string
@@ -202,6 +267,19 @@ class OrderService
         }
 
         return $this->moneyFromCents($unitPriceInCents * $quantity);
+    }
+
+    private function lineSubtotal(string $unitPrice, int $quantity, string $toppingAmount): string
+    {
+        $itemAmountInCents = $this->moneyToCents($this->multiplyMoney($unitPrice, $quantity));
+        $toppingAmountInCents = $this->moneyToCents($toppingAmount);
+        $maximumOrderAmountInCents = 99999999999999999;
+
+        if ($toppingAmountInCents > $maximumOrderAmountInCents - $itemAmountInCents) {
+            throw ValidationException::withMessages(['quantity' => 'Tổng tiền món vượt quá giới hạn cho phép.']);
+        }
+
+        return $this->moneyFromCents($itemAmountInCents + $toppingAmountInCents);
     }
 
     private function normalizeMoney(mixed $amount): string

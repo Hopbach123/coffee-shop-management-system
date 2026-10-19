@@ -14,9 +14,10 @@
                 <p>Chưa có món nào trong đơn.</p>
             @else
                 <div class="category-table-wrap product-table-wrap"><table class="category-table"><caption class="sr-only">Món trong đơn</caption>
-                    <thead><tr><th scope="col">Món</th><th scope="col">Số lượng</th><th scope="col">Đơn giá</th><th scope="col">Thành tiền</th><th scope="col">Trạng thái</th></tr></thead>
+                    <thead><tr><th scope="col">Món</th><th scope="col">Số lượng</th><th scope="col">Đơn giá</th><th scope="col">Thành tiền</th><th scope="col">Trạng thái</th>@if ($order->status === 'pending')<th scope="col">Thao tác</th>@endif</tr></thead>
                     <tbody>@foreach ($order->orderItems as $item)<tr>
                         <th scope="row" data-label="Món">{{ $item->product_name }}{{ $item->variant_name ? ' · '.$item->variant_name : '' }}</th><td data-label="Số lượng">{{ $item->quantity }}</td><td data-label="Đơn giá">{{ number_format((float) $item->unit_price, 0, ',', '.') }} đ</td><td data-label="Thành tiền">{{ number_format((float) $item->subtotal, 0, ',', '.') }} đ</td><td data-label="Trạng thái"><span class="category-status">{{ $item->status }}</span></td>
+                        @if ($order->status === 'pending')<td data-label="Thao tác">@if ($item->status === 'pending')<form method="POST" action="{{ route('staff.orders.items.update', [$order, $item]) }}" class="category-form">@csrf @method('PATCH')<label class="sr-only" for="quantity-{{ $item->id }}">Số lượng {{ $item->product_name }}</label><input id="quantity-{{ $item->id }}" name="quantity" type="number" min="1" max="2147483647" step="1" value="{{ $item->quantity }}" required><x-public.button type="submit" variant="outline">Cập nhật</x-public.button></form><form method="POST" action="{{ route('staff.orders.items.destroy', [$order, $item]) }}" class="category-form">@csrf @method('DELETE')<x-public.button type="submit" variant="outline">Xóa</x-public.button></form>@else<em>Không thể sửa</em>@endif</td>@endif
                     </tr>@endforeach</tbody>
                 </table></div>
             @endif

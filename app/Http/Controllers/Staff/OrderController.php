@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Staff;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\StoreOrderRequest;
 use App\Http\Requests\Order\StoreOrderItemRequest;
+use App\Http\Requests\Order\UpdateOrderItemQuantityRequest;
 use App\Models\CafeTable;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\ProductVariant;
 use App\Services\OrderService;
 use DomainException;
@@ -100,6 +102,42 @@ class OrderController extends Controller
         }
 
         return redirect()->route('staff.orders.show', $order)->with('success', 'Đã thêm món vào đơn hàng.');
+    }
+
+    public function updateItem(UpdateOrderItemQuantityRequest $request, Order $order, OrderItem $orderItem, OrderService $service): RedirectResponse
+    {
+        try {
+            $service->updateItemQuantity($order, $orderItem, $request->safe()->only(['quantity']), $request->user('web'));
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['order' => $exception->getMessage()]);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors(['order' => 'Không thể cập nhật món. Vui lòng thử lại.'])->withInput();
+        }
+
+        return redirect()->route('staff.orders.show', $order)->with('success', 'Đã cập nhật số lượng món.');
+    }
+
+    public function destroyItem(Request $request, Order $order, OrderItem $orderItem, OrderService $service): RedirectResponse
+    {
+        $this->assertActiveStaff($request);
+
+        try {
+            $service->removeItem($order, $orderItem, $request->user('web'));
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['order' => $exception->getMessage()]);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors(['order' => 'Không thể xóa món. Vui lòng thử lại.']);
+        }
+
+        return redirect()->route('staff.orders.show', $order)->with('success', 'Đã xóa món khỏi đơn hàng.');
     }
 
     private function assertActiveStaff(Request $request): void

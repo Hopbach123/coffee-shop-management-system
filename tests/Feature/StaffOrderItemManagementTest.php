@@ -118,6 +118,33 @@ class StaffOrderItemManagementTest extends TestCase
         ]);
     }
 
+    private function item(Order $order, ProductVariant $variant, int $quantity = 1, string $toppingAmount = '0.00', string $status = 'pending'): OrderItem
+    {
+        $unitPrice = (string) $variant->price;
+        $subtotalInCents = ($this->moneyToCents($unitPrice) * $quantity) + $this->moneyToCents($toppingAmount);
+        $subtotal = intdiv($subtotalInCents, 100).'.'.str_pad((string) ($subtotalInCents % 100), 2, '0', STR_PAD_LEFT);
+
+        return OrderItem::forceCreate([
+            'order_id' => $order->id,
+            'product_id' => $variant->product_id,
+            'variant_id' => $variant->id,
+            'product_name' => $variant->product->name,
+            'variant_name' => $variant->name,
+            'quantity' => $quantity,
+            'unit_price' => $unitPrice,
+            'topping_amount' => $toppingAmount,
+            'subtotal' => $subtotal,
+            'status' => $status,
+        ]);
+    }
+
+    private function moneyToCents(string $amount): int
+    {
+        [$whole, $fraction] = explode('.', $amount);
+
+        return ((int) $whole * 100) + (int) str_pad($fraction, 2, '0');
+    }
+
     public function test_active_staff_can_add_available_variant_with_snapshots_and_recalculated_totals(): void
     {
         $staff = $this->staff();
@@ -213,5 +240,132 @@ class StaffOrderItemManagementTest extends TestCase
         $this->actingAs($this->staff('active', 'admin'), 'web')->post(route('staff.orders.items.store', $order), $payload)->assertForbidden();
         $this->actingAs($this->staff('inactive'), 'web')->post(route('staff.orders.items.store', $order), $payload)->assertForbidden();
         $this->assertDatabaseCount('order_items', 0);
+    }
+
+    public function test_active_staff_can_update_a_pending_item_quantity_and_recalculate_snapshot_totals(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $variant = $this->sellableVariant();
+        $item = $this->item($order, $variant, 2, '5.00');
+
+        $this->actingAs($staff, 'web')->patch(route('staff.orders.items.update', [$order, $item]), [
+            'quantity' => 3,
+            'unit_price' => '999.99',
+            'topping_amount' => '999.99',
+            'subtotal' => '999.99',
+            'status' => 'served',
+            'order_id' => 999,
+        ])->assertRedirect(route('staff.orders.show', $order))->assertSessionHas('success');
+
+        $item->refresh();
+        $this->assertSame(3, $item->quantity);
+        $this->assertSame('12.50', $item->unit_price);
+        $this->assertSame('5.00', $item->topping_amount);
+        $this->assertSame('42.50', $item->subtotal);
+        $this->assertSame('pending', $item->status);
+        $this->assertSame($order->id, $item->order_id);
+        $this->assertSame('42.50', $order->fresh()->subtotal);
+        $this->assertSame('42.50', $order->fresh()->total_amount);
+    }
+
+    public function test_quantity_update_rejects_invalid_values_and_item_from_another_order(): void
+    {
+        $staff = $this->staff();
+        $variant = $this->sellableVariant();
+        $order = $this->order($staff);
+        $item = $this->item($order, $variant);
+
+        $this->actingAs($staff, 'web');
+        foreach ([0, -1, '1.5'] as $quantity) {
+            $this->patchJson(route('staff.orders.items.update', [$order, $item]), ['quantity' => $quantity])
+                ->assertUnprocessable()->assertJsonValidationErrors('quantity');
+        }
+
+        $otherOrder = $this->order($staff);
+        $otherItem = $this->item($otherOrder, $variant);
+        $this->patchJson(route('staff.orders.items.update', [$order, $otherItem]), ['quantity' => 2])
+            ->assertUnprocessable()->assertJsonValidationErrors('order_item');
+
+        $this->assertSame(1, $item->fresh()->quantity);
+        $this->assertSame(1, $otherItem->fresh()->quantity);
+    }
+
+    public function test_non_pending_orders_or_items_cannot_be_updated_or_removed(): void
+    {
+        $staff = $this->staff();
+        $variant = $this->sellableVariant();
+        $order = $this->order($staff);
+        $item = $this->item($order, $variant, 1, '0.00', 'preparing');
+        $completedOrder = $this->order($staff, 'completed');
+        $completedOrderItem = $this->item($completedOrder, $variant);
+
+        $this->actingAs($staff, 'web');
+        $this->patchJson(route('staff.orders.items.update', [$order, $item]), ['quantity' => 2])
+            ->assertUnprocessable()->assertJsonValidationErrors('order_item');
+        $this->deleteJson(route('staff.orders.items.destroy', [$order, $item]))
+            ->assertUnprocessable()->assertJsonValidationErrors('order_item');
+        $this->patchJson(route('staff.orders.items.update', [$completedOrder, $completedOrderItem]), ['quantity' => 2])
+            ->assertUnprocessable()->assertJsonValidationErrors('order');
+        $this->deleteJson(route('staff.orders.items.destroy', [$completedOrder, $completedOrderItem]))
+            ->assertUnprocessable()->assertJsonValidationErrors('order');
+
+        $this->assertDatabaseCount('order_items', 2);
+        $this->assertSame(1, $item->fresh()->quantity);
+    }
+
+    public function test_active_staff_can_remove_pending_items_and_recalculate_order_to_zero(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $variant = $this->sellableVariant();
+        $firstItem = $this->item($order, $variant, 2);
+        $secondItem = $this->item($order, $variant, 1);
+
+        $this->actingAs($staff, 'web')->delete(route('staff.orders.items.destroy', [$order, $firstItem]))
+            ->assertRedirect(route('staff.orders.show', $order))->assertSessionHas('success');
+        $this->assertDatabaseMissing('order_items', ['id' => $firstItem->id]);
+        $this->assertSame('12.50', $order->fresh()->subtotal);
+
+        $this->delete(route('staff.orders.items.destroy', [$order, $secondItem]))
+            ->assertRedirect(route('staff.orders.show', $order));
+        $this->assertDatabaseMissing('order_items', ['id' => $secondItem->id]);
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'pending', 'subtotal' => '0.00', 'total_amount' => '0.00']);
+    }
+
+    public function test_guest_admin_and_inactive_staff_cannot_update_or_remove_order_items(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant());
+        $updateRoute = route('staff.orders.items.update', [$order, $item]);
+        $deleteRoute = route('staff.orders.items.destroy', [$order, $item]);
+
+        $this->patch($updateRoute, ['quantity' => 2])->assertRedirect(route('login'));
+        $this->delete($deleteRoute)->assertRedirect(route('login'));
+        $this->actingAs($this->staff('active', 'admin'), 'web')->patch($updateRoute, ['quantity' => 2])->assertForbidden();
+        $this->actingAs($this->staff('inactive'), 'web')->delete($deleteRoute)->assertForbidden();
+        $this->assertDatabaseHas('order_items', ['id' => $item->id, 'quantity' => 1]);
+    }
+
+    public function test_update_and_delete_roll_back_when_order_total_save_fails(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant());
+        Order::saving(fn () => throw new QueryException('sqlite', 'private SQL', [], new \RuntimeException('private failure')));
+
+        try {
+            $this->actingAs($staff, 'web')->from(route('staff.orders.show', $order))
+                ->patch(route('staff.orders.items.update', [$order, $item]), ['quantity' => 2])
+                ->assertRedirect(route('staff.orders.show', $order))->assertSessionHasErrors('order');
+            $this->assertSame(1, $item->fresh()->quantity);
+
+            $this->delete(route('staff.orders.items.destroy', [$order, $item]))
+                ->assertRedirect(route('staff.orders.show', $order))->assertSessionHasErrors('order');
+            $this->assertDatabaseHas('order_items', ['id' => $item->id]);
+        } finally {
+            Order::flushEventListeners();
+        }
     }
 }
