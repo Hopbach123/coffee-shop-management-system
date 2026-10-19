@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AreaController;
 use App\Http\Controllers\Admin\CafeTableController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IngredientController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductVariantController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'admin.home')->name('home');
+Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
 Route::get('reservations', [ReservationController::class, 'index'])->name('reservations.index');
 Route::get('reservations/create', [ReservationController::class, 'create'])->name('reservations.create');

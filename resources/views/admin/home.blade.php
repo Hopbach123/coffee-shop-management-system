@@ -45,6 +45,7 @@
         <p>Xin chào, {{ auth('web')->user()->name }} 👋</p>
         <h1>Tổng quan cửa hàng</h1>
         <span>Hôm nay, {{ now()->format('d/m/Y') }} · Dữ liệu từ hệ thống của bạn</span>
+        <a href="{{ route('admin.dashboard.index') }}">Xem thống kê đơn hàng và thanh toán →</a>
     </div>
     <a href="{{ route('admin.products.create') }}" class="sneat-primary">+ Thêm sản phẩm</a>
 </div>
