@@ -103,15 +103,27 @@ class DashboardRevenueStatisticsTest extends TestCase
         $this->assertSame($before, DB::table('payments')->get()->toJson());
     }
 
-    public function test_sqlite_precision_artifacts_are_not_presented_as_verified_money(): void
+    public function test_sqlite_decimal_sum_handles_different_engine_string_representations(): void
     {
         $this->payment($this->order(), 'paid', '0.10');
         $this->payment($this->order(), 'paid', '0.20');
-        // This engine has no exact MySQL DECIMAL semantics: reject the observed floating artifact.
-        $this->assertSame(['available' => false, 'amount' => null, 'reason' => 'invalid_aggregate'], app(RevenueStatisticsService::class)->summarize());
+        // SQLite versions may stringify this sum as 0.3 or expose extra floating digits.
+        // Neither representation establishes MySQL DECIMAL accuracy.
+        $this->assertContains(app(RevenueStatisticsService::class)->summarize(), [
+            ['available' => true, 'amount' => '0.30', 'reason' => null],
+            ['available' => false, 'amount' => null, 'reason' => 'invalid_aggregate'],
+        ], true);
         // Exact decimal-string presentation beyond float precision, independent of SQLite SUM semantics.
         $html = view('admin.dashboard._vnd', ['amount' => '19999999999999.98'])->render();
         $this->assertStringContainsString('19.999.999.999.999,98 VNĐ', $html);
+    }
+
+    public function test_aggregate_with_more_than_two_decimal_places_is_rejected(): void
+    {
+        // SQLite permits this fixture despite decimal(15, 2); MySQL does not.
+        // Use a deterministic third decimal to exercise the precision guard.
+        $this->payment($this->order(), 'paid', '0.001');
+        $this->assertSame(['available' => false, 'amount' => null, 'reason' => 'invalid_aggregate'], app(RevenueStatisticsService::class)->summarize());
     }
 
     public function test_dashboard_has_one_payment_aggregate_and_remains_read_only(): void
