@@ -1,0 +1,5 @@
+@extends('layouts.internal')
+@section('title','Pha chế')
+@section('content')<div class="sneat-page-title"><div><p>Vận hành</p><h1>Hàng đợi pha chế</h1><span>Danh sách món đang chờ và đang thực hiện</span></div></div>
+<div class="kitchen-grid">@forelse($items as $item)<article class="sneat-card kitchen-item"><div class="sneat-card-heading"><strong>#{{ $item->order?->order_code }}</strong><span class="sneat-pill {{ $item->status === 'ready' ? 'is-success' : 'is-warning' }}">{{ ['pending'=>'Chờ pha','preparing'=>'Đang pha','ready'=>'Sẵn sàng'][$item->status] ?? $item->status }}</span></div><h2>{{ $item->product_name }}</h2><p>{{ $item->variant_name }} · {{ $item->quantity }} phần</p>@if($item->note)<p>Ghi chú: {{ $item->note }}</p>@endif<small>{{ $item->created_at?->format('H:i d/m') }}</small></article>@empty<div class="sneat-card sneat-empty">Chưa có món nào trong hàng đợi.</div>@endforelse</div><p class="sneat-hint">Màn hình giám sát: việc đổi sang “đang pha” cần được tích hợp với dịch vụ kiểm tra và trừ tồn kho trước khi bật thao tác.</p>
+@endsection
