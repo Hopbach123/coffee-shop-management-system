@@ -4,10 +4,12 @@
             <p>✦ Cà phê thủ công, cảm hứng mỗi ngày</p>
             <span>MAISON DU CAFÉ · COFFEE & MORE</span>
             @auth('web')
-                <a href="{{ auth('web')->user()->role === 'admin' ? route('admin.home') : route('staff.home') }}">
-                    {{ auth('web')->user()->role === 'admin' ? 'Trang quản trị' : 'Khu vực nhân viên' }}
-                </a>
-                <form method="POST" action="{{ route('logout') }}" class="auth-logout">
+                @if (auth('web')->user()->role === 'admin')
+                    <a href="{{ route('admin.home') }}">Trang quản trị</a>
+                @elseif (auth('web')->user()->role === 'staff')
+                    <a href="{{ route('staff.home') }}">Khu vực nhân viên</a>
+                @endif
+                <form class="auth-logout" method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit">Đăng xuất</button>
                 </form>
