@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\StoreOrderRequest;
+use App\Http\Requests\Order\StoreOrderItemRequest;
 use App\Models\CafeTable;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\ProductVariant;
 use App\Services\OrderService;
 use DomainException;
 use Illuminate\Database\QueryException;
@@ -65,9 +67,39 @@ class OrderController extends Controller
     public function show(Request $request, Order $order): View
     {
         $this->assertActiveStaff($request);
-        $order->load(['cafeTable:id,table_code,table_name', 'customer:id,name,phone', 'creator:id,name']);
+        $order->load([
+            'cafeTable:id,table_code,table_name',
+            'customer:id,name,phone',
+            'creator:id,name',
+            'orderItems' => fn ($query) => $query->orderBy('id'),
+        ]);
 
-        return view('staff.orders.show', compact('order'));
+        $variants = ProductVariant::query()
+            ->where('status', 'available')
+            ->whereHas('product', fn ($query) => $query->where('status', 'available'))
+            ->with('product:id,name')
+            ->orderBy('product_id')
+            ->orderBy('id')
+            ->get(['id', 'product_id', 'name', 'price']);
+
+        return view('staff.orders.show', compact('order', 'variants'));
+    }
+
+    public function storeItem(StoreOrderItemRequest $request, Order $order, OrderService $service): RedirectResponse
+    {
+        try {
+            $service->addItem($order, $request->safe()->only(['variant_id', 'quantity', 'note']), $request->user('web'));
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['order' => $exception->getMessage()]);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors(['order' => 'Không thể thêm món. Vui lòng thử lại.'])->withInput();
+        }
+
+        return redirect()->route('staff.orders.show', $order)->with('success', 'Đã thêm món vào đơn hàng.');
     }
 
     private function assertActiveStaff(Request $request): void

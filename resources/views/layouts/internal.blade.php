@@ -21,7 +21,10 @@
                         <a href="{{ route('admin.toppings.index') }}" @if(request()->routeIs('admin.toppings.*')) aria-current="page" @endif>Topping</a>
                         <a href="{{ route('admin.promotions.index') }}" @if(request()->routeIs('admin.promotions.*')) aria-current="page" @endif>Khuyến mãi</a>
                     @endif
-                    <a href="{{ route('staff.home') }}" @if(request()->routeIs('staff.*')) aria-current="page" @endif>Khu vực Staff</a>
+                    <a href="{{ route('staff.home') }}" @if(request()->routeIs('staff.home')) aria-current="page" @endif>Khu vực Staff</a>
+                    @if (auth('web')->user()->role === 'staff')
+                        <a href="{{ route('staff.orders.index') }}" @if(request()->routeIs('staff.orders.*')) aria-current="page" @endif>Đơn hàng</a>
+                    @endif
                     <a href="{{ url('/') }}">Trang công khai</a>
                 </nav>
             </aside>
