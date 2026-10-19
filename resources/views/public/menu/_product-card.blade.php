@@ -31,6 +31,6 @@
                 @endforeach
             </ul>
         @endif
-        <a class="text-link" href="{{ route('menu.show', ['product' => $product->slug]) }}">Xem chi tiết <span aria-hidden="true">→</span></a>
+        <a class="coffee-button coffee-button--primary storefront-card-button" href="{{ route('menu.show', ['product' => $product->slug]) }}">{{ $product->status === 'available' ? 'Chọn món' : 'Xem chi tiết' }} →</a>
     </div>
 </article>

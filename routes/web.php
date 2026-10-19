@@ -5,8 +5,14 @@ use App\Http\Controllers\Public\MenuController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('public.home.index');
-});
+    try {
+        $featured = \Illuminate\Support\Facades\Schema::hasTable('products') && \Illuminate\Support\Facades\Schema::hasTable('product_variants')
+            ? \App\Models\Product::with('productVariants')->where('status', 'available')->where('is_featured', true)->limit(4)->get() : collect();
+    } catch (\Throwable $e) {
+        $featured = collect();
+    }
+    return view('public.home.index', compact('featured'));
+})->name('home');
 
 Route::get('/menu', [MenuController::class, 'index'])->name('menu.index');
 Route::get('/menu/search/results', [MenuController::class, 'search'])->name('menu.search');
