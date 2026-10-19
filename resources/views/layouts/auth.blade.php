@@ -4,7 +4,12 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>@yield('title', 'Đăng nhập — Maison du Café')</title>
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @if (is_file(public_path('build/manifest.json')))
+            @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @else
+            <link rel="stylesheet" href="{{ asset('assets/css/app.bundle.css') }}">
+            <script src="{{ asset('assets/js/app.bundle.js') }}" defer></script>
+        @endif
     </head>
     <body class="coffee-page auth-page">
         <a class="skip-link" href="#main-content">Đến nội dung chính</a>
