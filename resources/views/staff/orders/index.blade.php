@@ -1,0 +1,6 @@
+@extends('layouts.internal')
+@section('title','Đơn hàng')
+@section('content')
+<div class="sneat-page-title"><div><p>Vận hành</p><h1>Đơn hàng</h1><span>Danh sách đơn do nhân viên tạo</span></div><a href="{{ route('staff.home') }}" class="sneat-primary">+ Tạo đơn</a></div>
+<div class="sneat-card"><div class="sneat-responsive"><table class="sneat-datatable"><thead><tr><th>Mã đơn</th><th>Thời gian</th><th>Loại</th><th>Bàn</th><th>Nhân viên</th><th>Số món</th><th>Tổng</th><th>Trạng thái</th></tr></thead><tbody>@forelse($orders as $order)<tr><td><strong>{{ $order->order_code }}</strong></td><td>{{ $order->ordered_at?->format('d/m H:i') }}</td><td>{{ $order->order_type === 'takeaway' ? 'Mang đi' : 'Tại bàn' }}</td><td>{{ $order->cafeTable?->table_code ?? '—' }}</td><td>{{ $order->creator?->name ?? '—' }}</td><td>{{ $order->orderItems->sum('quantity') }}</td><td>{{ number_format((float)$order->total_amount,0,',','.') }}đ</td><td><span class="sneat-pill {{ $order->status === 'completed' ? 'is-success' : 'is-warning' }}">{{ $order->status }}</span></td></tr>@empty<tr><td colspan="8" class="sneat-empty">Chưa có đơn hàng.</td></tr>@endforelse</tbody></table></div><div class="sneat-pagination">{{ $orders->links() }}</div></div>
+@endsection

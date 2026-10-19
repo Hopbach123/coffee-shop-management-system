@@ -72,3 +72,10 @@ if (promotionType && promotionMaximum) {
     promotionType.addEventListener('change', updateMaximum);
     updateMaximum();
 }
+
+import './internal.js';
+
+// Respect accessibility preferences for motion-heavy hero media.
+if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll('.hero__video').forEach(video => video.pause());
+}
