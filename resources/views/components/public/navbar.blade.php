@@ -1,15 +1,13 @@
 <header class="site-header" data-site-header>
     <div class="utility-bar">
         <div class="coffee-container utility-bar__inner">
-            <p>Roasted with patience · Served with warmth</p>
-            <a href="#contact">Open daily · 07:00–21:00</a>
+            <p>✦ Cà phê thủ công, cảm hứng mỗi ngày</p>
+            <span>MAISON DU CAFÉ · COFFEE & MORE</span>
             @auth('web')
-                @if (auth('web')->user()->role === 'admin')
-                    <a href="{{ route('admin.home') }}">Trang quản trị</a>
-                @elseif (auth('web')->user()->role === 'staff')
-                    <a href="{{ route('staff.home') }}">Khu vực nhân viên</a>
-                @endif
-                <form class="auth-logout" method="POST" action="{{ route('logout') }}">
+                <a href="{{ auth('web')->user()->role === 'admin' ? route('admin.home') : route('staff.home') }}">
+                    {{ auth('web')->user()->role === 'admin' ? 'Trang quản trị' : 'Khu vực nhân viên' }}
+                </a>
+                <form method="POST" action="{{ route('logout') }}" class="auth-logout">
                     @csrf
                     <button type="submit">Đăng xuất</button>
                 </form>
@@ -18,24 +16,20 @@
             @endauth
         </div>
     </div>
-
-    <nav class="site-nav coffee-container" aria-label="Primary navigation">
+    <nav class="site-nav coffee-container" aria-label="Điều hướng chính">
         <x-public.brand />
-
         <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-menu" data-nav-toggle>
-            <span class="sr-only">Toggle navigation</span>
-            <span aria-hidden="true"></span>
-            <span aria-hidden="true"></span>
-            <span aria-hidden="true"></span>
+            <span class="sr-only">Mở menu</span>
+            <span></span>
+            <span></span>
+            <span></span>
         </button>
-
         <div class="site-nav__menu" id="primary-menu" data-nav-menu>
-            <a href="{{ url('/') }}#home">Home</a>
-            <a href="{{ url('/') }}#story">About</a>
+            <a href="{{ route('home') }}" @if(request()->routeIs('home')) aria-current="page" @endif>Trang chủ</a>
             <a href="{{ route('menu.index') }}" @if(request()->routeIs('menu.*')) aria-current="page" @endif>Thực đơn</a>
-            <a href="{{ url('/') }}#specials">Specials</a>
-            <a href="{{ url('/') }}#reservation">Reservation</a>
-            <a href="#contact">Contact</a>
+            <a href="{{ route('home') }}#specials">Ưu đãi</a>
+            <a href="{{ route('home') }}#story">Về Maison</a>
+            <a href="{{ route('home') }}#reservation">Đặt bàn</a>
         </div>
     </nav>
 </header>

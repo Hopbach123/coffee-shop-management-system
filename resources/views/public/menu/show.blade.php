@@ -16,7 +16,7 @@
                     @if ($imageUrl = $product->imageUrl())
                         <img src="{{ $imageUrl }}" alt="{{ $product->name }}">
                     @else
-                        <span aria-hidden="true">M</span>
+                        <img src="{{ asset('images/coffeehouse/artisan-espresso.png') }}" alt="Hình minh họa cà phê" loading="lazy">
                     @endif
                 </div>
                 <div class="public-menu-detail__copy">

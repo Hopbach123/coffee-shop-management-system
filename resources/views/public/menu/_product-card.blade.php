@@ -3,7 +3,7 @@
         @if ($imageUrl = $product->imageUrl())
             <img src="{{ $imageUrl }}" alt="{{ $product->name }}" loading="lazy">
         @else
-            <span aria-hidden="true">M</span>
+            <img src="{{ asset('images/coffeehouse/artisan-espresso.png') }}" alt="Hình minh họa cà phê" loading="lazy">
         @endif
     </div>
     <div class="public-menu-card__body">
@@ -31,6 +31,6 @@
                 @endforeach
             </ul>
         @endif
-        <a class="text-link" href="{{ route('menu.show', ['product' => $product->slug]) }}">Xem chi tiết <span aria-hidden="true">→</span></a>
+        <a class="coffee-button coffee-button--primary storefront-card-button" href="{{ route('menu.show', ['product' => $product->slug]) }}">{{ $product->status === 'available' ? 'Chọn món' : 'Xem chi tiết' }} →</a>
     </div>
 </article>

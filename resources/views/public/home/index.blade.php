@@ -1,31 +1,29 @@
 @extends('layouts.public')
 
-@section('title', 'Maison du Café — Slow coffee, warmly served')
+@section('title', 'Maison du Café — Cà phê ngon, khoảnh khắc đẹp')
 
 @section('content')
     <section class="hero" id="home" aria-labelledby="hero-title">
-        <img
-            class="hero__image"
-            src="{{ asset('images/coffeehouse/hero-coffeehouse.png') }}"
-            alt="A handcrafted espresso resting on a marble table in a warm, quiet coffeehouse"
-        >
+        <video class="hero__image hero__video" autoplay muted loop playsinline preload="metadata" poster="{{ asset('assets/video/maison-coffee-poster.jpg') }}" aria-hidden="true">
+            <source src="{{ asset('assets/video/maison-coffee-hero.mp4') }}" type="video/mp4">
+        </video>
         <div class="hero__veil" aria-hidden="true"></div>
         <div class="coffee-container hero__content">
-            <p class="hero__kicker">An independent house of coffee</p>
-            <h1 id="hero-title">Coffee worth<br><em>slowing down</em> for.</h1>
-            <p class="hero__intro">Thoughtfully roasted beans, careful hands and a room made for lingering a little longer.</p>
+            <p class="hero__kicker">MAISON DU CAFÉ · COFFEE & MORE</p>
+            <h1 id="hero-title">Một chút cà phê,<br><em>một ngày tuyệt vời.</em></h1>
+            <p class="hero__intro">Từ hạt cà phê tuyển chọn đến ly nước trên tay bạn — từng khoảnh khắc đều xứng đáng được nâng niu.</p>
             <div class="hero__actions">
-                <x-public.button href="#menu">Explore our menu</x-public.button>
-                <x-public.button href="#story" variant="ghost">Our story</x-public.button>
+                <x-public.button href="{{ route('menu.index') }}">Khám phá thực đơn →</x-public.button>
+                <x-public.button href="#story" variant="ghost">Câu chuyện của chúng tôi</x-public.button>
             </div>
         </div>
-        <p class="hero__note">Small batches · Seasonal origins · Everyday ritual</p>
+        <p class="hero__note">ROASTED WITH CARE · SERVED WITH LOVE</p>
     </section>
 
-    <section class="welcome-note" aria-label="Our coffee philosophy">
+    <section class="welcome-note" aria-label="Triết lý cà phê của Maison">
         <div class="coffee-container welcome-note__inner">
             <span aria-hidden="true">✦</span>
-            <p>From first light to the last quiet cup, every detail is considered.</p>
+            <p>Mỗi tách cà phê được làm bằng sự tận tâm, từ giọt đầu tiên đến dư vị cuối cùng.</p>
             <span aria-hidden="true">✦</span>
         </div>
     </section>
@@ -35,71 +33,81 @@
             <figure class="story__image-wrap">
                 <img
                     src="{{ asset('images/coffeehouse/artisan-espresso.png') }}"
-                    alt="Espresso, roasted coffee beans and an olive branch arranged on warm stone"
+                    alt="Espresso thủ công, hạt cà phê rang và những nguyên liệu chọn lọc"
                     loading="lazy"
                 >
-                <figcaption>Simple things, made exceptionally well.</figcaption>
+                <figcaption>Điều giản dị, được chăm chút bằng cả trái tim.</figcaption>
             </figure>
 
             <div class="story__copy">
-                <p class="accent-script">A quieter kind of ritual</p>
-                <x-public.section-heading eyebrow="Our house" title="Craft, comfort and a sense of place">
-                    <p>We believe a coffeehouse should feel discovered rather than designed: warm light, honest materials and the welcome rhythm of cups meeting saucers.</p>
+                <p class="accent-script">Một nhịp sống chậm hơn</p>
+                <x-public.section-heading eyebrow="Câu chuyện Maison" title="Chút tỉ mỉ trong từng ly cà phê">
+                    <p>Chúng tôi tin rằng quán cà phê đẹp nhất là nơi bạn muốn quay trở lại: có ánh sáng ấm, hương cà phê mới và những cuộc trò chuyện không vội vã.</p>
                 </x-public.section-heading>
-                <p>Our coffee is selected seasonally and roasted in small batches to keep each origin expressive. The result is a menu grounded in classics, with just enough room for curiosity.</p>
-                <a class="text-link" href="#menu">Discover the day’s cups <span aria-hidden="true">→</span></a>
+                <p>Từ những thức uống quen thuộc đến chút biến tấu mới, Maison luôn giữ trọn chất cà phê và sự chỉn chu ở từng công đoạn.</p>
+                <a class="text-link" href="{{ route('menu.index') }}">Khám phá hương vị hôm nay <span aria-hidden="true">→</span></a>
             </div>
         </div>
     </section>
 
-    <section class="coffee-section menu-preview" id="menu">
+    <section class="coffee-section storefront-featured" id="menu">
         <div class="coffee-container">
-            <x-public.section-heading eyebrow="From the bar" title="A short menu, carefully composed" align="center">
-                <p>Familiar forms, beautifully balanced — made to order and served without hurry.</p>
-            </x-public.section-heading>
-
-            <div class="menu-grid">
-                <article class="menu-card">
-                    <div class="menu-card__number" aria-hidden="true">01</div>
-                    <p class="menu-card__type">Espresso</p>
-                    <h3>House Espresso</h3>
-                    <p>Dark cacao, toasted almond and a lingering caramel finish.</p>
-                    <div class="menu-card__meta"><span>Single origin</span><strong>65</strong></div>
-                </article>
-                <article class="menu-card menu-card--featured">
-                    <p class="menu-card__badge">House favourite</p>
-                    <div class="menu-card__number" aria-hidden="true">02</div>
-                    <p class="menu-card__type">Milk coffee</p>
-                    <h3>Café Crème</h3>
-                    <p>Silky milk, rounded espresso and a whisper of raw sugar.</p>
-                    <div class="menu-card__meta"><span>Warm or iced</span><strong>78</strong></div>
-                </article>
-                <article class="menu-card">
-                    <div class="menu-card__number" aria-hidden="true">03</div>
-                    <p class="menu-card__type">Slow bar</p>
-                    <h3>Morning Filter</h3>
-                    <p>Clean, fragrant and brewed to reveal the season’s origin.</p>
-                    <div class="menu-card__meta"><span>Hand poured</span><strong>82</strong></div>
-                </article>
+            <div class="storefront-section-top">
+                <div>
+                    <p class="section-heading__eyebrow">BEST SELLERS</p>
+                    <h2>Thức uống dành cho bạn</h2>
+                    <p>Hương vị quen thuộc, được chăm chút từ những điều nhỏ nhất.</p>
+                </div>
+                <a class="text-link" href="{{ route('menu.index') }}">Xem thực đơn đầy đủ →</a>
             </div>
-
-            <div class="menu-preview__action">
-                <x-public.button href="#specials" variant="outline">View seasonal notes</x-public.button>
+            @if(isset($featured) && $featured->isNotEmpty())
+            <div class="storefront-products">
+                @foreach($featured as $product)
+                    <article class="storefront-product">
+                        <a href="{{ route('menu.show', $product->slug) }}" class="storefront-product-image">
+                            @if(method_exists($product, 'imageUrl') && $product->imageUrl())
+                                <img src="{{ $product->imageUrl() }}" alt="{{ $product->name }}" loading="lazy">
+                            @else
+                                <img src="{{ asset('images/coffeehouse/artisan-espresso.png') }}" alt="Hình minh họa cà phê" loading="lazy">
+                            @endif
+                        </a>
+                        <span class="storefront-product-tag">SIGNATURE</span>
+                        <h3>{{ $product->name }}</h3>
+                        <div class="storefront-product-bottom">
+                            <span>
+                                @if($product->productVariants && $product->productVariants->isNotEmpty())
+                                    Từ {{ number_format((float)$product->productVariants->min('price'), 0, ',', '.') }}đ
+                                @else
+                                    Xem sản phẩm
+                                @endif
+                            </span>
+                            <a href="{{ route('menu.show', $product->slug) }}" aria-label="Xem {{ $product->name }}">Xem món ↗</a>
+                        </div>
+                    </article>
+                @endforeach
             </div>
+            @else
+            <div class="storefront-featured-empty">
+                <img src="{{ asset('images/coffeehouse/artisan-espresso.png') }}" alt="Cà phê Maison du Café" loading="lazy">
+                <div>
+                    <h3>Cùng khám phá thực đơn của chúng tôi</h3>
+                    <p>Những thức uống được yêu thích sẽ xuất hiện tại đây khi cửa hàng đánh dấu sản phẩm nổi bật.</p>
+                    <x-public.button href="{{ route('menu.index') }}">Khám phá thực đơn</x-public.button>
+                </div>
+            </div>
+            @endif
         </div>
     </section>
 
-    <section class="special" id="specials" aria-labelledby="special-title">
-        <div class="coffee-container special__grid">
+    <section class="storefront-promo coffee-section" id="specials">
+        <div class="coffee-container storefront-promo-grid">
             <div>
-                <p class="section-heading__eyebrow section-heading__eyebrow--light">The seasonal table</p>
-                <h2 id="special-title">An afternoon pairing, made for two.</h2>
+                <p class="section-heading__eyebrow">MADE FOR YOUR MOMENTS</p>
+                <h2>Mang hương vị yêu thích đi cùng bạn.</h2>
+                <p>Khám phá thực đơn phong phú từ cà phê pha phin truyền thống, espresso chuẩn vị đến các dòng trà thanh mát cho ngày mới.</p>
+                <x-public.button href="{{ route('menu.index') }}">Chọn món yêu thích →</x-public.button>
             </div>
-            <p>Two hand-poured coffees with a warm butter madeleine. Available each afternoon while the bake lasts.</p>
-            <div class="special__offer">
-                <span>Daily</span>
-                <strong>14:00–17:00</strong>
-            </div>
+            <img src="{{ asset('images/coffeehouse/artisan-espresso.png') }}" loading="lazy" alt="Ly espresso thủ công và hạt cà phê">
         </div>
     </section>
 
@@ -107,11 +115,11 @@
         <div class="coffee-container reservation__panel">
             <div class="reservation__ornament" aria-hidden="true">M</div>
             <div>
-                <p class="accent-script">Your table is waiting</p>
-                <h2>Make room for a slower moment.</h2>
-                <p>Join us for an early cup, a long lunch or a candlelit evening coffee.</p>
+                <p class="accent-script">Một chỗ ngồi, một câu chuyện</p>
+                <h2>Một chiếc bàn dành cho bạn.</h2>
+                <p>Hẹn một buổi sáng thư thái hay cuộc gặp gỡ cuối tuần. Ghé Maison du Café để tận hưởng những phút giây trọn vẹn.</p>
             </div>
-            <x-public.button href="mailto:hello@example.com">Request a table</x-public.button>
+            <x-public.button href="{{ route('menu.index') }}">Khám phá ngay</x-public.button>
         </div>
     </section>
 @endsection
