@@ -1,0 +1,28 @@
+.shop-location {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.shop-location iframe {
+    display: block;
+    width: 100%;
+    min-height: 18rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    margin-block: var(--space-md);
+}
+
+.shop-location__links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.shop-location__links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 3rem;
+    padding: var(--space-sm);
+    border: 1px solid currentColor;
+    border-radius: var(--radius-sm);
+}
