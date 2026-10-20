@@ -10,7 +10,16 @@
                 <div class="order-detail__title-row"><h1 id="page-title">{{ $order->order_code }}</h1><span class="order-detail__status">{{ $order->status }}</span></div>
                 <p class="order-detail__intro">{{ $order->order_type === 'dine_in' ? 'Đơn tại chỗ' : 'Đơn mang đi' }} · tạo lúc {{ $order->ordered_at?->format('d/m/Y H:i') }}</p>
             </div>
-            <x-public.button href="{{ route('staff.orders.index') }}" variant="outline">Danh sách đơn</x-public.button>
+            <div class="order-detail__item-actions">
+                @if ($canCancel)
+                    <form method="POST" action="{{ route('staff.orders.cancel', $order) }}" onsubmit="return confirm('Hủy đơn hàng này? Dữ liệu đơn sẽ được lưu lại.');">
+                        @csrf
+                        @method('PATCH')
+                        <x-public.button type="submit" variant="outline">Hủy đơn</x-public.button>
+                    </form>
+                @endif
+                <x-public.button href="{{ route('staff.orders.index') }}" variant="outline">Danh sách đơn</x-public.button>
+            </div>
         </header>
 
         <div class="order-detail__overview">

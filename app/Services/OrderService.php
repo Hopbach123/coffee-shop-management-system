@@ -138,6 +138,54 @@ class OrderService
     }
 
     /**
+     * Cancel a pending order without deleting its historical item or topping snapshots.
+     * Inventory is intentionally not restored here: only pending items are cancellable.
+     */
+    public function cancel(Order $order, User $actor): Order
+    {
+        return DB::transaction(function () use ($order, $actor): Order {
+            $this->assertActiveStaff($actor);
+
+            $lockedOrder = Order::query()->lockForUpdate()->find($order->getKey());
+            if ($lockedOrder === null || $lockedOrder->status !== 'pending') {
+                throw ValidationException::withMessages(['order' => 'Chỉ có thể hủy đơn đang chờ xử lý.']);
+            }
+
+            $items = OrderItem::query()
+                ->where('order_id', $lockedOrder->getKey())
+                ->lockForUpdate()
+                ->get(['id', 'status']);
+
+            if ($items->contains(fn (OrderItem $item): bool => $item->status !== 'pending')) {
+                throw ValidationException::withMessages(['order_item' => 'Không thể hủy đơn đã có món đang hoặc đã pha chế.']);
+            }
+
+            $lockedOrder->forceFill(['status' => 'cancelled']);
+            $lockedOrder->saveOrFail();
+
+            if ($lockedOrder->order_type === 'dine_in' && $lockedOrder->table_id !== null) {
+                $table = CafeTable::withTrashed()->lockForUpdate()->find($lockedOrder->table_id);
+
+                if ($table !== null && ! $table->trashed() && $table->status === 'occupied') {
+                    $hasAnotherPendingOrder = Order::query()
+                        ->where('table_id', $table->getKey())
+                        ->where('order_type', 'dine_in')
+                        ->where('status', 'pending')
+                        ->where('id', '!=', $lockedOrder->getKey())
+                        ->lockForUpdate()
+                        ->exists();
+
+                    if (! $hasAnotherPendingOrder) {
+                        $table->forceFill(['status' => 'available'])->saveOrFail();
+                    }
+                }
+            }
+
+            return $lockedOrder;
+        }, 3);
+    }
+
+    /**
      * Add one sellable variant to a pending order and refresh its server-owned totals.
      * Toppings and item-status transitions are deliberately handled by later workflows.
      */

@@ -95,7 +95,29 @@ class OrderController extends Controller
             ->orderBy('id')
             ->get(['id', 'name', 'price']);
 
-        return view('staff.orders.show', compact('order', 'variants', 'toppings'));
+        $canCancel = $order->status === 'pending'
+            && $order->orderItems->every(fn (OrderItem $item): bool => $item->status === 'pending');
+
+        return view('staff.orders.show', compact('order', 'variants', 'toppings', 'canCancel'));
+    }
+
+    public function cancel(Request $request, Order $order, OrderService $service): RedirectResponse
+    {
+        $this->assertActiveStaff($request);
+
+        try {
+            $service->cancel($order, $request->user('web'));
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['order' => $exception->getMessage()]);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors(['order' => 'Không thể hủy đơn hàng. Vui lòng thử lại.']);
+        }
+
+        return redirect()->route('staff.orders.show', $order)->with('success', 'Đã hủy đơn hàng.');
     }
 
     public function storeItem(StoreOrderItemRequest $request, Order $order, OrderService $service): RedirectResponse
