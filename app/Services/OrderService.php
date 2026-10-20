@@ -100,6 +100,44 @@ class OrderService
     }
 
     /**
+     * Creates a pending order and all of its item snapshots as one POS workflow.
+     * The POS controller supplies only variant IDs and quantities from its draft cart.
+     *
+     * @param  array<int, array{variant_id: mixed, quantity: mixed}>  $items
+     */
+    public function createWithItems(array $attributes, array $items, User $actor): Order
+    {
+        if ($items === []) {
+            throw ValidationException::withMessages(['cart' => 'Chưa có món trong đơn.']);
+        }
+
+        return DB::transaction(function () use ($attributes, $items, $actor): Order {
+            foreach ($items as $item) {
+                if (! is_array($item)
+                    || ! isset($item['variant_id'], $item['quantity'])
+                    || ! ctype_digit((string) $item['variant_id'])
+                    || ! ctype_digit((string) $item['quantity'])
+                    || (int) $item['variant_id'] < 1
+                    || (int) $item['quantity'] < 1
+                    || (int) $item['quantity'] > 2147483647) {
+                    throw ValidationException::withMessages(['cart' => 'Giỏ hàng không hợp lệ.']);
+                }
+            }
+
+            $order = $this->create($attributes, $actor);
+
+            foreach ($items as $item) {
+                $this->addItem($order, [
+                    'variant_id' => (int) $item['variant_id'],
+                    'quantity' => (int) $item['quantity'],
+                ], $actor);
+            }
+
+            return Order::query()->findOrFail($order->getKey());
+        }, 3);
+    }
+
+    /**
      * Add one sellable variant to a pending order and refresh its server-owned totals.
      * Toppings and item-status transitions are deliberately handled by later workflows.
      */
