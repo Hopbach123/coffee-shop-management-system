@@ -20,6 +20,8 @@ use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
+    public function __construct(private readonly InventoryService $inventoryService) {}
+
     public function create(array $attributes, User $actor): Order
     {
         for ($attempt = 0; $attempt < 3; $attempt++) {
@@ -95,6 +97,92 @@ class OrderService
         }
 
         throw new DomainException('Không thể tạo mã đơn hàng duy nhất.');
+    }
+
+    /**
+     * Creates a pending order and all of its item snapshots as one POS workflow.
+     * The POS controller supplies only variant IDs and quantities from its draft cart.
+     *
+     * @param  array<int, array{variant_id: mixed, quantity: mixed}>  $items
+     */
+    public function createWithItems(array $attributes, array $items, User $actor): Order
+    {
+        if ($items === []) {
+            throw ValidationException::withMessages(['cart' => 'Chưa có món trong đơn.']);
+        }
+
+        return DB::transaction(function () use ($attributes, $items, $actor): Order {
+            foreach ($items as $item) {
+                if (! is_array($item)
+                    || ! isset($item['variant_id'], $item['quantity'])
+                    || ! ctype_digit((string) $item['variant_id'])
+                    || ! ctype_digit((string) $item['quantity'])
+                    || (int) $item['variant_id'] < 1
+                    || (int) $item['quantity'] < 1
+                    || (int) $item['quantity'] > 2147483647) {
+                    throw ValidationException::withMessages(['cart' => 'Giỏ hàng không hợp lệ.']);
+                }
+            }
+
+            $order = $this->create($attributes, $actor);
+
+            foreach ($items as $item) {
+                $this->addItem($order, [
+                    'variant_id' => (int) $item['variant_id'],
+                    'quantity' => (int) $item['quantity'],
+                ], $actor);
+            }
+
+            return Order::query()->findOrFail($order->getKey());
+        }, 3);
+    }
+
+    /**
+     * Cancel a pending order without deleting its historical item or topping snapshots.
+     * Inventory is intentionally not restored here: only pending items are cancellable.
+     */
+    public function cancel(Order $order, User $actor): Order
+    {
+        return DB::transaction(function () use ($order, $actor): Order {
+            $this->assertActiveStaff($actor);
+
+            $lockedOrder = Order::query()->lockForUpdate()->find($order->getKey());
+            if ($lockedOrder === null || $lockedOrder->status !== 'pending') {
+                throw ValidationException::withMessages(['order' => 'Chỉ có thể hủy đơn đang chờ xử lý.']);
+            }
+
+            $items = OrderItem::query()
+                ->where('order_id', $lockedOrder->getKey())
+                ->lockForUpdate()
+                ->get(['id', 'status']);
+
+            if ($items->contains(fn (OrderItem $item): bool => $item->status !== 'pending')) {
+                throw ValidationException::withMessages(['order_item' => 'Không thể hủy đơn đã có món đang hoặc đã pha chế.']);
+            }
+
+            $lockedOrder->forceFill(['status' => 'cancelled']);
+            $lockedOrder->saveOrFail();
+
+            if ($lockedOrder->order_type === 'dine_in' && $lockedOrder->table_id !== null) {
+                $table = CafeTable::withTrashed()->lockForUpdate()->find($lockedOrder->table_id);
+
+                if ($table !== null && ! $table->trashed() && $table->status === 'occupied') {
+                    $hasAnotherPendingOrder = Order::query()
+                        ->where('table_id', $table->getKey())
+                        ->where('order_type', 'dine_in')
+                        ->where('status', 'pending')
+                        ->where('id', '!=', $lockedOrder->getKey())
+                        ->lockForUpdate()
+                        ->exists();
+
+                    if (! $hasAnotherPendingOrder) {
+                        $table->forceFill(['status' => 'available'])->saveOrFail();
+                    }
+                }
+            }
+
+            return $lockedOrder;
+        }, 3);
     }
 
     /**
@@ -275,6 +363,40 @@ class OrderService
         }, 3);
     }
 
+    public function transitionItemStatus(Order $order, OrderItem $item, string $nextStatus, User $actor): OrderItem
+    {
+        return DB::transaction(function () use ($order, $item, $nextStatus, $actor): OrderItem {
+            $this->assertActiveStaff($actor);
+            $lockedOrder = $this->lockedPendingOrder($order);
+            $lockedItem = $this->lockedItemForStatus($lockedOrder, $item);
+
+            if ($nextStatus === 'preparing') {
+                if ($lockedItem->status !== 'pending') {
+                    throw ValidationException::withMessages(['order_item' => 'Món phải ở trạng thái chờ trước khi bắt đầu pha chế.']);
+                }
+
+                $this->inventoryService->startPreparing($lockedItem, $actor);
+
+                return OrderItem::query()->findOrFail($lockedItem->getKey());
+            }
+
+            $expectedCurrentStatus = match ($nextStatus) {
+                'ready' => 'preparing',
+                'served' => 'ready',
+                default => null,
+            };
+
+            if ($expectedCurrentStatus === null || $lockedItem->status !== $expectedCurrentStatus) {
+                throw ValidationException::withMessages(['status' => 'Chuyển trạng thái món không hợp lệ.']);
+            }
+
+            $lockedItem->forceFill(['status' => $nextStatus]);
+            $lockedItem->saveOrFail();
+
+            return $lockedItem;
+        }, 3);
+    }
+
     private function assertActiveStaff(User $actor): void
     {
         $currentActor = User::query()->lockForUpdate()->find($actor->getKey());
@@ -307,6 +429,21 @@ class OrderService
 
         if ($lockedItem->status !== 'pending') {
             throw ValidationException::withMessages(['order_item' => 'Chỉ có thể chỉnh sửa món đang chờ pha chế.']);
+        }
+
+        return $lockedItem;
+    }
+
+    private function lockedItemForStatus(Order $order, OrderItem $item): OrderItem
+    {
+        $lockedItem = OrderItem::query()
+            ->whereKey($item->getKey())
+            ->where('order_id', $order->getKey())
+            ->lockForUpdate()
+            ->first();
+
+        if ($lockedItem === null) {
+            throw ValidationException::withMessages(['order_item' => 'Món không thuộc đơn hàng này.']);
         }
 
         return $lockedItem;

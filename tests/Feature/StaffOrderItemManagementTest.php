@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\Ingredient;
+use App\Models\InventoryTransaction;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderItemTopping;
 use App\Models\Product;
+use App\Models\ProductRecipe;
 use App\Models\ProductVariant;
 use App\Models\Topping;
 use App\Models\User;
@@ -25,6 +28,7 @@ class StaffOrderItemManagementTest extends TestCase
         (require database_path('migrations/0001_01_01_000000_create_users_table.php'))->up();
         (require database_path('migrations/2026_08_14_000003_create_categories_table.php'))->up();
         (require database_path('migrations/2026_08_14_000004_create_toppings_table.php'))->up();
+        (require database_path('migrations/2026_08_14_000005_create_ingredients_table.php'))->up();
         (require database_path('migrations/2026_08_14_000007_create_products_table.php'))->up();
 
         // The production migrations add MySQL-only CHECK constraints after create.
@@ -84,6 +88,29 @@ class StaffOrderItemManagementTest extends TestCase
             $table->integer('quantity')->default(1);
             $table->timestamps();
             $table->unique(['order_item_id', 'topping_id']);
+        });
+
+        Schema::create('product_recipes', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('variant_id')->constrained('product_variants')->restrictOnDelete();
+            $table->foreignId('ingredient_id')->constrained('ingredients')->restrictOnDelete();
+            $table->decimal('quantity', 12, 3);
+            $table->timestamps();
+            $table->unique(['variant_id', 'ingredient_id']);
+        });
+
+        Schema::create('inventory_transactions', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('ingredient_id')->constrained('ingredients')->restrictOnDelete();
+            $table->string('type');
+            $table->decimal('quantity', 12, 3);
+            $table->decimal('before_quantity', 12, 3);
+            $table->decimal('after_quantity', 12, 3);
+            $table->string('reference_type')->nullable();
+            $table->unsignedBigInteger('reference_id')->nullable();
+            $table->text('note')->nullable();
+            $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
+            $table->timestamps();
         });
 
         $this->withoutVite();
@@ -165,6 +192,27 @@ class StaffOrderItemManagementTest extends TestCase
             'name' => uniqid('Topping-', true),
             'price' => $price,
             'status' => $status,
+        ]);
+    }
+
+    private function ingredient(string $stock = '10.000', string $status = 'active'): Ingredient
+    {
+        return Ingredient::forceCreate([
+            'name' => uniqid('Ingredient-', true),
+            'unit' => 'g',
+            'current_stock' => $stock,
+            'minimum_stock' => '0.000',
+            'cost_price' => '0.00',
+            'status' => $status,
+        ]);
+    }
+
+    private function recipe(OrderItem $item, Ingredient $ingredient, string $quantity): void
+    {
+        ProductRecipe::forceCreate([
+            'variant_id' => $item->variant_id,
+            'ingredient_id' => $ingredient->id,
+            'quantity' => $quantity,
         ]);
     }
 
@@ -593,5 +641,100 @@ class StaffOrderItemManagementTest extends TestCase
         $this->assertSame('6.00', $item->fresh()->topping_amount);
         $this->assertSame('31.00', $item->fresh()->subtotal);
         $this->assertSame('31.00', $order->fresh()->total_amount);
+    }
+
+    public function test_active_staff_can_start_preparing_and_inventory_is_consumed_once(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant(), 2);
+        $ingredient = $this->ingredient('8.000');
+        $this->recipe($item, $ingredient, '1.500');
+        $route = route('staff.orders.items.status.update', [$order, $item]);
+
+        $this->actingAs($staff, 'web')->patch($route, [
+            'status' => 'preparing',
+            'quantity' => 999,
+            'unit_price' => '999.99',
+        ])->assertRedirect(route('staff.orders.show', $order))->assertSessionHas('success');
+
+        $this->assertSame('preparing', $item->fresh()->status);
+        $this->assertSame(2, $item->fresh()->quantity);
+        $this->assertSame('5.000', $ingredient->fresh()->current_stock);
+        $this->assertDatabaseHas('inventory_transactions', [
+            'ingredient_id' => $ingredient->id,
+            'type' => 'consume',
+            'quantity' => '3.000',
+            'before_quantity' => '8.000',
+            'after_quantity' => '5.000',
+            'reference_type' => 'order_item',
+            'reference_id' => $item->id,
+            'created_by' => $staff->id,
+        ]);
+
+        $this->patchJson($route, ['status' => 'preparing'])
+            ->assertUnprocessable()->assertJsonValidationErrors('order_item');
+        $this->assertSame('5.000', $ingredient->fresh()->current_stock);
+        $this->assertDatabaseCount('inventory_transactions', 1);
+    }
+
+    public function test_insufficient_stock_rolls_back_pending_to_preparing_transition(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant());
+        $ingredient = $this->ingredient('0.500');
+        $this->recipe($item, $ingredient, '1.000');
+
+        $this->actingAs($staff, 'web')->patchJson(route('staff.orders.items.status.update', [$order, $item]), ['status' => 'preparing'])
+            ->assertUnprocessable()->assertJsonValidationErrors('ingredient');
+
+        $this->assertSame('pending', $item->fresh()->status);
+        $this->assertSame('0.500', $ingredient->fresh()->current_stock);
+        $this->assertDatabaseCount('inventory_transactions', 0);
+    }
+
+    public function test_status_transition_allows_only_the_approved_forward_lifecycle(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant());
+        $ingredient = $this->ingredient('4.000');
+        $this->recipe($item, $ingredient, '1.000');
+        $route = route('staff.orders.items.status.update', [$order, $item]);
+
+        $this->actingAs($staff, 'web');
+        $this->patchJson($route, ['status' => 'ready'])->assertUnprocessable()->assertJsonValidationErrors('status');
+        $this->patch($route, ['status' => 'preparing'])->assertRedirect(route('staff.orders.show', $order));
+        $this->patch($route, ['status' => 'ready'])->assertRedirect(route('staff.orders.show', $order));
+        $this->patch($route, ['status' => 'served'])->assertRedirect(route('staff.orders.show', $order));
+        $this->patchJson($route, ['status' => 'preparing'])->assertUnprocessable()->assertJsonValidationErrors('order_item');
+
+        $this->assertSame('served', $item->fresh()->status);
+        $this->assertSame('3.000', $ingredient->fresh()->current_stock);
+        $this->assertDatabaseCount('inventory_transactions', 1);
+    }
+
+    public function test_status_transition_rejects_wrong_order_non_pending_order_and_unauthorized_actors(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $otherItem = $this->item($this->order($staff), $this->sellableVariant());
+        $item = $this->item($order, $this->sellableVariant());
+        $authorizedRoute = route('staff.orders.items.status.update', [$order, $item]);
+        $this->patch($authorizedRoute, ['status' => 'preparing'])->assertRedirect(route('login'));
+
+        $route = route('staff.orders.items.status.update', [$order, $otherItem]);
+
+        $this->actingAs($staff, 'web')->patchJson($route, ['status' => 'preparing'])
+            ->assertUnprocessable()->assertJsonValidationErrors('order_item');
+
+        $completedOrder = $this->order($staff, 'completed');
+        $completedItem = $this->item($completedOrder, $this->sellableVariant());
+        $this->patchJson(route('staff.orders.items.status.update', [$completedOrder, $completedItem]), ['status' => 'preparing'])
+            ->assertUnprocessable()->assertJsonValidationErrors('order');
+
+        $this->actingAs($this->staff('active', 'admin'), 'web')->patch($authorizedRoute, ['status' => 'preparing'])->assertForbidden();
+        $this->actingAs($this->staff('inactive'), 'web')->patch($authorizedRoute, ['status' => 'preparing'])->assertForbidden();
     }
 }

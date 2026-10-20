@@ -10,7 +10,16 @@
                 <div class="order-detail__title-row"><h1 id="page-title">{{ $order->order_code }}</h1><span class="order-detail__status">{{ $order->status }}</span></div>
                 <p class="order-detail__intro">{{ $order->order_type === 'dine_in' ? 'Đơn tại chỗ' : 'Đơn mang đi' }} · tạo lúc {{ $order->ordered_at?->format('d/m/Y H:i') }}</p>
             </div>
-            <x-public.button href="{{ route('staff.orders.index') }}" variant="outline">Danh sách đơn</x-public.button>
+            <div class="order-detail__item-actions">
+                @if ($canCancel)
+                    <form method="POST" action="{{ route('staff.orders.cancel', $order) }}" onsubmit="return confirm('Hủy đơn hàng này? Dữ liệu đơn sẽ được lưu lại.');">
+                        @csrf
+                        @method('PATCH')
+                        <x-public.button type="submit" variant="outline">Hủy đơn</x-public.button>
+                    </form>
+                @endif
+                <x-public.button href="{{ route('staff.orders.index') }}" variant="outline">Danh sách đơn</x-public.button>
+            </div>
         </header>
 
         <div class="order-detail__overview">
@@ -37,7 +46,7 @@
                     <tbody>@foreach ($order->orderItems as $item)<tr>
                         <th scope="row" data-label="Món"><span class="order-detail__item-name">{{ $item->product_name }}</span>@if ($item->variant_name)<small>{{ $item->variant_name }}</small>@endif @if ($item->note)<em>{{ $item->note }}</em>@endif</th>
                         <td data-label="Đơn giá">{{ number_format((float) $item->unit_price, 0, ',', '.') }} đ</td><td data-label="Số lượng">{{ $item->quantity }}</td><td data-label="Tạm tính"><strong>{{ number_format((float) $item->subtotal, 0, ',', '.') }} đ</strong></td><td data-label="Trạng thái"><span class="category-status">{{ $item->status }}</span></td>
-                        @if ($order->status === 'pending')<td data-label="Thao tác">@if ($item->status === 'pending')<div class="order-detail__item-actions"><form method="POST" action="{{ route('staff.orders.items.update', [$order, $item]) }}">@csrf @method('PATCH')<label class="sr-only" for="quantity-{{ $item->id }}">Số lượng {{ $item->product_name }}</label><input id="quantity-{{ $item->id }}" name="quantity" type="number" min="1" max="2147483647" step="1" value="{{ $item->quantity }}" required><x-public.button type="submit" variant="outline">Cập nhật</x-public.button></form><form method="POST" action="{{ route('staff.orders.items.destroy', [$order, $item]) }}">@csrf @method('DELETE')<x-public.button type="submit" variant="outline">Xóa món</x-public.button></form></div>@else<span class="order-detail__locked">Đã khóa</span>@endif</td>@endif
+                        @if ($order->status === 'pending')<td data-label="Thao tác">@if ($item->status === 'pending')<div class="order-detail__item-actions"><form method="POST" action="{{ route('staff.orders.items.update', [$order, $item]) }}">@csrf @method('PATCH')<label class="sr-only" for="quantity-{{ $item->id }}">Số lượng {{ $item->product_name }}</label><input id="quantity-{{ $item->id }}" name="quantity" type="number" min="1" max="2147483647" step="1" value="{{ $item->quantity }}" required><x-public.button type="submit" variant="outline">Cập nhật</x-public.button></form><form method="POST" action="{{ route('staff.orders.items.destroy', [$order, $item]) }}">@csrf @method('DELETE')<x-public.button type="submit" variant="outline">Xóa món</x-public.button></form></div>@endif @if (in_array($item->status, ['pending', 'preparing', 'ready'], true))<form method="POST" action="{{ route('staff.orders.items.status.update', [$order, $item]) }}">@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $item->status === 'pending' ? 'preparing' : ($item->status === 'preparing' ? 'ready' : 'served') }}"><x-public.button type="submit" variant="outline">{{ $item->status === 'pending' ? 'Bắt đầu pha chế' : ($item->status === 'preparing' ? 'Sẵn sàng' : 'Đã phục vụ') }}</x-public.button></form>@else<span class="order-detail__locked">Đã khóa</span>@endif</td>@endif
                     </tr>@endforeach</tbody>
                 </table></div>
             @endif
