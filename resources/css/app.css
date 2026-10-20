@@ -6,5 +6,6 @@
 @import './admin/products.css';
 @import './admin/promotions.css';
 @import './admin/dashboard.css';
+@import './staff/orders.css';
 @import './public/menu.css';
 @import './public/shop-location.css';

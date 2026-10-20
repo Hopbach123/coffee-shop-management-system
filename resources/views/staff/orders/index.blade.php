@@ -1,6 +1,51 @@
 @extends('layouts.internal')
-@section('title','Đơn hàng')
+@section('title', 'Đơn hàng')
 @section('content')
-<div class="sneat-page-title"><div><p>Vận hành</p><h1>Đơn hàng</h1><span>Danh sách đơn do nhân viên tạo</span></div><a href="{{ route('staff.home') }}" class="sneat-primary">+ Tạo đơn</a></div>
-<div class="sneat-card"><div class="sneat-responsive"><table class="sneat-datatable"><thead><tr><th>Mã đơn</th><th>Thời gian</th><th>Loại</th><th>Bàn</th><th>Nhân viên</th><th>Số món</th><th>Tổng</th><th>Trạng thái</th></tr></thead><tbody>@forelse($orders as $order)<tr><td><strong>{{ $order->order_code }}</strong></td><td>{{ $order->ordered_at?->format('d/m H:i') }}</td><td>{{ $order->order_type === 'takeaway' ? 'Mang đi' : 'Tại bàn' }}</td><td>{{ $order->cafeTable?->table_code ?? '—' }}</td><td>{{ $order->creator?->name ?? '—' }}</td><td>{{ $order->orderItems->sum('quantity') }}</td><td>{{ number_format((float)$order->total_amount,0,',','.') }}đ</td><td><span class="sneat-pill {{ $order->status === 'completed' ? 'is-success' : 'is-warning' }}">{{ $order->status }}</span></td></tr>@empty<tr><td colspan="8" class="sneat-empty">Chưa có đơn hàng.</td></tr>@endforelse</tbody></table></div><div class="sneat-pagination">{{ $orders->links() }}</div></div>
+<section class="category-page" aria-labelledby="page-title">
+    <div class="category-heading">
+        <div>
+            <p class="section-heading__eyebrow">Maison du Café · Nhân viên</p>
+            <h1 id="page-title">Đơn hàng</h1>
+            <p>Theo dõi các đơn đang được nhân viên tạo.</p>
+        </div>
+        <x-public.button href="{{ route('staff.orders.create') }}">Tạo đơn hàng</x-public.button>
+    </div>
+    @if (session('success')) <p class="category-notice category-notice--success" role="status">{{ session('success') }}</p> @endif
+    @if ($errors->any()) <div class="category-notice category-notice--error" role="alert">@foreach ($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div> @endif
+    <div class="category-panel">
+        @if ($orders->isEmpty())
+        <div class="category-empty">
+            <h2>Chưa có đơn hàng</h2>
+            <p>Tạo đơn đầu tiên để bắt đầu phục vụ khách.</p>
+        </div>
+        @else
+        <div class="category-table-wrap product-table-wrap">
+            <table class="category-table">
+                <caption class="sr-only">Danh sách đơn hàng</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Mã đơn</th>
+                        <th scope="col">Loại đơn</th>
+                        <th scope="col">Bàn</th>
+                        <th scope="col">Khách hàng</th>
+                        <th scope="col">Trạng thái</th>
+                        <th scope="col">Thời gian</th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>@foreach ($orders as $order)<tr>
+                        <th scope="row" data-label="Mã đơn">{{ $order->order_code }}</th>
+                        <td data-label="Loại đơn">{{ $order->order_type === 'dine_in' ? 'Tại chỗ' : 'Mang đi' }}</td>
+                        <td data-label="Bàn">{{ $order->cafeTable?->table_code ?? '—' }}</td>
+                        <td data-label="Khách hàng">{{ $order->customer?->name ?? 'Khách vãng lai' }}</td>
+                        <td data-label="Trạng thái"><span class="category-status">{{ $order->status }}</span></td>
+                        <td data-label="Thời gian">{{ $order->ordered_at?->format('d/m/Y H:i') }}</td>
+                        <td data-label="Thao tác"><x-public.button href="{{ route('staff.orders.show', $order) }}" variant="outline">Xem</x-public.button></td>
+                    </tr>@endforeach</tbody>
+            </table>
+        </div>
+        @if ($orders->hasPages())<div class="category-pagination">{{ $orders->links() }}</div>@endif
+        @endif
+    </div>
+</section>
 @endsection
