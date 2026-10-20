@@ -20,6 +20,8 @@ use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
+    public function __construct(private readonly InventoryService $inventoryService) {}
+
     public function create(array $attributes, User $actor): Order
     {
         for ($attempt = 0; $attempt < 3; $attempt++) {
@@ -275,6 +277,40 @@ class OrderService
         }, 3);
     }
 
+    public function transitionItemStatus(Order $order, OrderItem $item, string $nextStatus, User $actor): OrderItem
+    {
+        return DB::transaction(function () use ($order, $item, $nextStatus, $actor): OrderItem {
+            $this->assertActiveStaff($actor);
+            $lockedOrder = $this->lockedPendingOrder($order);
+            $lockedItem = $this->lockedItemForStatus($lockedOrder, $item);
+
+            if ($nextStatus === 'preparing') {
+                if ($lockedItem->status !== 'pending') {
+                    throw ValidationException::withMessages(['order_item' => 'Món phải ở trạng thái chờ trước khi bắt đầu pha chế.']);
+                }
+
+                $this->inventoryService->startPreparing($lockedItem, $actor);
+
+                return OrderItem::query()->findOrFail($lockedItem->getKey());
+            }
+
+            $expectedCurrentStatus = match ($nextStatus) {
+                'ready' => 'preparing',
+                'served' => 'ready',
+                default => null,
+            };
+
+            if ($expectedCurrentStatus === null || $lockedItem->status !== $expectedCurrentStatus) {
+                throw ValidationException::withMessages(['status' => 'Chuyển trạng thái món không hợp lệ.']);
+            }
+
+            $lockedItem->forceFill(['status' => $nextStatus]);
+            $lockedItem->saveOrFail();
+
+            return $lockedItem;
+        }, 3);
+    }
+
     private function assertActiveStaff(User $actor): void
     {
         $currentActor = User::query()->lockForUpdate()->find($actor->getKey());
@@ -307,6 +343,21 @@ class OrderService
 
         if ($lockedItem->status !== 'pending') {
             throw ValidationException::withMessages(['order_item' => 'Chỉ có thể chỉnh sửa món đang chờ pha chế.']);
+        }
+
+        return $lockedItem;
+    }
+
+    private function lockedItemForStatus(Order $order, OrderItem $item): OrderItem
+    {
+        $lockedItem = OrderItem::query()
+            ->whereKey($item->getKey())
+            ->where('order_id', $order->getKey())
+            ->lockForUpdate()
+            ->first();
+
+        if ($lockedItem === null) {
+            throw ValidationException::withMessages(['order_item' => 'Món không thuộc đơn hàng này.']);
         }
 
         return $lockedItem;
