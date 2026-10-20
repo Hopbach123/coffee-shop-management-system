@@ -6,7 +6,7 @@ use App\Http\Controllers\Staff\PosController;
 use App\Http\Controllers\Staff\WorkspaceController;
 
 
-Route::middleware('role:staff')->group(function (): void {
+Route::middleware('role:admin,staff')->group(function (): void {
     Route::get('/', [PosController::class, 'index'])->name('home');
     Route::post('/pos/add', [PosController::class, 'add'])->name('pos.add');
     Route::post('/pos/remove', [PosController::class, 'remove'])->name('pos.remove');

@@ -7,7 +7,7 @@
         </section>
         <section aria-labelledby="footer-visit-title">
             <h3 id="footer-visit-title">Ghé thăm</h3>
-            <address>Liên hệ cửa hàng để xác nhận địa chỉ và thời gian hoạt động.</address>
+            <x-public.shop-location />
         </section>
         <section aria-labelledby="footer-hours-title">
             <h3 id="footer-hours-title">Khám phá</h3>

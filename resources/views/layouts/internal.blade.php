@@ -1,31 +1,6 @@
 @php
 $isAdmin = request()->routeIs('admin.*');
-$menus = $isAdmin ? [
-['label' => 'TỔNG QUAN', 'links' => [
-['route' => 'admin.home', 'text' => 'Dashboard', 'icon' => 'grid']
-]],
-['label' => 'THỰC ĐƠN', 'links' => [
-['route' => 'admin.categories.index', 'text' => 'Danh mục', 'icon' => 'layers'],
-['route' => 'admin.products.index', 'text' => 'Sản phẩm', 'icon' => 'coffee'],
-['route' => 'admin.product-variants.index', 'text' => 'Biến thể', 'icon' => 'box'],
-['route' => 'admin.toppings.index', 'text' => 'Topping', 'icon' => 'plus'],
-['route' => 'admin.promotions.index', 'text' => 'Khuyến mãi', 'icon' => 'gift'],
-]],
-['label' => 'KHO & NGUYÊN LIỆU', 'links' => [
-['route' => 'admin.ingredients.index', 'text' => 'Nguyên liệu', 'icon' => 'tag'],
-]],
-['label' => 'MẶT BẰNG & BÀN', 'links' => [
-['route' => 'admin.areas.index', 'text' => 'Khu vực', 'icon' => 'chart'],
-['route' => 'admin.tables.index', 'text' => 'Bàn cà phê', 'icon' => 'table'],
-]],
-['label' => 'NGƯỜI DÙNG', 'links' => [
-['route' => 'admin.customers.index', 'text' => 'Khách hàng', 'icon' => 'users'],
-['route' => 'admin.users.index', 'text' => 'Tài khoản nội bộ', 'icon' => 'users'],
-]],
-['label' => 'VẬN HÀNH', 'links' => [
-['route' => 'staff.home', 'text' => 'Màn hình POS', 'icon' => 'bag'],
-]],
-] : [
+$menus = [
 ['label' => 'WORKSPACE', 'links' => [
 ['route' => 'staff.home', 'text' => 'Bán hàng / POS', 'icon' => 'bag'],
 ['route' => 'staff.orders.index', 'text' => 'Đơn hàng', 'icon' => 'receipt'],
@@ -58,6 +33,9 @@ $menus = $isAdmin ? [
                 <span>Maison <strong>du Café</strong><small>{{ $isAdmin ? 'Khu vực Admin' : 'STAFF WORKSPACE' }}</small></span>
             </a>
             <nav aria-label="Điều hướng nội bộ" class="sneat-nav">
+                @if ($isAdmin)
+                    <x-internal.admin-sidebar />
+                @else
                 @foreach ($menus as $group)
                 <p class="sneat-nav-section">{{ $group['label'] }}</p>
                 @foreach($group['links'] as $entry)
@@ -66,6 +44,7 @@ $menus = $isAdmin ? [
                 </a>
                 @endforeach
                 @endforeach
+                @endif
             </nav>
             <div class="sneat-sidebar-footer">
                 <a href="{{ url('/') }}"><x-internal.icon name="arrow" size="17" /> Xem website khách</a>
