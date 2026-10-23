@@ -131,17 +131,19 @@ Biểu đồ, kỳ báo cáo và cách tổng hợp cụ thể là TBD.
 | Quản lý User | Quản lý | Không | Không |
 | Xem tình trạng Table | Có | Có | TBD trong quy trình đặt bàn |
 | Quản lý cấu hình Table | Quản lý | Không | Không |
-| Reservation | Quản lý/giám sát ở mức tổng quan | Hỗ trợ vận hành | Tham gia khi chức năng được triển khai |
+| Reservation | Quản lý/giám sát và hỗ trợ vận hành như Staff | Hỗ trợ vận hành | Tham gia khi chức năng được triển khai |
 | Xem Menu | Có | Có | Có |
 | Quản lý Menu | Quản lý | TBD nếu có quyền giới hạn trong tương lai | Không |
-| Vận hành Order nội bộ | Theo dõi | Thực hiện | Không trong phiên bản đầu |
-| Payment | Theo dõi | Xử lý | Là bên tham gia thanh toán, không vận hành hệ thống nội bộ |
+| Vận hành Order nội bộ | Theo dõi và thực hiện như Staff | Thực hiện | Không trong phiên bản đầu |
+| Payment | Theo dõi và xử lý như Staff | Xử lý | Là bên tham gia thanh toán, không vận hành hệ thống nội bộ |
 | Quản lý Promotion | Quản lý | TBD | Không |
 | Inventory | Quản lý | Chỉ xem/thao tác nếu được phê duyệt sau – TBD | Không |
 | Dashboard | Có | TBD nếu được phê duyệt sau | Không |
 | Xem trang công khai | Có | Có | Có |
 
 Các ô TBD không cấp quyền mặc định; chúng chỉ ghi nhận điểm cần được phê duyệt trước khi phân rã thành yêu cầu chi tiết.
+
+Quy tắc truy cập được engineer xác nhận ngày 09/10/2026: Admin có toàn bộ quyền vận hành đã được phê duyệt của Staff cùng quyền quản trị. Khu vực Admin chỉ cho Admin; khu vực Staff cho cả Admin và Staff. Staff không được truy cập khu vực Admin. Quyền truy cập không miễn trừ validation, quy tắc nghiệp vụ hoặc việc ghi nhận đúng người thực hiện; các nghiệp vụ còn TBD vẫn cần phê duyệt riêng.
 
 ## 8. In-Scope Features
 
