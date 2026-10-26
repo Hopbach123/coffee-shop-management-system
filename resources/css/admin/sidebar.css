@@ -1,0 +1,8 @@
+.dynamic-admin-sidebar { min-width: 0; }
+.dynamic-admin-sidebar .dynamic-admin-sidebar__toggle { width: 100%; min-height: 3rem; border: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.dynamic-admin-sidebar .sneat-nav-link { min-height: 3rem; white-space: normal; }
+.dynamic-admin-sidebar .sneat-nav-link span { overflow-wrap: anywhere; min-width: 0; }
+.dynamic-admin-sidebar__children { margin-inline-start: var(--space-sm); border-inline-start: 1px solid var(--coffee-border); }
+.dynamic-admin-sidebar__children[hidden] { display: none; }
+.dynamic-admin-sidebar__toggle[aria-expanded="false"] > span:last-child { transform: rotate(-90deg); }
+.dynamic-admin-sidebar .is-active-group > button { font-weight: 700; }

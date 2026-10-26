@@ -1,5 +1,9 @@
 # Coffee Shop Management System – Requirements
 
+## Approved extension — Dynamic Admin Menu (20/10/2026)
+
+Engineer đã duyệt database-driven Admin navigation theo docs/admin-menu-architecture.md: group/link tối đa 3 cấp; cha inactive ẩn nhánh mà không sửa con; chỉ xóa nút lá không protected; registry bảo vệ admin.home/admin.dashboard.index/admin.menus.index và ancestors/recovery link. Chỉ whitelist named route Admin GET không tham số; permission_key hiện chỉ NULL vì chưa có permission registry. Không thay backend authorization hoặc Catalog. Task8.1 chỉ tạo migration/model/tests nền tảng, chưa seed/CRUD/Sidebar; các workflow trên thuộc task sau.
+
 ## 1. Document Purpose
 
 Tài liệu này là nguồn tham chiếu chính thức về yêu cầu nghiệp vụ và chức năng ở mức tổng quan của Coffee Shop Management System. Tài liệu xác định hệ thống phải hỗ trợ những năng lực nào, các vai trò được phê duyệt, ranh giới phạm vi và những nội dung còn cần làm rõ.

@@ -1,5 +1,11 @@
 # Coffee Shop Database Design
 
+## Approved extension — admin_menus (20/10/2026)
+
+MySQL compatibility correction (20/10/2026): self-parent protection uses AFTER INSERT and BEFORE UPDATE triggers with SIGNAL, because MySQL disallows CHECK referencing AUTO_INCREMENT id. SQLite retains the self-parent CHECK. Other CHECKs/FK and approved self-parent prohibition unchanged; no application data migration or seed.
+
+Engineer duyệt extension riêng, không thay các bảng Frozen bên dưới. Chi tiết tại docs/admin-menu-architecture.md. Migration: 2026_10_20_000001_create_admin_menus_table.php. Columns: id BIGINT UNSIGNED PK; parent_id nullable self-FK RESTRICT; name VARCHAR(100); type VARCHAR(20) group/link; route_name VARCHAR(150) nullable; icon VARCHAR(100) nullable; sort_order INT UNSIGNED default 0; is_active BOOLEAN default true; permission_key VARCHAR(150) nullable; Laravel timestamps. Composite index (parent_id, sort_order, id), CHECK type/route/self-parent/sort bounds. Không UNIQUE route_name, không SoftDeletes/is_system. permission_key hiện chỉ NULL theo application policy, không phải FK hay quyền mới. FK không ngăn multi-node cycle; depth/cycle/protection thuộc workflow task sau. Model trực tiếp app/Models/AdminMenu được duyệt; không tạo Base thủ công.
+
 ## 1. Document status and version
 
 | Field | Value |

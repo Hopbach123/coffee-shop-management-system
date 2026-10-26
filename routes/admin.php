@@ -14,6 +14,15 @@ use App\Http\Controllers\Admin\ToppingController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('menus', [\App\Http\Controllers\Admin\AdminMenuController::class, 'index'])->name('menus.index');
+Route::get('menus/create', [\App\Http\Controllers\Admin\AdminMenuController::class, 'create'])->name('menus.create');
+Route::post('menus', [\App\Http\Controllers\Admin\AdminMenuController::class, 'store'])->name('menus.store');
+Route::patch('menus/reorder', [\App\Http\Controllers\Admin\AdminMenuController::class, 'reorder'])->name('menus.reorder');
+Route::get('menus/{admin_menu}/edit', [\App\Http\Controllers\Admin\AdminMenuController::class, 'edit'])->name('menus.edit');
+Route::put('menus/{admin_menu}', [\App\Http\Controllers\Admin\AdminMenuController::class, 'update'])->name('menus.update');
+Route::patch('menus/{admin_menu}/status', [\App\Http\Controllers\Admin\AdminMenuController::class, 'status'])->name('menus.status');
+Route::delete('menus/{admin_menu}', [\App\Http\Controllers\Admin\AdminMenuController::class, 'destroy'])->name('menus.destroy');
+
 Route::view('/', 'admin.home')->name('home');
 Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
