@@ -11,7 +11,7 @@
 @if($item->note)<p>Ghi chú: {{ $item->note }}</p>@endif
 <ul>@foreach($item->orderItemToppings as $topping)<li>{{ $topping->topping_name }} · {{ $topping->quantity }} phần topping</li>@endforeach</ul>
 <small>Tạo lúc {{ $item->created_at?->format('H:i d/m') }} (UTC)</small>
-@if(auth('web')->user()->role === 'staff')
+@if(auth('web')->user()->canOperateSales())
 <div class="category-actions">
 <x-public.button href="{{ route('staff.orders.show', $item->order_id) }}" variant="outline">Chi tiết đơn</x-public.button>
 @if($item->status !== 'ready')

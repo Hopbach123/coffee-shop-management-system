@@ -3,7 +3,7 @@
         @if ($imageUrl = $product->imageUrl())
             <img src="{{ $imageUrl }}" alt="{{ $product->name }}" loading="lazy" class="public-menu-card__img">
         @else
-            <img src="{{ asset('images/coffeehouse/artisan-espresso.png') }}" alt="Hình minh họa cà phê" loading="lazy" class="public-menu-card__img">
+            <span aria-hidden="true">M</span>
         @endif
         <div class="public-menu-card__badges">
             @if ($product->is_featured)
@@ -16,7 +16,7 @@
             @endif
             <span class="public-menu-badge {{ $product->status === 'available' ? 'public-menu-badge--available' : 'public-menu-badge--unavailable' }}">
                 <span class="badge-dot"></span>
-                <span>{{ $product->status === 'available' ? 'Có sẵn' : 'Tạm hết' }}</span>
+                <span>{{ $product->status === 'available' ? 'Có sẵn' : 'Hết món' }}</span>
             </span>
         </div>
     </div>
@@ -33,9 +33,9 @@
                 <ul class="public-menu-card__variants" aria-label="Kích cỡ và giá">
                     @foreach ($product->productVariants as $variant)
                         <li class="variant-item @if($loop->first) is-primary @endif">
-                            <span class="variant-name">{{ $variant->name }}</span>
+                            <span class="variant-name">{{ $variant->name }} @if($variant->status === 'unavailable') <small>· Tạm hết</small> @endif</span>
                             <span class="variant-divider"></span>
-                            <strong class="variant-price">{{ number_format((float) $variant->price, 0, ',', '.') }} đ</strong>
+                            <strong class="variant-price">{{ number_format((float) $variant->price, 2, ',', '.') }} ₫</strong>
                         </li>
                     @endforeach
                 </ul>

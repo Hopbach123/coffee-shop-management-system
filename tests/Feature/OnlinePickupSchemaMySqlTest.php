@@ -143,7 +143,7 @@ class OnlinePickupSchemaMySqlTest extends TestCase
         $this->assertSame('preparing', $item->fresh()->status);
         $this->assertNotSame($stockBefore, DB::table('ingredients')->where('id', $ingredientId)->value('current_stock'));
         $this->actingAs($admin, 'web');
-        $this->get('/staff/brewing')->assertOk()->assertDontSee('type="submit">Bắt đầu pha', false);
+        $this->get('/staff/brewing')->assertOk()->assertSee('Bắt đầu pha');
         $this->get('/admin/ingredients/'.$ingredientId.'/history')->assertOk()->assertSee('Tiêu hao pha chế');
         $this->get('/admin/product-variants/'.$item->variant_id.'/recipe')->assertOk()->assertSee('Định lượng')->assertSee('Lịch sử kho');
         $this->get('/admin/product-variants')->assertOk()->assertSee('Xem công thức');

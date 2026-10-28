@@ -51,7 +51,7 @@ class InventoryService
                 $ingredient->forceFill(['current_stock' => $this->milliToDecimal($afterQuantity)]);
                 $ingredient->saveOrFail();
 
-                $transaction = new InventoryTransaction();
+                $transaction = new InventoryTransaction;
                 $transaction->forceFill([
                     'ingredient_id' => $ingredient->getKey(),
                     'type' => 'consume',
@@ -112,8 +112,8 @@ class InventoryService
     private function assertActiveStaff(User $actor): void
     {
         $currentActor = User::query()->find($actor->getKey());
-        if ($currentActor === null || $currentActor->role !== 'staff' || $currentActor->status !== 'active') {
-            throw new DomainException('Chỉ nhân viên đang hoạt động mới được bắt đầu pha chế.');
+        if ($currentActor === null || ! $currentActor->canOperateSales()) {
+            throw new DomainException('Chỉ tài khoản nội bộ đang hoạt động mới được bắt đầu pha chế.');
         }
     }
 

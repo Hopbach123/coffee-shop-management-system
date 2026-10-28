@@ -250,14 +250,14 @@ class StaffOrderCancellationTest extends TestCase
         }
     }
 
-    public function test_guest_admin_and_inactive_staff_cannot_cancel_orders(): void
+    public function test_guests_and_inactive_users_cannot_cancel_orders(): void
     {
         $staff = $this->staff();
         $order = $this->order($staff);
         $route = route('staff.orders.cancel', $order);
 
         $this->patch($route)->assertRedirect(route('login'));
-        $this->actingAs($this->staff('admin'), 'web')->patch($route)->assertForbidden();
+        $this->actingAs($this->staff('admin', 'inactive'), 'web')->patch($route)->assertForbidden();
         $this->actingAs($this->staff('staff', 'inactive'), 'web')->patch($route)->assertForbidden();
         $this->assertSame('pending', $order->fresh()->status);
     }

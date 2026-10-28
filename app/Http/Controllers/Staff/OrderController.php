@@ -249,6 +249,6 @@ class OrderController extends Controller
 
     private function assertActiveStaff(Request $request): void
     {
-        abort_unless($request->user('web')?->role === 'staff' && $request->user('web')?->status === 'active', 403);
+        abort_unless($request->user('web')?->canOperateSales(), 403);
     }
 }

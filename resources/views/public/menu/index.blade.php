@@ -87,7 +87,7 @@
 
                     @if ($category->products->isEmpty())
                         <div class="public-menu-category__empty-card">
-                            <p>Danh mục này hiện chưa có món để hiển thị.</p>
+                            <p>Danh mục này chưa có món để hiển thị.</p>
                         </div>
                     @else
                         <div class="public-menu-grid" id="category-products-{{ $loop->iteration }}">
