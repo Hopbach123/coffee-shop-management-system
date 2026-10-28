@@ -1,5 +1,13 @@
 # Coffee Shop Management System – Implementation Plan
 
+## UI audit follow-up — CAFE-UI-WORKFLOW-001 (26/10/2026)
+
+User requests UI gap report and implementation in existing template. Audit source/routes then deliver read-only request inbox/detail, recipe/ledger access from parent pages, real payment history in Order, and preparation actions via existing endpoints. No duplicate online/payment write workflow or recipe CRUD from another branch. Browser verification at 375/768/1440 required before full UI DONE. Services for public submit/tracking, accept/reject, payment/movement writes remain separately scoped dependencies; missing writes must be reported, never simulated success. AC/test: middleware/PII, filters and missing-schema state, correct parent links, queue excludes finished Orders, actual existing preparation command, build, regressions and browser limitation report. Split into audit/design and screen/tests substeps; no automatic subsequent module implementation.
+
+## Current extension task — CAFE-DB-ONLINE-001 (26/10/2026)
+
+User-authorized schema-only extension: counter/scheduled/online pickup as defined in requirements/database-design. Dependency: existing catalog/user/customer/Order migrations. Scope: additive four migrations, specification, MySQL schema regression tests, upgrade/rollback evidence. Out of scope: Service/UI, gateway/shipper/holds, seed import and generated models. AC: correct three tables/FKs/CHECK/unique/indexes; legacy data/defaults preserved; reject invalid values and duplicate links; fresh migrations and empty rollback succeed; rollback of populated new schema refused. Test on isolated disposable MySQL database, never migrate:fresh coffee_shop. Estimate two sequential reviewable substeps (specification/migrations and tests/report, 30–90 minutes each). Stop after schema delivery; UI/workflow/SQL v2 require subsequent tasks.
+
 ## 1. Purpose
 
 Tài liệu này là roadmap triển khai chính thức của Coffee Shop Management System. Roadmap xác định thứ tự phụ thuộc từ nền tảng, dữ liệu, xác thực, nghiệp vụ cốt lõi, frontend, kiểm thử đến bàn giao.

@@ -36,6 +36,19 @@
             </aside>
         </div>
 
+        <section class="category-panel" aria-labelledby="payments-title">
+            <h2 id="payments-title">Thanh toán</h2>
+            <p>Cách mua: {{ ['counter'=>'Tại quầy','scheduled'=>'Đặt hẹn đến lấy','online'=>'Online lấy sớm'][$order->purchase_type ?? 'counter'] ?? 'Chưa xác định' }}. Tiến độ pha chế và thanh toán được theo dõi riêng.</p>
+            @if (! $paymentsAvailable)<p role="status">Chưa thể tải lịch sử thanh toán. Vui lòng liên hệ quản trị viên.</p>
+            @elseif ($order->payments->isEmpty())<p>Chưa có giao dịch thanh toán được ghi nhận.</p>
+            @else
+                <div class="category-table-wrap" role="region" aria-label="Lịch sử thanh toán đơn hàng" tabindex="0"><table class="category-table"><caption class="sr-only">Lịch sử các lần thanh toán</caption><thead><tr><th scope="col">Mã</th><th scope="col">Phương thức</th><th scope="col">Số tiền</th><th scope="col">Trạng thái</th><th scope="col">Xác nhận (UTC)</th></tr></thead><tbody>
+                @foreach($order->payments as $payment)<tr><th scope="row" data-label="Mã">{{ $payment->payment_code }}</th><td data-label="Phương thức">{{ $payment->payment_method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản' }}</td><td data-label="Số tiền">{{ number_format((float) $payment->amount, 0, ',', '.') }} ₫</td><td data-label="Trạng thái"><x-internal.workflow-status :value="$payment->status" /></td><td data-label="Xác nhận (UTC)">{{ $payment->paid_at?->format('d/m/Y H:i') ?? 'Chưa xác nhận thu' }}<p>{{ $payment->creator?->name ?? '—' }}</p></td></tr>@endforeach
+                </tbody></table></div>
+            @endif
+            <p>Màn này chỉ hiển thị giao dịch đã ghi nhận. Thao tác thu tiền chưa được mở; tạo đơn POS không đồng nghĩa đã thanh toán.</p>
+        </section>
+
         <section class="category-panel order-detail__items" aria-labelledby="items-title">
             <div class="order-detail__section-heading"><div><p class="section-heading__eyebrow">Danh sách phục vụ</p><h2 id="items-title">Món trong đơn</h2></div><span>{{ $order->orderItems->count() }} món</span></div>
             @if ($order->orderItems->isEmpty())

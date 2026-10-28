@@ -1,5 +1,17 @@
 # Import seed_data.sql vào MySQL Laragon
 
+## Cập nhật SQL cho schema online đơn giản — 26/10/2026
+
+File hiện tại chứa baseline DEMO-V1 và fixtures DEMO-V2 trong cùng transaction. Phải chạy đủ bốn migration online ngày 26/10 trước khi import. Chỉ thử bộ mới trên database development riêng đã migrate, không reset coffee_shop đang dùng.
+
+Phần V2 thêm 6 requests (online/hẹn pending, online accepted, hẹn prepaid, rejected, cancelled), 7 request items, 1 request topping, 2 Orders takeaway, 3 sold items, 1 sold topping và 1 Payment bank_transfer paid. Tổng bộ mới có 9 Orders, 10 Order Items, 5 Payments; stock/29 log kho V1 không đổi vì các món V2 chưa preparing. Ba kiểu mua là counter/scheduled/online. Không shipper/gateway. Token DEMO-V2-TRACK-1 đến 6 là fixture công khai, SQL chỉ lưu SHA-256 hash; không dùng token này cho đơn thật.
+
+Seed dùng timezone UTC cho session và mật khẩu fixture DemoCoffee123! cho lần tạo mới. Không thay mật khẩu local khi chạy lại. **DB có marker V1 hoặc email demo sẽ bỏ qua cả bộ insert, không tự thêm V2 vào dữ liệu cũ.** Nếu thiếu V2, kết quả cuối báo V2 NOT IMPORTED; verifier presence sẽ báo invalid_count > 0. Không xóa marker/email để ép import; cần database dev riêng hoặc task nâng cấp fixture có review.
+
+verify_seed_data.sql hiện có 12 checks, gồm presence V2, liên kết request/Order, totals/snapshots và Payment. Tất cả phải bằng 0 ngay sau fresh import; DB trống hoặc bộ thiếu không còn có thể được coi là PASS. Các kiểm tra fixture ban đầu không phải invariant runtime: prepaid scenario và recipe hiện tại có thể đổi hợp lệ khi vận hành. Không dùng kết quả đó để tự sửa ledger quá khứ. Baseline V1 được giữ để đối chiếu, chưa chuyển toàn bộ verifier thành audit production.
+
+Các số liệu/trạng thái import phía dưới là báo cáo lần import cũ, không phải xác nhận đã import V2 vào coffee_shop. Lần cập nhật này chỉ test database tạm, không nạp lại database dự án.
+
 ## Trạng thái nạp trên máy hiện tại
 
 **Đã import `database/seed_data.sql` vào database dự án `coffee_shop` trên MySQL Laragon theo yêu cầu của bạn.** Không cần import lại để bắt đầu test.

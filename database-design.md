@@ -1,5 +1,26 @@
 # Coffee Shop Database Design
 
+## Approved extension — Simple Online Pickup (26/10/2026)
+
+User yêu cầu triển khai schema theo phạm vi đơn giản đã chốt. Phần Frozen v1.2 bên dưới là baseline lịch sử 18 bảng; sau admin_menus và ba bảng dưới, thiết kế mở rộng có 22 bảng nghiệp vụ/cấu hình. Không xóa/sửa migration cũ. Đích MySQL 8.0.16+ có CHECK enforced (môi trường local MySQL 8.4). Không thêm shipper/gateway/holds.
+
+| Table | Columns |
+| --- | --- |
+| online_order_requests | id BIGINT UNSIGNED PK; request_code VARCHAR(50) UNIQUE; purchase_type ENUM(online,scheduled); customer_id nullable FK; contact_name VARCHAR(255); contact_phone VARCHAR(20); pickup_at DATETIME nullable; note VARCHAR(500) nullable; status ENUM(pending,accepted,rejected,cancelled) default pending; payment_preference ENUM(cash,bank_transfer); payment_timing ENUM(on_receipt,prepaid) default on_receipt; accepted_by nullable FK users; accepted_at DATETIME nullable; rejection_reason VARCHAR(500) nullable; submission_key VARCHAR(64) UNIQUE; tracking_token_hash CHAR(64) UNIQUE; timestamps |
+| online_order_request_items | id; request_id FK online_order_requests; variant_id FK product_variants; quantity INT; note VARCHAR(500) nullable; product_name VARCHAR(255); variant_name VARCHAR(50); unit_price DECIMAL(12,2); timestamps |
+| online_order_request_item_toppings | id; request_item_id FK online_order_request_items; topping_id FK toppings; quantity INT; topping_name VARCHAR(255); price DECIMAL(12,2); timestamps; UNIQUE(request_item_id,topping_id) |
+| orders additions | purchase_type ENUM(counter,scheduled,online) default counter; online_request_id nullable UNIQUE FK online_order_requests |
+
+New IDs use BIGINT UNSIGNED AUTO_INCREMENT; FKs RESTRICT/NO ACTION, no cascade/soft delete for request documents. Required columns NOT NULL/no default unless stated. Snapshot quantity >0, prices >=0; repeated variants are allowed as distinct lines with different notes/toppings. Topping quantity is total for the line, consistent with existing sold snapshots. Totals computed server-side from snapshots; no extra duplicated request totals.
+
+CHECK: scheduled iff pickup_at non-null; prepaid requires bank_transfer; accepted status requires accepted_by/at, pending/rejected have no acceptance fields; cancelled may retain both acceptance fields or neither. accepted_by and accepted_at must appear together. rejected requires nonblank rejection_reason; other statuses keep optional reason for history. request_code/contact_name/contact_phone/submission_key cannot be blank; tracking hash is exactly 64 hexadecimal characters. Business-format phone normalization and random token generation remain application validation.
+
+Order CHECK: counter iff online_request_id IS NULL; online/scheduled require takeaway and table_id IS NULL. Existing orders receive counter/NULL without changing money, IDs or states. Matching request purchase_type/status, author roles, request items nonempty, correct variant/product snapshots, future hours, one paid payment and lifecycle transitions require locked application workflow; FK/CHECK alone do not prove those invariants.
+
+Indexes: request(status,created_at), request(purchase_type,pickup_at), customer/accepted_by FK indexes; item request and variant indexes; topping pair plus topping FK index; orders(purchase_type,status,ordered_at), unique online_request_id. Store UTC; render local timezone later without reinterpreting existing DATETIME blindly.
+
+Migration order: requests → request items → request toppings → orders additions. down refuses to remove new tables containing records or orders with a linked/non-counter purchase, preventing accidental loss of new business history. MySQL DDL is not fully transactional; backup/forward fix for live data. Old payments/ledger/seed v1 unchanged. New Custom/Base Models and public workflows belong to subsequent module tasks, not this schema-only change.
+
 ## Approved extension — admin_menus (20/10/2026)
 
 MySQL compatibility correction (20/10/2026): self-parent protection uses AFTER INSERT and BEFORE UPDATE triggers with SIGNAL, because MySQL disallows CHECK referencing AUTO_INCREMENT id. SQLite retains the self-parent CHECK. Other CHECKs/FK and approved self-parent prohibition unchanged; no application data migration or seed.

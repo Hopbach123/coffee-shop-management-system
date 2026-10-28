@@ -1,10 +1,12 @@
--- Coffee Shop: DEMO-V1 linked test data, MySQL 8.4.
+-- Coffee Shop: DEMO-V1 baseline + DEMO-V2 online pickup fixtures, MySQL 8.4.
 -- Run migrations first; select the intended DEVELOPMENT database before import.
 -- Data only: no DROP/TRUNCATE/CREATE/ALTER, no disabled FK checks.
 -- Public fixture login password: DemoCoffee123! (never use in production).
 -- Execute the entire file in ONE session, STOP ON ERROR and ROLLBACK on failure.
--- See docs/HUONG_DAN_SEED_DATA_TOAN_HE_THONG.md.
+-- Requires all 2026_10_26 online pickup migrations. See docs/Rp-seeddata-runMySQL.md.
+-- Existing V1 datasets are preserved, NOT upgraded automatically; verifier detects missing V2.
 SET NAMES utf8mb4;
+SET time_zone = '+00:00';
 SET @demo_now = NOW();
 START TRANSACTION;
 SET @demo_existing = EXISTS(SELECT 1 FROM orders WHERE order_code = 'DEMO-V1-CANCELLED');
@@ -293,5 +295,42 @@ SET @demo_inventory_transactions_29 = LAST_INSERT_ID();
 INSERT INTO `order_item_toppings` (`order_item_id`, `topping_id`, `topping_name`, `price`, `quantity`, `created_at`, `updated_at`) SELECT @demo_order_items_1, @demo_toppings_1, '[DEMO] Kem sữa', '5000.00', '2', DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_order_item_toppings_1 = LAST_INSERT_ID();
 
+-- DEMO-V2: request fixtures. Tracking tokens below are public development fixtures only.
+INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,payment_timing,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-ONLINE-PENDING','online','[DEMO] Khách lấy sớm','0900000001',NULL,'pending','cash','on_receipt','DEMO-V2-SUBMIT-1',SHA2('DEMO-V2-TRACK-1',256),@demo_now,@demo_now WHERE @demo_new;
+SET @demo_request_1 = LAST_INSERT_ID();
+INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,payment_timing,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-SCHEDULED-PENDING','scheduled','[DEMO] Khách hẹn lấy','0900000002',DATE_ADD(@demo_now,INTERVAL 1 DAY),'pending','bank_transfer','prepaid','DEMO-V2-SUBMIT-2',SHA2('DEMO-V2-TRACK-2',256),@demo_now,@demo_now WHERE @demo_new;
+SET @demo_request_2 = LAST_INSERT_ID();
+INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,payment_timing,accepted_by,accepted_at,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-ONLINE-ACCEPTED','online','[DEMO] Khách online đã nhận đơn','0900000003',NULL,'accepted','cash','on_receipt',@demo_users_2,@demo_now,'DEMO-V2-SUBMIT-3',SHA2('DEMO-V2-TRACK-3',256),@demo_now,@demo_now WHERE @demo_new;
+SET @demo_request_3 = LAST_INSERT_ID();
+INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,payment_timing,accepted_by,accepted_at,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-SCHEDULED-PAID','scheduled','[DEMO] Khách hẹn trả trước','0900000004',DATE_ADD(@demo_now,INTERVAL 1 DAY),'accepted','bank_transfer','prepaid',@demo_users_2,@demo_now,'DEMO-V2-SUBMIT-4',SHA2('DEMO-V2-TRACK-4',256),@demo_now,@demo_now WHERE @demo_new;
+SET @demo_request_4 = LAST_INSERT_ID();
+INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,rejection_reason,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-REJECTED','online','[DEMO] Yêu cầu bị từ chối','0900000005',NULL,'rejected','cash','Quán chưa thể nhận thêm đơn','DEMO-V2-SUBMIT-5',SHA2('DEMO-V2-TRACK-5',256),@demo_now,@demo_now WHERE @demo_new;
+SET @demo_request_5 = LAST_INSERT_ID();
+INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-CANCELLED','scheduled','[DEMO] Khách hủy trước duyệt','0900000006',DATE_ADD(@demo_now,INTERVAL 1 DAY),'cancelled','cash','DEMO-V2-SUBMIT-6',SHA2('DEMO-V2-TRACK-6',256),@demo_now,@demo_now WHERE @demo_new;
+SET @demo_request_6 = LAST_INSERT_ID();
+
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_1,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_2,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_3,@demo_product_variants_1,2,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_new;
+SET @demo_web_item_3 = LAST_INSERT_ID();
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,note,created_at,updated_at) SELECT @demo_request_3,@demo_product_variants_2,1,'[DEMO] Latte','Lớn',40000,'Ít ngọt',@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_4,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_5,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_6,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_request_item_toppings (request_item_id,topping_id,quantity,topping_name,price,created_at,updated_at) SELECT @demo_web_item_3,@demo_toppings_1,2,'[DEMO] Kem sữa',5000,@demo_now,@demo_now WHERE @demo_new;
+
+-- Accepted requests create pending takeaway Orders; prepaid does not mean completed.
+INSERT INTO orders (order_code,user_id,order_type,purchase_type,online_request_id,status,subtotal,total_amount,ordered_at,created_at,updated_at) SELECT 'DEMO-V2-ONLINE-ORDER',@demo_users_2,'takeaway','online',@demo_request_3,'pending',110000,110000,@demo_now,@demo_now,@demo_now WHERE @demo_new;
+SET @demo_web_order_1 = LAST_INSERT_ID();
+INSERT INTO order_items (order_id,product_id,variant_id,product_name,variant_name,quantity,unit_price,topping_amount,subtotal,status,created_at,updated_at) SELECT @demo_web_order_1,@demo_products_1,@demo_product_variants_1,'[DEMO] Latte','Nhỏ',2,30000,10000,70000,'pending',@demo_now,@demo_now WHERE @demo_new;
+SET @demo_web_sold_item = LAST_INSERT_ID();
+INSERT INTO order_item_toppings (order_item_id,topping_id,topping_name,price,quantity,created_at,updated_at) SELECT @demo_web_sold_item,@demo_toppings_1,'[DEMO] Kem sữa',5000,2,@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO order_items (order_id,product_id,variant_id,product_name,variant_name,quantity,unit_price,topping_amount,subtotal,note,status,created_at,updated_at) SELECT @demo_web_order_1,@demo_products_1,@demo_product_variants_2,'[DEMO] Latte','Lớn',1,40000,0,40000,'Ít ngọt','pending',@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO orders (order_code,user_id,order_type,purchase_type,online_request_id,status,subtotal,total_amount,ordered_at,created_at,updated_at) SELECT 'DEMO-V2-SCHEDULED-ORDER',@demo_users_2,'takeaway','scheduled',@demo_request_4,'pending',30000,30000,@demo_now,@demo_now,@demo_now WHERE @demo_new;
+SET @demo_web_order_2 = LAST_INSERT_ID();
+INSERT INTO order_items (order_id,product_id,variant_id,product_name,variant_name,quantity,unit_price,topping_amount,subtotal,status,created_at,updated_at) SELECT @demo_web_order_2,@demo_products_1,@demo_product_variants_1,'[DEMO] Latte','Nhỏ',1,30000,0,30000,'pending',@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO payments (order_id,payment_code,payment_method,amount,status,paid_at,created_by,created_at,updated_at) SELECT @demo_web_order_2,'DEMO-V2-PREPAID','bank_transfer',30000,'paid',@demo_now,@demo_users_2,@demo_now,@demo_now WHERE @demo_new;
+
 COMMIT;
 SELECT DATABASE() AS target_database, CASE WHEN @demo_existing THEN 'SKIPPED: DEMO-V1 already imported; existing data preserved' WHEN @demo_account_collision THEN 'SKIPPED: demo emails exist but dataset marker missing; inspect before importing' ELSE 'IMPORTED: DEMO-V1, 18 business tables' END AS import_result;
+SELECT CASE WHEN @demo_new THEN 'IMPORTED: DEMO-V2 pickup fixtures' WHEN EXISTS(SELECT 1 FROM online_order_requests WHERE request_code = 'DEMO-V2-SCHEDULED-PAID') THEN 'Existing dataset: run verify_seed_data.sql to check completeness' ELSE 'V2 NOT IMPORTED: existing V1 preserved; use a fresh development database or a separately reviewed upgrade' END AS online_fixture_result;

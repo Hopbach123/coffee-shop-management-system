@@ -1,5 +1,11 @@
 # Coffee Shop Management System – Requirements
 
+## Approved extension — Simple Online Pickup (26/10/2026)
+
+Theo yêu cầu user triển khai schema trên feature/schema-template-sync và phạm vi rút gọn mục 7 của bảng phân công: hỗ trợ purchase_type counter (POS), scheduled (hẹn đến lấy), online (web lấy sớm). scheduled/online chỉ takeaway, không shipper/phí giao/gateway/COD/slot/holds/refund tự động. Khách không cần tài khoản; request lưu snapshot liên hệ, món/topping và giờ hẹn nếu scheduled. Staff/Admin duyệt tạo một Order, user_id vẫn bắt buộc là người nhận đơn; UNIQUE request trên Order chống tạo trùng. Request có pending/accepted/rejected/cancelled; giữ các trạng thái Order/món/Payment hiện có. Loại mua không phải status.
+
+Thanh toán cash/bank_transfer; payment_timing on_receipt hoặc prepaid, prepaid chỉ bank_transfer do nhân viên xác nhận thực nhận. Hẹn có pickup_at; online lấy sớm không có giờ hẹn. Token tra cứu lưu SHA-256 hash, submission key chống gửi lặp. Snapshot giá do server tính; thay đổi giá cần khách xác nhận trong workflow sau. Extension này phê duyệt cấu trúc dữ liệu, không tuyên bố Service/UI đã triển khai. Chi tiết vật lý tại database-design.md; schema không thể thay thế transaction accept/payment, kiểm giờ mở, quyền và đối chiếu giá.
+
 ## Approved extension — Dynamic Admin Menu (20/10/2026)
 
 Engineer đã duyệt database-driven Admin navigation theo docs/admin-menu-architecture.md: group/link tối đa 3 cấp; cha inactive ẩn nhánh mà không sửa con; chỉ xóa nút lá không protected; registry bảo vệ admin.home/admin.dashboard.index/admin.menus.index và ancestors/recovery link. Chỉ whitelist named route Admin GET không tham số; permission_key hiện chỉ NULL vì chưa có permission registry. Không thay backend authorization hoặc Catalog. Task8.1 chỉ tạo migration/model/tests nền tảng, chưa seed/CRUD/Sidebar; các workflow trên thuộc task sau.

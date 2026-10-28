@@ -37,7 +37,8 @@ class WorkspaceController extends Controller
     public function brewing(): View
     {
         $items = Schema::hasTable('order_items')
-            ? OrderItem::with(['order', 'product'])->whereIn('status', ['pending', 'preparing', 'ready'])->latest()->limit(60)->get()
+            ? OrderItem::with(['order', 'orderItemToppings'])->whereHas('order', fn ($query) => $query->where('status', 'pending'))
+                ->whereIn('status', ['pending', 'preparing', 'ready'])->oldest()->orderBy('id')->paginate(30)
             : collect();
 
         return view('staff.brewing.index', compact('items'));
