@@ -161,13 +161,13 @@ class StaffOrderManagementTest extends TestCase
         $this->assertSame('available', $table->fresh()->status);
     }
 
-    public function test_guest_admin_and_inactive_staff_cannot_access_staff_order_operations(): void
+    public function test_guests_and_inactive_users_cannot_access_staff_order_operations(): void
     {
         $table = $this->table();
         $this->get('/staff/orders')->assertRedirect(route('login'));
         $this->post('/staff/orders', ['order_type' => 'dine_in', 'table_id' => $table->id])->assertRedirect(route('login'));
 
-        $admin = User::forceCreate(['name' => 'Admin', 'email' => uniqid('admin-', true).'@example.test', 'password' => 'test-only-password', 'role' => 'admin', 'status' => 'active']);
+        $admin = User::forceCreate(['name' => 'Admin', 'email' => uniqid('admin-', true).'@example.test', 'password' => 'test-only-password', 'role' => 'admin', 'status' => 'inactive']);
         $this->actingAs($admin, 'web')->get('/staff/orders')->assertForbidden();
         $this->post('/staff/orders', ['order_type' => 'dine_in', 'table_id' => $table->id])->assertForbidden();
 

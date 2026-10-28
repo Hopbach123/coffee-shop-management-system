@@ -4,6 +4,10 @@ $menus = [
 ['label' => 'WORKSPACE', 'links' => [
 ['route' => 'staff.home', 'text' => 'Bán hàng / POS', 'icon' => 'bag'],
 ['route' => 'staff.orders.index', 'text' => 'Đơn hàng', 'icon' => 'receipt'],
+['route' => 'staff.online-requests.index', 'text' => 'Online & hẹn', 'icon' => 'bag'],
+['route' => 'staff.brewing.index', 'text' => 'Pha chế', 'icon' => 'coffee'],
+['route' => 'staff.tables.index', 'text' => 'Bàn phục vụ', 'icon' => 'table'],
+['route' => 'staff.reservations.index', 'text' => 'Đặt bàn', 'icon' => 'calendar'],
 ]],
 ];
 @endphp

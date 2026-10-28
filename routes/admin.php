@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IngredientController;
+use App\Http\Controllers\Admin\InventoryOverviewController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\Admin\PromotionController;
@@ -52,6 +53,8 @@ Route::delete('areas/{area}', [AreaController::class, 'destroy'])->name('areas.d
 Route::patch('ingredients/{ingredient}/toggle-status', [IngredientController::class, 'toggleStatus'])
     ->name('ingredients.toggle-status');
 Route::resource('ingredients', IngredientController::class)->except('show');
+Route::get('ingredients/{ingredient}/history', [InventoryOverviewController::class, 'history'])->name('ingredients.history');
+Route::get('product-variants/{product_variant}/recipe', [InventoryOverviewController::class, 'recipe'])->name('product-variants.recipe');
 
 Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
 Route::get('customers/create', [CustomerController::class, 'create'])->name('customers.create');

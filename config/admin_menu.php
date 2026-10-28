@@ -13,10 +13,10 @@ return [
     'active_routes' => [
         'admin.categories.index' => ['admin.categories.create', 'admin.categories.edit'],
         'admin.products.index' => ['admin.products.create', 'admin.products.edit'],
-        'admin.product-variants.index' => ['admin.product-variants.create', 'admin.product-variants.edit'],
+        'admin.product-variants.index' => ['admin.product-variants.create', 'admin.product-variants.edit', 'admin.product-variants.recipe'],
         'admin.toppings.index' => ['admin.toppings.create', 'admin.toppings.edit'],
         'admin.promotions.index' => ['admin.promotions.create', 'admin.promotions.edit'],
-        'admin.ingredients.index' => ['admin.ingredients.create', 'admin.ingredients.edit'],
+        'admin.ingredients.index' => ['admin.ingredients.create', 'admin.ingredients.edit', 'admin.ingredients.history'],
         'admin.areas.index' => ['admin.areas.create', 'admin.areas.edit'],
         'admin.tables.index' => ['admin.tables.create', 'admin.tables.edit'],
         'admin.customers.index' => ['admin.customers.create', 'admin.customers.edit'],
