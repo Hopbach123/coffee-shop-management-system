@@ -7,38 +7,52 @@ use App\Models\CafeTable;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PickupRequest;
+use App\Models\Product;
 use App\Models\Reservation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class WorkspaceController extends Controller
 {
     public function orders(): View
     {
-        $orders = Schema::hasTable('orders')
-            ? Order::with(['creator', 'cafeTable', 'orderItems'])->latest('ordered_at')->paginate(15)
-            : new LengthAwarePaginator([], 0, 15);
+        return view('staff.orders.index', ['orders' => Order::with(['creator', 'cafeTable', 'orderItems'])->latest('ordered_at')->paginate(15)]);
+    }
 
-        return view('staff.orders.index', compact('orders'));
+    public function orderShow(Order $order): View
+    {
+        $order->load([
+            'creator',
+            'cafeTable.area',
+            'customer',
+            'reservation',
+            'orderItems.product',
+            'orderItems.productVariant',
+            'orderItems.orderItemToppings.topping',
+            'payments.creator',
+            'orderPromotion.promotion',
+        ]);
+
+        return view('staff.orders.show', compact('order'));
     }
 
     public function tables(): View
     {
-        $tables = Schema::hasTable('cafe_tables')
-            ? CafeTable::with('area')->orderBy('table_code')->get()
-            : collect();
-
-        return view('staff.tables.index', compact('tables'));
+        return view('staff.tables.index', ['tables' => CafeTable::with('area')->orderBy('table_code')->get()]);
     }
 
     public function brewing(): View
     {
-        $items = Schema::hasTable('order_items')
-            ? OrderItem::with(['order', 'orderItemToppings'])->whereHas('order', fn ($query) => $query->where('status', 'pending'))
-                ->whereIn('status', ['pending', 'preparing', 'ready'])->oldest()->orderBy('id')->paginate(30)
+        $items = \Illuminate\Support\Facades\Schema::hasTable('order_items') && \Illuminate\Support\Facades\Schema::hasTable('orders')
+            ? OrderItem::with(['order', 'product', 'productVariant', 'orderItemToppings.topping'])
+                ->whereHas('order', function ($query) {
+                    $query->whereNotIn('status', ['cancelled', 'completed']);
+                })
+                ->whereIn('status', ['pending', 'preparing', 'ready'])
+                ->latest()
+                ->limit(60)
+                ->get()
             : collect();
 
         return view('staff.brewing.index', compact('items'));
@@ -46,20 +60,12 @@ class WorkspaceController extends Controller
 
     public function reservations(): View
     {
-        $reservations = Schema::hasTable('reservations')
-            ? Reservation::latest('reservation_start_at')->paginate(15)
-            : new LengthAwarePaginator([], 0, 15);
-
-        return view('staff.reservations.index', compact('reservations'));
+        return view('staff.reservations.index', ['reservations' => Reservation::latest('reservation_start_at')->paginate(15)]);
     }
 
     public function pickups(): View
     {
-        $requests = Schema::hasTable('pickup_requests')
-            ? PickupRequest::latest()->paginate(15)
-            : new LengthAwarePaginator([], 0, 15);
-
-        return view('staff.pickup-requests.index', compact('requests'));
+        return view('staff.pickup-requests.index', ['requests' => PickupRequest::latest()->paginate(15)]);
     }
 
     public function updatePickup(Request $request, PickupRequest $pickupRequest): RedirectResponse

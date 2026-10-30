@@ -17,7 +17,7 @@ class CheckRole
             throw new AuthenticationException(guards: ['web']);
         }
 
-        abort_unless(in_array($user->role, $roles, true), 403);
+        abort_unless($user->status === 'active' && in_array($user->role, $roles, true), 403);
 
         return $next($request);
     }
