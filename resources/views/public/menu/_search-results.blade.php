@@ -21,3 +21,7 @@
         </section>
     @endforeach
 @endif
+
+@if ($query !== '')
+    <div class="category-pagination">{{ $products->links() }}</div>
+@endif

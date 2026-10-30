@@ -16,7 +16,7 @@
                     @if ($imageUrl = $product->imageUrl())
                         <img src="{{ $imageUrl }}" alt="{{ $product->name }}">
                     @else
-                        <span aria-hidden="true">M</span>
+                        <img src="{{ asset('images/coffeehouse/artisan-espresso.png') }}" alt="Hình minh họa cà phê" loading="lazy">
                     @endif
                 </div>
                 <div class="public-menu-detail__copy">
@@ -47,7 +47,14 @@
                             @endforeach
                         </ul>
                     @endif
-                    <x-public.button href="{{ route('menu.index') }}" variant="outline">Quay lại thực đơn</x-public.button>
+                    @if($product->status === 'available' && $product->productVariants->contains('status', 'available'))
+                        <form class="storefront-add-form" action="{{ route('cart.add') }}" method="POST">@csrf
+                            <label for="choose-variant">Chọn kích cỡ</label><select name="variant_id" id="choose-variant" required>
+                            @foreach($product->productVariants->where('status', 'available') as $variant)<option value="{{ $variant->id }}">{{ $variant->name }} — {{ number_format((float)$variant->price,0,',','.') }}đ</option>@endforeach
+                            </select><label for="choose-quantity">Số lượng</label><input type="number" id="choose-quantity" name="quantity" min="1" max="20" value="1" required><button class="coffee-button coffee-button--primary" type="submit">+ Thêm vào giỏ hàng</button>
+                        </form>
+                    @endif
+                    <x-public.button href="{{ route('menu.index') }}" variant="outline">← Quay lại thực đơn</x-public.button>
                 </div>
             </div>
         </div>

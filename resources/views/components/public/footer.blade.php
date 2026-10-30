@@ -7,20 +7,20 @@
         </section>
         <section aria-labelledby="footer-visit-title">
             <h3 id="footer-visit-title">Ghé thăm</h3>
-            <x-public.shop-location />
+            <address>Liên hệ cửa hàng để xác nhận địa chỉ và thời gian hoạt động.</address>
         </section>
         <section aria-labelledby="footer-hours-title">
             <h3 id="footer-hours-title">Khám phá</h3>
             <dl class="opening-hours">
-                <div><dt>Thực đơn</dt><dd><a href="{{ route('menu.index') }}">Xem danh mục ↗</a></dd></div>
-                <div><dt>Giờ mở cửa</dt><dd>07:00 – 22:00 hằng ngày</dd></div>
+                <div><dt>Đặt bàn</dt><dd><a href="{{ route('reservation.create') }}">Gửi yêu cầu ↗</a></dd></div>
+                <div><dt>Đặt món</dt><dd><a href="{{ route('menu.index') }}">Xem thực đơn ↗</a></dd></div>
             </dl>
         </section>
         <section aria-labelledby="footer-letter-title">
             <h3 id="footer-letter-title">Liên kết nhanh</h3>
-            <p><a href="{{ route('menu.index') }}">Thực đơn quán</a></p>
-            <p><a href="{{ route('home') }}#story">Câu chuyện Maison</a></p>
-            @guest('web')<p><a href="{{ route('login') }}">Đăng nhập nội bộ</a></p>@endguest
+            <p><a href="{{ route('menu.index') }}">Thực đơn</a></p>
+            <p><a href="{{ route('cart.index') }}">Giỏ hàng</a></p>
+            @guest('web')<p><a href="{{ route('login') }}">Đăng nhập nhân viên</a></p>@endguest
         </section>
     </div>
     <div class="coffee-container site-footer__bottom">

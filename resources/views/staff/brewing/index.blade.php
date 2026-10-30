@@ -1,32 +1,48 @@
 @extends('layouts.internal')
-@section('title', 'Pha chế')
+@section('title','Hàng đợi pha chế')
 @section('content')
-<section aria-labelledby="page-title">
-<div class="sneat-page-title"><div><p>Đơn hàng → Pha chế</p><h1 id="page-title">Hàng đợi pha chế</h1><p>Ưu tiên món chờ lâu; chỉ hiển thị món của đơn đang xử lý.</p></div><x-public.button href="{{ route('staff.orders.index') }}" variant="outline">Đơn hàng</x-public.button></div>
+<div class="sneat-page-title">
+    <div>
+        <p>Vận hành · Barista Workspace</p>
+        <h1>Hàng đợi pha chế</h1>
+        <span>Danh sách món cần pha chế từ các đơn hàng hợp lệ (loại trừ đơn đã hủy / đã hoàn thành)</span>
+    </div>
+    <span class="sneat-pill is-info">Hàng đợi: {{ $items->count() }} món</span>
+</div>
 <div class="kitchen-grid">
-@forelse($items as $item)
-<article class="sneat-card kitchen-item">
-<div class="sneat-card-heading"><strong>{{ $item->order->order_code }}</strong><x-internal.workflow-status :value="$item->status" /></div>
-<h2>{{ $item->product_name }}</h2><p>{{ $item->variant_name }} · {{ $item->quantity }} phần</p>
-@if($item->note)<p>Ghi chú: {{ $item->note }}</p>@endif
-<ul>@foreach($item->orderItemToppings as $topping)<li>{{ $topping->topping_name }} · {{ $topping->quantity }} phần topping</li>@endforeach</ul>
-<small>Tạo lúc {{ $item->created_at?->format('H:i d/m') }} (UTC)</small>
-@if(auth('web')->user()->canOperateSales())
-<div class="category-actions">
-<x-public.button href="{{ route('staff.orders.show', $item->order_id) }}" variant="outline">Chi tiết đơn</x-public.button>
-@if($item->status !== 'ready')
-<form method="POST" action="{{ route('staff.orders.items.status.update', [$item->order_id, $item->id]) }}">
-@csrf @method('PATCH')
-<input type="hidden" name="status" value="{{ $item->status === 'pending' ? 'preparing' : 'ready' }}">
-<x-public.button type="submit">{{ $item->status === 'pending' ? 'Bắt đầu pha' : 'Đánh dấu sẵn sàng' }}</x-public.button>
-</form>
-@else<p>Sẵn sàng phục vụ. Kiểm tra tiền và nhận đồ tại chi tiết đơn.</p>@endif
+    @forelse($items as $item)
+        <article class="sneat-card kitchen-item">
+            <div class="sneat-card-heading">
+                <a href="{{ $item->order ? route('staff.orders.show', $item->order) : '#' }}" style="color: var(--coffee-caramel); font-weight: 700; text-decoration: underline;">
+                    #{{ $item->order?->order_code ?? 'ĐƠN' }}
+                </a>
+                <span class="sneat-pill {{ $item->status === 'ready' ? 'is-success' : ($item->status === 'preparing' ? 'is-info' : 'is-warning') }}">
+                    {{ ['pending'=>'Chờ pha','preparing'=>'Đang pha','ready'=>'Sẵn sàng'][$item->status] ?? $item->status }}
+                </span>
+            </div>
+            <h2>{{ $item->product_name ?: ($item->product?->name ?? 'Món uống') }}</h2>
+            <p><strong>Kích cỡ / Size:</strong> {{ $item->variant_name ?: ($item->productVariant?->name ?? 'Tiêu chuẩn') }} · <strong>Số lượng:</strong> {{ $item->quantity }} phần</p>
+            @if($item->orderItemToppings && $item->orderItemToppings->isNotEmpty())
+                <p style="color: var(--coffee-accent); margin-top: 0.25rem;">
+                    <strong>Món thêm:</strong> {{ $item->orderItemToppings->pluck('topping_name')->join(', ') }}
+                </p>
+            @endif
+            @if($item->note)
+                <p style="background: var(--coffee-bg); padding: 0.35rem 0.5rem; border-radius: var(--radius-sm); border-left: 3px solid var(--coffee-caramel); font-size: 0.9rem;">
+                    <strong>Ghi chú:</strong> {{ $item->note }}
+                </p>
+            @endif
+            <small style="color: var(--coffee-text-muted); display: block; margin-top: 0.5rem;">
+                Nhận lúc: {{ $item->created_at?->format('H:i d/m') }}
+            </small>
+        </article>
+    @empty
+        <div class="sneat-card sneat-empty" style="grid-column: 1 / -1;">
+            Hiện không có món nào trong hàng đợi pha chế.
+        </div>
+    @endforelse
 </div>
-@endif
-</article>
-@empty<div class="sneat-card sneat-empty">Chưa có món nào trong hàng đợi.</div>@endforelse
-</div>
-@if($items instanceof \Illuminate\Contracts\Pagination\Paginator)<div class="category-pagination">{{ $items->links() }}</div>@endif
-<p class="sneat-hint">Bắt đầu pha sẽ kiểm tra và trừ nguyên liệu bằng dịch vụ kho. Thiếu tồn phải được xử lý trước khi tiếp tục. Sẵn sàng không đồng nghĩa đã thu tiền.</p>
-</section>
+<p class="sneat-hint" style="margin-top: 1.5rem;">
+    <strong>Quy định vận hành:</strong> Màn hình pha chế phục vụ theo dõi trực quan cho quầy Barista. Việc chuyển trạng thái sang “Đang pha” tự động trừ kho nguyên liệu cần được tích hợp với <code>InventoryService</code> có kiểm tra định lượng và khóa dòng nguyên tử trước khi kích hoạt thao tác mutation.
+</p>
 @endsection

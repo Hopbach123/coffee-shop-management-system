@@ -20,5 +20,6 @@
             @yield('content')
         </main>
         <x-public.footer />
+        <x-public.chatbox />
     </body>
 </html>

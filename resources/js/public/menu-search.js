@@ -21,9 +21,17 @@ export function initializeMenuSearch() {
 
     const updateUrl = (query) => {
         const url = new URL(form.action);
+        const category = form.querySelector('[name="category"]')?.value;
+        if (category) url.searchParams.set('category', category);
         if (query) {
             url.searchParams.set('search', query);
         }
+        document.querySelectorAll('.public-menu-categories a').forEach((link) => {
+            const target = new URL(link.href);
+            if (query) target.searchParams.set('search', query);
+            else target.searchParams.delete('search');
+            link.href = target.toString();
+        });
         window.history.replaceState(null, '', url);
     };
 
@@ -32,6 +40,13 @@ export function initializeMenuSearch() {
         requestVersion++;
         activeRequest?.abort();
         activeRequest = undefined;
+        if (new URL(window.location.href).searchParams.has('search')) {
+            const url = new URL(form.action);
+            const category = form.querySelector('[name="category"]')?.value;
+            if (category) url.searchParams.set('category', category);
+            window.location.assign(url);
+            return;
+        }
         defaultMenu.hidden = false;
         results.hidden = true;
         if (categoryNav) categoryNav.hidden = false;
@@ -51,6 +66,8 @@ export function initializeMenuSearch() {
         activeRequest = new AbortController();
         const requestUrl = new URL(form.dataset.searchEndpoint);
         requestUrl.searchParams.set('q', query);
+        const category = form.querySelector('[name="category"]')?.value;
+        if (category) requestUrl.searchParams.set('category', category);
         setStatus('Đang tìm món...', 'loading');
 
         try {
