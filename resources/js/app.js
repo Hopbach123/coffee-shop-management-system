@@ -74,6 +74,8 @@ if (promotionType && promotionMaximum) {
 }
 
 import './internal.js';
+import './admin/menu-sortable.js';
+import './admin/sidebar.js';
 
 // Respect accessibility preferences for motion-heavy hero media.
 if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {

@@ -4,13 +4,11 @@ namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
 use App\Models\CafeTable;
-use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -32,11 +30,18 @@ class PosController extends Controller
             $variant = $variants->get($id);
             if (!$variant || $variant->status !== 'available' || !$variant->product || $variant->product->status !== 'available') continue;
             $qty = max(1, min(20, (int) $quantity));
-            $priceCents = (int) round((float) $variant->price * 100);
+            $parts = explode('.', (string) $variant->price);
+            $priceCents = ((int) $parts[0] * 100) + (int) str_pad(substr($parts[1] ?? '', 0, 2), 2, '0');
             $total += $qty * $priceCents;
             $lines[] = compact('variant', 'qty', 'priceCents');
         }
-        return view('staff.home', ['products' => $products, 'lines' => $lines, 'totalCents' => $total, 'search' => $search, 'tables' => Schema::hasTable('cafe_tables') ? CafeTable::where('status', 'available')->orderBy('table_code')->get() : collect()]);
+        return view('staff.home', [
+            'products' => $products,
+            'lines' => $lines,
+            'totalCents' => $total,
+            'search' => $search,
+            'tables' => Schema::hasTable('cafe_tables') ? CafeTable::where('status', 'available')->orderBy('table_code')->get() : collect(),
+        ]);
     }
 
     public function add(Request $request): RedirectResponse
@@ -62,7 +67,7 @@ class PosController extends Controller
         return redirect()->route('staff.home');
     }
 
-    public function checkout(Request $request): RedirectResponse
+    public function checkout(Request $request, OrderService $orderService): RedirectResponse
     {
         $data = $request->validate([
             'order_type' => ['required', 'in:dine_in,takeaway'],
@@ -70,44 +75,21 @@ class PosController extends Controller
             'note' => ['nullable', 'string', 'max:500'],
         ]);
         $draft = $request->session()->get('pos_cart', []);
-        if (!$draft) throw ValidationException::withMessages(['cart' => 'Chưa có món trong đơn.']);
-        $order = DB::transaction(function () use ($draft, $data, $request) {
-            if ($data['order_type'] === 'dine_in') {
-                // Lock the selected table to prevent duplicate table assignment.
-                $table = CafeTable::whereKey($data['table_id'])->lockForUpdate()->firstOrFail();
-                if ($table->status !== 'available') throw ValidationException::withMessages(['table_id' => 'Bàn không còn trống.']);
-            }
-            $variants = ProductVariant::with('product')->whereIn('id', array_keys($draft))->get()->keyBy('id');
-            $items = [];
-            $subtotalCents = 0;
-            foreach ($draft as $id => $quantity) {
-                $variant = $variants->get($id);
-                if (!$variant || $variant->status !== 'available' || ($variant->product?->status !== 'available' || $variant->product?->trashed())) {
-                    throw ValidationException::withMessages(['cart' => 'Một số món không còn có sẵn.']);
-                }
-                $quantity = max(1, min(20, (int) $quantity));
-                $price = (int) round((float) $variant->price * 100);
-                $subtotalCents += $price * $quantity;
-                $items[] = ['product_id' => $variant->product_id, 'variant_id' => $variant->id, 'product_name' => $variant->product->name, 'variant_name' => $variant->name, 'quantity' => $quantity, 'unit_price' => number_format($price / 100, 2, '.', ''), 'topping_amount' => '0.00', 'subtotal' => number_format($price * $quantity / 100, 2, '.', ''), 'status' => 'pending'];
-            }
-            $order = new Order();
-            $order->order_code = 'POS-'.strtoupper(Str::random(12));
-            $order->user_id = $request->user()->id;
-            $order->order_type = $data['order_type'];
-            $order->table_id = $data['order_type'] === 'dine_in' ? $data['table_id'] : null;
-            $order->status = 'pending';
-            $order->subtotal = number_format($subtotalCents / 100, 2, '.', '');
-            $order->total_amount = $order->subtotal;
-            $order->discount_amount = '0.00';
-            $order->tax_amount = '0.00';
-            $order->ordered_at = now();
-            $order->note = $data['note'] ?? null;
-            $order->save();
-            $order->orderItems()->createMany($items);
-            if (isset($table)) $table->forceFill(['status' => 'occupied'])->save();
-            return $order;
-        });
+        if (!$draft) {
+            throw ValidationException::withMessages(['cart' => 'Chưa có món trong đơn.']);
+        }
+
+        $items = [];
+        foreach ($draft as $variantId => $qty) {
+            $items[] = [
+                'variant_id' => (int) $variantId,
+                'quantity' => (int) $qty,
+            ];
+        }
+
+        $order = $orderService->createWithItems($data, $items, $request->user());
         $request->session()->forget('pos_cart');
-        return redirect()->route('staff.orders.index')->with('success', 'Đã tạo đơn '.$order->order_code.'. Món đang chờ pha chế.');
+
+        return redirect()->route('staff.orders.show', $order)->with('success', 'Đã tạo đơn '.$order->order_code.'. Món đang chờ pha chế.');
     }
 }

@@ -153,4 +153,33 @@ class ProductRecipeManagementTest extends TestCase
         $this->put($this->uri($recipe), ['quantity' => 1])->assertStatus(419);
         $this->delete($this->uri($recipe))->assertStatus(419);
     }
+
+    public function test_inactive_admin_is_denied_and_legacy_pages_use_the_same_editor(): void
+    {
+        $this->login();
+        $recipe = $this->recipe();
+        $this->get(route('admin.product-variants.recipe', $this->variant))->assertOk()->assertSee('editing_recipe', false);
+        $this->get(route('admin.product-variants.recipes', $this->variant))->assertOk()->assertSee('editing_recipe', false);
+        auth('web')->user()->forceFill(['status' => 'inactive'])->save();
+        foreach ([['GET', $this->uri()], ['POST', $this->uri()], ['PUT', $this->uri($recipe)], ['DELETE', $this->uri($recipe)]] as [$method, $uri]) {
+            $this->call($method, $uri)->assertForbidden();
+        }
+        $this->assertSame('18.500', $recipe->fresh()->quantity);
+    }
+
+    public function test_cancelled_model_save_never_reports_success_or_changes_stock(): void
+    {
+        $this->login();
+        $recipe = $this->recipe();
+        ProductRecipe::saving(fn () => false);
+        try {
+            $this->putJson($this->uri($recipe), ['quantity' => '20.000'])->assertStatus(500);
+            $this->postJson($this->uri(), ['ingredient_id' => $this->ingredient->id, 'quantity' => 1])->assertUnprocessable();
+        } finally {
+            ProductRecipe::flushEventListeners();
+        }
+        $this->assertSame('18.500', $recipe->fresh()->quantity);
+        $this->assertSame('1000.000', $this->ingredient->fresh()->current_stock);
+        $this->assertDatabaseCount('inventory_transactions', 0);
+    }
 }

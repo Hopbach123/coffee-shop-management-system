@@ -11,8 +11,14 @@ class OrderItem extends BaseOrderItem
     protected $fillable = [
         'product_id',
         'variant_id',
+        'product_name',
+        'variant_name',
         'quantity',
+        'unit_price',
+        'topping_amount',
+        'subtotal',
         'note',
+        'status',
     ];
 
     protected function casts(): array

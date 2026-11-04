@@ -8,7 +8,9 @@ class UpdateProductRecipeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user('web')?->role === 'admin';
+        return $this->user('web')?->role === 'admin'
+            && $this->user('web')->status === 'active'
+            && ! $this->user('web')->trashed();
     }
 
     public function rules(): array

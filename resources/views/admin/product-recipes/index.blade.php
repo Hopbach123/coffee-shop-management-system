@@ -24,6 +24,7 @@
             <h2>Nguyên liệu trong công thức</h2>
             @if ($recipes->isEmpty())
                 <p class="category-empty">Biến thể chưa có công thức. Thêm nguyên liệu bên dưới.</p>
+                <p>Chưa có định lượng nguyên liệu để đối chiếu tiêu hao khi pha. Cần cấu hình trước khi sử dụng nghiệp vụ kho.</p>
             @else
                 <div class="category-table-wrap" role="region" aria-label="Công thức nguyên liệu" tabindex="0">
                     <table class="category-table">
@@ -39,13 +40,14 @@
                                 </th>
                                 <td data-label="Đơn vị">{{ $recipe->ingredient?->unit ?? '—' }}</td>
                                 <td data-label="Định lượng">
+                                    <p>{{ number_format((float) $recipe->quantity, 3, ',', '.') }} {{ $recipe->ingredient?->unit }}</p>
                                     <form method="POST" action="{{ route('admin.product-recipes.update', [$productVariant, $recipe]) }}" class="category-form">
                                         @csrf @method('PUT')
                                         <input type="hidden" name="editing_recipe" value="{{ $recipe->id }}">
                                         <div class="category-field">
                                             <label for="quantity-{{ $recipe->id }}">Định lượng {{ $recipe->ingredient?->name }}</label>
-                                            <input id="quantity-{{ $recipe->id }}" name="quantity" type="number" min="0.001" max="999999999.999" step="0.001" value="{{ old('editing_recipe') == $recipe->id && is_scalar(old('quantity')) ? old('quantity') : $recipe->quantity }}" required @if(old('editing_recipe') == $recipe->id && $errors->has('quantity')) aria-invalid="true" aria-describedby="quantity-error-{{ $recipe->id }}" @endif>
-                                            @if(old('editing_recipe') == $recipe->id && $errors->has('quantity'))
+                                            <input id="quantity-{{ $recipe->id }}" name="quantity" type="number" min="0.001" max="999999999.999" step="0.001" value="{{ (is_scalar(old('editing_recipe')) ? old('editing_recipe') : null) == $recipe->id && is_scalar(old('quantity')) ? old('quantity') : $recipe->quantity }}" required @if((is_scalar(old('editing_recipe')) ? old('editing_recipe') : null) == $recipe->id && $errors->has('quantity')) aria-invalid="true" aria-describedby="quantity-error-{{ $recipe->id }}" @endif>
+                                            @if((is_scalar(old('editing_recipe')) ? old('editing_recipe') : null) == $recipe->id && $errors->has('quantity'))
                                                 <p class="category-field__error" id="quantity-error-{{ $recipe->id }}">{{ $errors->first('quantity') }}</p>
                                             @endif
                                         </div>
@@ -85,8 +87,8 @@
                     </div>
                     <div class="category-field">
                         <label for="quantity">Định lượng cho một phần *</label>
-                        <input id="quantity" name="quantity" type="number" min="0.001" max="999999999.999" step="0.001" value="{{ ! old('editing_recipe') && is_scalar(old('quantity')) ? old('quantity') : '' }}" required @if(! old('editing_recipe') && $errors->has('quantity')) aria-invalid="true" aria-describedby="quantity-error" @endif>
-                        @if(! old('editing_recipe') && $errors->has('quantity'))<p class="category-field__error" id="quantity-error">{{ $errors->first('quantity') }}</p>@endif
+                        <input id="quantity" name="quantity" type="number" min="0.001" max="999999999.999" step="0.001" value="{{ ! (is_scalar(old('editing_recipe')) ? old('editing_recipe') : null) && is_scalar(old('quantity')) ? old('quantity') : '' }}" required @if(! (is_scalar(old('editing_recipe')) ? old('editing_recipe') : null) && $errors->has('quantity')) aria-invalid="true" aria-describedby="quantity-error" @endif>
+                        @if(! (is_scalar(old('editing_recipe')) ? old('editing_recipe') : null) && $errors->has('quantity'))<p class="category-field__error" id="quantity-error">{{ $errors->first('quantity') }}</p>@endif
                     </div>
                 </div>
                 <x-public.button type="submit">Thêm vào công thức</x-public.button>

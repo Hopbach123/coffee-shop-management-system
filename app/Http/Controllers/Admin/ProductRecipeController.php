@@ -10,13 +10,16 @@ use App\Models\ProductRecipe;
 use App\Models\ProductVariant;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use RuntimeException;
 
 class ProductRecipeController extends Controller
 {
-    public function index(ProductVariant $productVariant): View
+    public function index(Request $request, ProductVariant $productVariant): View
     {
+        abort_unless($request->user('web')?->status === 'active' && ! $request->user('web')->trashed(), 403);
         $productVariant->load('product');
         $recipes = $productVariant->productRecipes()->with('ingredient')->orderBy('id')->get();
         $ingredients = Ingredient::query()->where('status', 'active')
@@ -29,7 +32,10 @@ class ProductRecipeController extends Controller
     public function store(StoreProductRecipeRequest $request, ProductVariant $productVariant): RedirectResponse
     {
         try {
-            $productVariant->productRecipes()->create($request->validated());
+            $recipe = $productVariant->productRecipes()->make($request->validated());
+            if (! $recipe->saveOrFail()) {
+                throw new RuntimeException('Recipe could not be persisted.');
+            }
         } catch (UniqueConstraintViolationException $exception) {
             if (! $productVariant->productRecipes()->where('ingredient_id', $request->validated('ingredient_id'))->exists()) {
                 throw $exception;
@@ -42,14 +48,20 @@ class ProductRecipeController extends Controller
 
     public function update(UpdateProductRecipeRequest $request, ProductVariant $productVariant, ProductRecipe $productRecipe): RedirectResponse
     {
-        $productRecipe->update($request->validated());
+        $productRecipe->fill($request->safe()->only('quantity'));
+        if (! $productRecipe->saveOrFail()) {
+            throw new RuntimeException('Recipe could not be persisted.');
+        }
 
         return redirect()->route('admin.product-recipes.index', $productVariant)->with('success', 'Đã cập nhật định lượng.');
     }
 
-    public function destroy(ProductVariant $productVariant, ProductRecipe $productRecipe): RedirectResponse
+    public function destroy(Request $request, ProductVariant $productVariant, ProductRecipe $productRecipe): RedirectResponse
     {
-        $productRecipe->delete();
+        abort_unless($request->user('web')?->status === 'active' && ! $request->user('web')->trashed(), 403);
+        if (! $productRecipe->delete()) {
+            throw new RuntimeException('Recipe could not be persisted.');
+        }
 
         return redirect()->route('admin.product-recipes.index', $productVariant)->with('success', 'Đã bỏ nguyên liệu khỏi công thức.');
     }
