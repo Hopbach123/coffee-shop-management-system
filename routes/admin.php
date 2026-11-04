@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IngredientController;
 use App\Http\Controllers\Admin\InventoryOverviewController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProductRecipeController;
 use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\ReservationController;
@@ -26,6 +27,13 @@ Route::delete('menus/{admin_menu}', [\App\Http\Controllers\Admin\AdminMenuContro
 
 Route::get('/', [DashboardController::class, 'home'])->name('home');
 Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+
+Route::prefix('product-variants/{product_variant}/recipes')->name('product-recipes.')->scopeBindings()->group(function () {
+    Route::get('/', [ProductRecipeController::class, 'index'])->name('index');
+    Route::post('/', [ProductRecipeController::class, 'store'])->name('store');
+    Route::put('{product_recipe}', [ProductRecipeController::class, 'update'])->name('update');
+    Route::delete('{product_recipe}', [ProductRecipeController::class, 'destroy'])->name('destroy');
+});
 
 Route::get('reservations', [ReservationController::class, 'index'])->name('reservations.index');
 Route::get('reservations/create', [ReservationController::class, 'create'])->name('reservations.create');
@@ -54,8 +62,8 @@ Route::patch('ingredients/{ingredient}/toggle-status', [IngredientController::cl
     ->name('ingredients.toggle-status');
 Route::resource('ingredients', IngredientController::class)->except('show');
 Route::get('ingredients/{ingredient}/history', [InventoryOverviewController::class, 'history'])->name('ingredients.history');
-Route::get('product-variants/{product_variant}/recipe', [InventoryOverviewController::class, 'recipe'])->name('product-variants.recipe');
-Route::get('product-variants/{product_variant}/recipes', [ProductVariantController::class, 'recipes'])->name('product-variants.recipes');
+Route::get('product-variants/{product_variant}/recipe', [ProductRecipeController::class, 'index'])->name('product-variants.recipe');
+
 
 Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
 Route::get('customers/create', [CustomerController::class, 'create'])->name('customers.create');
@@ -92,3 +100,5 @@ Route::resource('toppings', ToppingController::class)->except('show');
 Route::patch('promotions/{promotion}/toggle-status', [PromotionController::class, 'toggleStatus'])
     ->name('promotions.toggle-status');
 Route::resource('promotions', PromotionController::class)->except('show');
+
+Route::get('product-variants/{product_variant}/recipes/view', [ProductRecipeController::class, 'index'])->name('product-variants.recipes');

@@ -80,10 +80,4 @@ class ProductVariantController extends Controller
         return redirect()->route('admin.product-variants.index')->with('success', 'Đã xóa biến thể.');
     }
 
-    public function recipes(ProductVariant $productVariant): View
-    {
-        $productVariant->load(['product', 'productRecipes.ingredient']);
-
-        return view('admin.product-variants.recipes', compact('productVariant'));
-    }
 }
