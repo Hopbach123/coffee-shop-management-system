@@ -24,7 +24,7 @@ Route::put('menus/{admin_menu}', [\App\Http\Controllers\Admin\AdminMenuControlle
 Route::patch('menus/{admin_menu}/status', [\App\Http\Controllers\Admin\AdminMenuController::class, 'status'])->name('menus.status');
 Route::delete('menus/{admin_menu}', [\App\Http\Controllers\Admin\AdminMenuController::class, 'destroy'])->name('menus.destroy');
 
-Route::view('/', 'admin.home')->name('home');
+Route::get('/', [DashboardController::class, 'home'])->name('home');
 Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
 Route::get('reservations', [ReservationController::class, 'index'])->name('reservations.index');
@@ -55,6 +55,7 @@ Route::patch('ingredients/{ingredient}/toggle-status', [IngredientController::cl
 Route::resource('ingredients', IngredientController::class)->except('show');
 Route::get('ingredients/{ingredient}/history', [InventoryOverviewController::class, 'history'])->name('ingredients.history');
 Route::get('product-variants/{product_variant}/recipe', [InventoryOverviewController::class, 'recipe'])->name('product-variants.recipe');
+Route::get('product-variants/{product_variant}/recipes', [ProductVariantController::class, 'recipes'])->name('product-variants.recipes');
 
 Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
 Route::get('customers/create', [CustomerController::class, 'create'])->name('customers.create');
