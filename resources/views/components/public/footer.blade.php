@@ -7,19 +7,21 @@
         </section>
         <section aria-labelledby="footer-visit-title">
             <h3 id="footer-visit-title">Ghé thăm</h3>
-            <address>Liên hệ cửa hàng để xác nhận địa chỉ và thời gian hoạt động.</address>
+            <x-public.shop-location />
         </section>
         <section aria-labelledby="footer-hours-title">
             <h3 id="footer-hours-title">Khám phá</h3>
             <dl class="opening-hours">
-                <div><dt>Đặt bàn</dt><dd><a href="{{ route('reservation.create') }}">Gửi yêu cầu ↗</a></dd></div>
+                <div><dt>Đặt bàn</dt><dd><a href="{{ (\Illuminate\Support\Facades\Route::has('reservation.create') ? route('reservation.create') : route('home').'#reservation') }}">Gửi yêu cầu ↗</a></dd></div>
                 <div><dt>Đặt món</dt><dd><a href="{{ route('menu.index') }}">Xem thực đơn ↗</a></dd></div>
             </dl>
         </section>
         <section aria-labelledby="footer-letter-title">
             <h3 id="footer-letter-title">Liên kết nhanh</h3>
             <p><a href="{{ route('menu.index') }}">Thực đơn</a></p>
+            @if (\Illuminate\Support\Facades\Route::has('cart.index'))
             <p><a href="{{ route('cart.index') }}">Giỏ hàng</a></p>
+            @endif
             @guest('web')<p><a href="{{ route('login') }}">Đăng nhập nhân viên</a></p>@endguest
         </section>
     </div>

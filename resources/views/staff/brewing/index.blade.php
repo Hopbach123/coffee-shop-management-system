@@ -38,7 +38,7 @@
         </article>
     @empty
         <div class="sneat-card sneat-empty" style="grid-column: 1 / -1;">
-            Hiện không có món nào trong hàng đợi pha chế.
+            Chưa có món nào trong hàng đợi pha chế.
         </div>
     @endforelse
 </div>

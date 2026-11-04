@@ -16,7 +16,7 @@
                     @if ($imageUrl = $product->imageUrl())
                         <img src="{{ $imageUrl }}" alt="{{ $product->name }}">
                     @else
-                        <img src="{{ asset('images/coffeehouse/artisan-espresso.png') }}" alt="Hình minh họa cà phê" loading="lazy">
+                        <span aria-hidden="true">M</span>
                     @endif
                 </div>
                 <div class="public-menu-detail__copy">
@@ -47,7 +47,7 @@
                             @endforeach
                         </ul>
                     @endif
-                    @if($product->status === 'available' && $product->productVariants->contains('status', 'available'))
+                    @if(\Illuminate\Support\Facades\Route::has('cart.add') && $product->status === 'available' && $product->productVariants->contains('status', 'available'))
                         <form class="storefront-add-form" action="{{ route('cart.add') }}" method="POST">@csrf
                             <label for="choose-variant">Chọn kích cỡ</label><select name="variant_id" id="choose-variant" required>
                             @foreach($product->productVariants->where('status', 'available') as $variant)<option value="{{ $variant->id }}">{{ $variant->name }} — {{ number_format((float)$variant->price,0,',','.') }}đ</option>@endforeach

@@ -14,7 +14,7 @@
             <p class="hero__intro">Từ hạt cà phê tuyển chọn đến ly nước trên tay bạn — từng khoảnh khắc đều xứng đáng được nâng niu.</p>
             <div class="hero__actions">
                 <x-public.button href="{{ route('menu.index') }}">Khám phá thực đơn →</x-public.button>
-                <x-public.button href="{{ route('reservation.create') }}" variant="ghost">Đặt bàn ngay</x-public.button>
+                <x-public.button href="{{ (\Illuminate\Support\Facades\Route::has('reservation.create') ? route('reservation.create') : route('home').'#reservation') }}" variant="ghost">Đặt bàn ngay</x-public.button>
             </div>
         </div>
         <p class="hero__note">ROASTED WITH CARE · SERVED WITH LOVE</p>
@@ -76,7 +76,7 @@
                 <h2>Một chiếc bàn dành cho bạn.</h2>
                 <p>Hẹn một buổi sáng thư thái hay cuộc gặp gỡ cuối tuần. Gửi yêu cầu đặt bàn ngay hôm nay.</p>
             </div>
-            <x-public.button href="{{ route('reservation.create') }}">Đặt bàn ngay</x-public.button>
+            <x-public.button href="{{ (\Illuminate\Support\Facades\Route::has('reservation.create') ? route('reservation.create') : route('home').'#reservation') }}">Đặt bàn ngay</x-public.button>
         </div>
     </section>
 @endsection

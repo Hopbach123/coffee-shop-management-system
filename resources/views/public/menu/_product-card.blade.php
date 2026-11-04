@@ -3,7 +3,7 @@
         @if ($imageUrl = $product->imageUrl())
             <img src="{{ $imageUrl }}" alt="{{ $product->name }}" loading="lazy">
         @else
-            <img src="{{ asset('images/coffeehouse/artisan-espresso.png') }}" alt="Hình minh họa cà phê" loading="lazy">
+            <span aria-hidden="true">M</span>
         @endif
     </div>
     <div class="public-menu-card__body">

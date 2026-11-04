@@ -47,6 +47,10 @@
                 <span>Maison <strong>du Café</strong><small>{{ $isAdmin ? 'Khu vực Admin' : 'STAFF WORKSPACE' }}</small></span>
             </a>
             <nav aria-label="Điều hướng nội bộ" class="sneat-nav">
+                @if ($isAdmin)
+                    <a href="{{ route('admin.dashboard.index') }}" class="sneat-nav-link">Dashboard</a>
+                    <x-internal.admin-sidebar />
+                @else
                 @foreach ($menus as $group)
                     <p class="sneat-nav-section">{{ $group['label'] }}</p>
                     @foreach($group['links'] as $entry)
@@ -55,6 +59,7 @@
                         </a>
                     @endforeach
                 @endforeach
+                @endif
             </nav>
             <div class="sneat-sidebar-footer"><a href="{{ route('home') }}"><x-internal.icon name="arrow" size="17"/> Xem website khách</a></div>
         </aside>
