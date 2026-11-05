@@ -91,7 +91,7 @@ class InventoryImportConcurrencyMySqlTest extends TestCase
                 $lines = explode("\n", trim($worker['output']));
                 $result = json_decode(end($lines), true);
                 $this->assertIsArray($result, 'Worker failed without exposing connection data.');
-                $ids[] = $result['id'];
+                $ids[] = $result['id'] ?? $result['error'];
             }
             unset($worker);
 
@@ -135,5 +135,38 @@ class InventoryImportConcurrencyMySqlTest extends TestCase
             $stock = $movement->after_quantity;
         }
         $this->assertSame('8.625', $stock);
+    }
+
+    public function test_adjustment_duplicates_competing_waste_and_stale_stocktake(): void
+    {
+        $first = User::forceCreate(['name' => 'First', 'email' => 'first@example.test', 'password' => 'test-only', 'role' => 'admin', 'status' => 'active']);
+        $second = User::forceCreate(['name' => 'Second', 'email' => 'second@example.test', 'password' => 'test-only', 'role' => 'admin', 'status' => 'active']);
+        $ingredient = Ingredient::forceCreate(['name' => 'Concurrent fixture', 'unit' => 'kg', 'current_stock' => '10.000', 'minimum_stock' => 0, 'cost_price' => 0, 'status' => 'active']);
+        $command = ['actor' => $first->id, 'key' => '123456789', 'quantity' => '2', 'mode' => 'decrease'];
+        $ids = $this->parallelImports($ingredient, [$command, $command]);
+        $this->assertIsInt($ids[0]);
+        $this->assertSame($ids[0], $ids[1]);
+        $this->assertSame('8.000', $ingredient->fresh()->current_stock);
+        $ids = $this->parallelImports($ingredient, [
+            ['actor' => $first->id, 'key' => '234567890', 'quantity' => '6', 'mode' => 'waste'],
+            ['actor' => $second->id, 'key' => '345678901', 'quantity' => '6', 'mode' => 'waste'],
+        ]);
+        $this->assertCount(1, array_filter($ids, 'is_int'));
+        $this->assertContains('domain_rejected', $ids);
+        $this->assertSame('2.000', $ingredient->fresh()->current_stock);
+        $ledger = (int) DB::table('inventory_transactions')->max('id');
+        $ids = $this->parallelImports($ingredient, [
+            ['actor' => $first->id, 'key' => '456789012', 'quantity' => '0', 'mode' => 'stocktake', 'stock' => '2.000', 'ledger' => $ledger],
+            ['actor' => $second->id, 'key' => '567890123', 'quantity' => '1', 'mode' => 'stocktake', 'stock' => '2.000', 'ledger' => $ledger],
+        ]);
+        $this->assertCount(1, array_filter($ids, 'is_int'));
+        $this->assertContains('domain_rejected', $ids);
+        $this->assertSame(3, DB::table('inventory_transactions')->count());
+        $stock = '10.000';
+        foreach (DB::table('inventory_transactions')->orderBy('id')->get() as $movement) {
+            $this->assertSame($stock, $movement->before_quantity);
+            $stock = $movement->after_quantity;
+        }
+        $this->assertSame($stock, $ingredient->fresh()->current_stock);
     }
 }

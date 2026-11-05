@@ -16,7 +16,7 @@ return [
         'admin.product-variants.index' => ['admin.product-variants.create', 'admin.product-variants.edit', 'admin.product-variants.recipe', 'admin.product-variants.recipes', 'admin.product-recipes.index'],
         'admin.toppings.index' => ['admin.toppings.create', 'admin.toppings.edit'],
         'admin.promotions.index' => ['admin.promotions.create', 'admin.promotions.edit'],
-        'admin.ingredients.index' => ['admin.ingredients.create', 'admin.ingredients.edit', 'admin.ingredients.history', 'admin.ingredients.import.create'],
+        'admin.ingredients.index' => ['admin.ingredients.create', 'admin.ingredients.edit', 'admin.ingredients.history', 'admin.ingredients.import.create', 'admin.ingredients.adjustment.create'],
         'admin.areas.index' => ['admin.areas.create', 'admin.areas.edit'],
         'admin.tables.index' => ['admin.tables.create', 'admin.tables.edit'],
         'admin.customers.index' => ['admin.customers.create', 'admin.customers.edit'],

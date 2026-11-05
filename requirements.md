@@ -108,6 +108,8 @@ Mục tiêu của domain Promotion là hỗ trợ giảm theo phần trăm hoặ
 
 ### 5.8 Inventory
 
+Theo yêu cầu hoàn thiện feature/inventory-adjustments ngày 06/11/2026: Admin đang hoạt động ghi điều chỉnh tăng/giảm, hao hụt hoặc kiểm kê một nguyên liệu đang dùng. Lý do bắt buộc tối đa 1000 ký tự; đơn vị theo Ingredient, không quy đổi. Kiểm kê nhập tồn thực tế không âm; hệ thống tính chênh lệch, không cho ghi nếu tồn/lịch sử đã đổi từ lúc mở phiếu và yêu cầu mở phiếu mới. Không chênh lệch thì thông báo không cần điều chỉnh, không tạo movement bằng 0. Admin ghi phiếu là người xác nhận điều chỉnh, chưa có quy trình đề xuất/duyệt hai người. Tồn và movement cùng transaction, chống gửi lặp; lịch sử chỉ đọc. Không thêm schema hoặc thay luồng tiêu hao.
+
 Mục tiêu của domain Inventory là quản lý nguyên liệu, tồn hiện tại, định mức tối thiểu, công thức theo biến thể và lịch sử biến động `import`, `consume`, `adjustment`, `waste`. Tồn kho chỉ bị trừ trong transaction khi Order Item chuyển `pending` sang `preparing`; mọi thay đổi tồn phải có log và không được làm tồn âm. Nhà cung cấp, mua hàng và ERP kho nằm ngoài phạm vi.
 
 Phạm vi rà soát nhập liệu nguyên liệu ngày 13/10/2026 theo yêu cầu user: dùng danh sách đơn vị chuẩn `g`, `kg`, `ml`, `l`, `cái` tại cấu hình ứng dụng, không thêm bảng hoặc enum database. Số lượng và giá vốn tính theo cùng đơn vị; chỉ cho đổi đơn vị khi tồn bằng 0 và chưa có công thức hoặc lịch sử kho. Không tự động quy đổi số lượng. CRUD không được sửa tồn kho. Tên bắt buộc, tối đa 255 ký tự; ngưỡng tồn và giá vốn không âm, đúng độ chính xác và giới hạn migration. Tên trùng không bị cấm bởi baseline hiện tại.
