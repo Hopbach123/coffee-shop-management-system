@@ -105,3 +105,6 @@ Route::get('product-variants/{product_variant}/recipes/view', [ProductRecipeCont
 
 Route::get('ingredients/{ingredient}/import', [\App\Http\Controllers\Admin\StockImportController::class, 'create'])->name('ingredients.import.create');
 Route::post('ingredients/{ingredient}/import', [\App\Http\Controllers\Admin\StockImportController::class, 'store'])->name('ingredients.import.store');
+
+Route::get('ingredients/{ingredient}/adjustment', [\App\Http\Controllers\Admin\StockAdjustmentController::class, 'create'])->name('ingredients.adjustment.create');
+Route::post('ingredients/{ingredient}/adjustment', [\App\Http\Controllers\Admin\StockAdjustmentController::class, 'store'])->name('ingredients.adjustment.store');

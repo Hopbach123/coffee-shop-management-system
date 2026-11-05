@@ -21,10 +21,21 @@ try {
     $actor = User::findOrFail($input['actor']);
     echo "READY\n";
     flush();
-    $movement = app(InventoryService::class)->recordImport(
-        $ingredient, $actor, $input['quantity'], 'concurrent fixture', $input['key'], 'kg'
-    );
+    if (isset($input['mode'])) {
+        $movement = app(InventoryService::class)->recordAdjustment(
+            $ingredient, $actor, $input['mode'], $input['quantity'], 'concurrent fixture',
+            ['key' => $input['key'], 'ingredient' => $ingredient->id, 'actor' => $actor->id,
+                'unit' => 'kg', 'stock' => $input['stock'] ?? '', 'ledger' => $input['ledger'] ?? 0]
+        );
+    } else {
+        $movement = app(InventoryService::class)->recordImport(
+            $ingredient, $actor, $input['quantity'], 'concurrent fixture', $input['key'], 'kg'
+        );
+    }
     echo json_encode(['id' => $movement->id], JSON_THROW_ON_ERROR)."\n";
+} catch (DomainException $exception) {
+    echo json_encode(['error' => 'domain_rejected'], JSON_THROW_ON_ERROR)."\n";
+    exit(2);
 } catch (Throwable $exception) {
     // Do not expose connection details or SQL parameters from worker processes.
     fwrite(STDERR, get_class($exception)."\n");

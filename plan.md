@@ -10,6 +10,10 @@ User-authorized schema-only extension: counter/scheduled/online pickup as define
 
 ## 1. Purpose
 
+### Current task — CAFE-INV-BE-005 / feature/inventory-adjustments (06/11/2026)
+
+User duyệt hoàn thiện H05 sau nhập kho PR #33; baseline dev e6e926e7. Chia ba bước 30–90 phút: (1) rules/token/Service, (2) form/routes/history navigation, (3) validation/rollback/retry/concurrency regression, build và report. Dependencies: Ingredient, auth Admin, inventory ledger và import đã có. Scope: adjustment tăng/giảm, waste, stocktake một nguyên liệu và hướng dẫn. Không sửa consume/Order/Payment, migration, seed hoặc dữ liệu dự án. AC: active Admin only, reason/precision/range, stock không âm/overflow, stocktake stale bị chặn, atomic ledger, retry không cộng hai lần, UI old/error/success/navigation. Test: isolated SQLite workflow, MySQL concurrency nếu môi trường cho phép, suite/build/diff và browser theo frontend standard. Không tự commit/push hoặc task tiếp theo.
+
 Tài liệu này là roadmap triển khai chính thức của Coffee Shop Management System. Roadmap xác định thứ tự phụ thuộc từ nền tảng, dữ liệu, xác thực, nghiệp vụ cốt lõi, frontend, kiểm thử đến bàn giao.
 
 `requirements.md` quyết định hệ thống cần hỗ trợ gì; `architecture.md` quyết định cấu trúc kỹ thuật; `frontend.md` quyết định tiêu chuẩn giao diện; `plan.md` chỉ quyết định thứ tự và cách chia nhỏ công việc. Khi các tài liệu mâu thuẫn, không được tự suy đoán hoặc triển khai tiếp.

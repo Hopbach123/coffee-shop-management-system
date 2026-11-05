@@ -229,6 +229,79 @@ class InventoryService
 
     private const MAX_MILLIUNITS = 999_999_999_999;
 
+    public function recordAdjustment(Ingredient $ingredient, User $actor, string $mode, string $quantity, string $note, array $operation): InventoryTransaction
+    {
+        if (! in_array($mode, ['increase', 'decrease', 'waste', 'stocktake'], true)
+            || trim($note) === '' || mb_strlen($note) > 1000
+            || ! is_string($operation['key'] ?? null)
+            || ! preg_match('/\A[1-9]\d{0,17}\z/', $operation['key'])
+            || ($operation['ingredient'] ?? null) !== $ingredient->id
+            || ($operation['actor'] ?? null) !== $actor->id
+            || ! is_string($operation['unit'] ?? null)) {
+            throw new DomainException('Thông tin phiếu điều chỉnh không hợp lệ.');
+        }
+        $amount = $this->importMilliunits($quantity, $mode !== 'stocktake');
+
+        return DB::transaction(function () use ($ingredient, $actor, $mode, $amount, $note, $operation): InventoryTransaction {
+            $currentActor = User::query()->lockForUpdate()->findOrFail($actor->id);
+            if ($currentActor->role !== 'admin' || $currentActor->status !== 'active') {
+                throw new DomainException('Chỉ Admin đang hoạt động mới được điều chỉnh kho.');
+            }
+            $current = Ingredient::query()->lockForUpdate()->findOrFail($ingredient->id);
+            $reference = 'stock_'.$mode;
+            $existing = InventoryTransaction::query()->where('ingredient_id', $current->id)
+                ->where('reference_id', $operation['key'])
+                ->whereIn('reference_type', ['stock_increase', 'stock_decrease', 'stock_waste', 'stock_stocktake'])->first();
+            if ($existing !== null) {
+                $originalAmount = $mode === 'stocktake' ? $existing->after_quantity : $existing->quantity;
+                if ($existing->reference_type !== $reference || $existing->created_by !== $currentActor->id
+                    || $this->importMilliunits($originalAmount, false) !== $amount || $existing->note !== $note) {
+                    throw new DomainException('Phiếu đã ghi với dữ liệu khác. Hãy mở phiếu mới.');
+                }
+
+                return $existing;
+            }
+            if ($current->status !== 'active' || $current->unit !== $operation['unit']) {
+                throw new DomainException('Nguyên liệu ngừng dùng hoặc đã đổi đơn vị. Hãy mở lại phiếu.');
+            }
+            $before = $this->importMilliunits($current->current_stock, false);
+            if ($mode === 'stocktake') {
+                $latestId = (int) InventoryTransaction::query()->where('ingredient_id', $current->id)->max('id');
+                if (($operation['stock'] ?? null) !== $current->current_stock || ($operation['ledger'] ?? null) !== $latestId) {
+                    throw new DomainException('Tồn kho đã thay đổi sau khi mở phiếu. Hãy kiểm kê và mở phiếu mới.');
+                }
+            }
+            $after = match ($mode) {
+                'increase' => $before + $amount,
+                'stocktake' => $amount,
+                default => $before - $amount,
+            };
+            if ($after < 0 || $after > self::MAX_MILLIUNITS) {
+                throw new DomainException('Tồn sau điều chỉnh phải từ 0 đến 999999999.999.');
+            }
+            if ($before === $after) {
+                throw new DomainException('Tồn thực tế khớp hệ thống; không cần tạo phiếu điều chỉnh.');
+            }
+            $current->current_stock = $this->importDecimal($after);
+            if (! $current->saveOrFail()) {
+                throw new \RuntimeException('Stock could not be saved.');
+            }
+            $movement = new InventoryTransaction;
+            $movement->forceFill([
+                'ingredient_id' => $current->id, 'created_by' => $currentActor->id,
+                'type' => $mode === 'waste' ? 'waste' : 'adjustment',
+                'quantity' => $this->importDecimal(abs($after - $before)),
+                'before_quantity' => $this->importDecimal($before), 'after_quantity' => $this->importDecimal($after),
+                'reference_type' => $reference, 'reference_id' => $operation['key'], 'note' => $note,
+            ]);
+            if (! $movement->saveOrFail()) {
+                throw new \RuntimeException('Stock ledger could not be saved.');
+            }
+
+            return $movement;
+        }, 3);
+    }
+
     private function importMilliunits(string $amount, bool $mustBePositive = true): int
     {
         if (! preg_match('/\A\d{1,9}(?:\.\d{1,3})?\z/', $amount)) {
