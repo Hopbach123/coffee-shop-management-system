@@ -78,3 +78,7 @@ Browser responsive/keyboard, MySQL integration, simultaneous-request race cases,
 
 ## Recommended Next Task
 Nghiệm thu UI, sau đó stock movement theo task riêng. Không tự triển khai.
+
+## Đính chính bàn giao ngày 05/11/2026
+
+Code công thức đã commit tại c9468123 và merge vào dev qua PR #32 (1ba4b8fa). Các mục báo cáo cũ ghi thời điểm, baseline hoặc merge chưa commit chỉ phản ánh lịch sử, không phải trạng thái bàn giao hiện tại. Không dùng kết quả test cũ làm bằng chứng cho thay đổi mới. Lần triển khai inventory-transactions sửa active sidebar qua config/admin_menu.php vì Admin sử dụng component sidebar động. Không thêm nghiệp vụ công thức hoặc sửa tiêu hao trong task nhập kho.

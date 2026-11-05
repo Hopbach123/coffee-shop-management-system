@@ -137,6 +137,7 @@ class InventoryService
 
         return intdiv($quantity, 1000).'.'.str_pad((string) ($quantity % 1000), 3, '0', STR_PAD_LEFT);
     }
+
     /**
      * Record a stock import and its immutable audit row atomically.
      */
@@ -144,10 +145,10 @@ class InventoryService
     {
         $quantityInMilliunits = $this->importMilliunits($quantity);
         if ($operationKey !== null && ! preg_match('/\A[1-9]\d{0,17}\z/', $operationKey)) {
-            throw new DomainException('Invalid import operation key.');
+            throw new DomainException('Mã phiếu nhập không hợp lệ.');
         }
         if ($note !== null && mb_strlen($note) > 1000) {
-            throw new DomainException('Import note exceeds 1000 characters.');
+            throw new DomainException('Ghi chú nhập kho tối đa 1000 ký tự.');
         }
 
         return DB::transaction(function () use ($ingredient, $actor, $quantityInMilliunits, $note, $operationKey, $expectedUnit): InventoryTransaction {
@@ -170,16 +171,17 @@ class InventoryService
                 if ($existing !== null) {
                     if ($existing->type !== 'import' || $existing->created_by !== $currentActor->id
                         || $this->importMilliunits($existing->quantity) !== $quantityInMilliunits || $existing->note !== $note) {
-                        throw new DomainException('Import operation already used with different data.');
+                        throw new DomainException('Phiếu đã ghi nhận với dữ liệu khác. Hãy mở phiếu mới nếu cần nhập thêm.');
                     }
+
                     return $existing;
                 }
             }
             if ($currentIngredient->status !== 'active') {
-                throw new DomainException('Ingredient is inactive. Activate it before importing.');
+                throw new DomainException('Nguyên liệu đã ngừng dùng. Hãy kích hoạt trước khi nhập kho.');
             }
             if ($expectedUnit !== null && $expectedUnit !== $currentIngredient->unit) {
-                throw new DomainException('Ingredient unit changed. Reopen the import form.');
+                throw new DomainException('Đơn vị nguyên liệu đã thay đổi. Hãy mở lại form nhập kho.');
             }
 
             $beforeInMilliunits = $this->importMilliunits($currentIngredient->current_stock, false);

@@ -102,3 +102,6 @@ Route::patch('promotions/{promotion}/toggle-status', [PromotionController::class
 Route::resource('promotions', PromotionController::class)->except('show');
 
 Route::get('product-variants/{product_variant}/recipes/view', [ProductRecipeController::class, 'index'])->name('product-variants.recipes');
+
+Route::get('ingredients/{ingredient}/import', [\App\Http\Controllers\Admin\StockImportController::class, 'create'])->name('ingredients.import.create');
+Route::post('ingredients/{ingredient}/import', [\App\Http\Controllers\Admin\StockImportController::class, 'store'])->name('ingredients.import.store');
