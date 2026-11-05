@@ -72,6 +72,7 @@
                                     </td>
                                     <td data-label="Thao tác">
                                         <div class="category-actions">
+                                            <x-public.button href="{{ route('admin.ingredients.history', $ingredient) }}" variant="outline">Lịch sử kho</x-public.button>
                                             <x-public.button href="{{ route('admin.ingredients.edit', $ingredient) }}" variant="outline">Sửa</x-public.button>
                                             <form method="POST" action="{{ route('admin.ingredients.toggle-status', $ingredient) }}">
                                                 @csrf

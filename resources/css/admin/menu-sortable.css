@@ -1,0 +1,9 @@
+.menu-sort ol { list-style: none; padding: 0; }
+.menu-sort li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); padding: var(--space-sm); border: 1px solid var(--coffee-border); margin-block: var(--space-sm); }
+.menu-sort li > span { flex: 1 1 12rem; overflow-wrap: anywhere; }
+.menu-sort button, .menu-sort select { min-height: 3rem; max-width: 100%; padding: var(--space-xs) var(--space-sm); border: 1px solid var(--coffee-border); border-radius: var(--radius-sm); color: var(--coffee-text); background: var(--coffee-surface); }
+.menu-sort button { cursor: pointer; }
+.menu-sort button:disabled { cursor: wait; opacity: .6; }
+.menu-sort [draggable] { cursor: grab; }
+.menu-sort .menu-sort__drop { outline: 3px solid var(--coffee-focus); outline-offset: 2px; }
+.menu-sort [data-sort-message] { margin-top: var(--space-md); overflow-wrap: anywhere; }
