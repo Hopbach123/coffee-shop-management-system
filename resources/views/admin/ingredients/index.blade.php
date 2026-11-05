@@ -23,18 +23,28 @@
                 <label for="ingredient-search">Tìm nguyên liệu theo tên</label>
                 <div class="category-search__controls">
                     <input id="ingredient-search" type="search" name="search" value="{{ $search }}" maxlength="255" placeholder="Nhập tên nguyên liệu">
+                    <div class="category-field">
+                        <label for="stock-filter">Tình trạng tồn kho</label>
+                        <select id="stock-filter" name="stock">
+                            <option value="">Tất cả</option>
+                            <option value="out" @selected($stock === 'out')>Hết tồn</option>
+                            <option value="low" @selected($stock === 'low')>Dưới ngưỡng</option>
+                            <option value="sufficient" @selected($stock === 'sufficient')>Đủ ngưỡng</option>
+                        </select>
+                    </div>
                     <x-public.button type="submit">Tìm kiếm</x-public.button>
-                    @if ($search !== '')
+                    @if ($search !== '' || $stock !== '')
                         <x-public.button href="{{ route('admin.ingredients.index') }}" variant="outline">Xóa lọc</x-public.button>
                     @endif
                 </div>
             </form>
+            <p>Hết tồn: bằng 0. Dưới ngưỡng: lớn hơn 0 và thấp hơn tồn tối thiểu. Bộ lọc tồn chỉ gồm nguyên liệu đang dùng; bằng ngưỡng vẫn đủ. Cảnh báo không tự ngừng bán món hoặc giữ nguyên liệu cho đơn.</p>
 
             @if ($ingredients->isEmpty())
                 <div class="category-empty">
-                    @if ($search !== '')
+                    @if ($search !== '' || $stock !== '')
                         <h2>Không tìm thấy nguyên liệu</h2>
-                        <p>Thử tên khác hoặc xóa bộ lọc.</p>
+                        <p>Thử tên hoặc tình trạng tồn khác, hoặc xóa bộ lọc.</p>
                         <x-public.button href="{{ route('admin.ingredients.index') }}" variant="outline">Xem tất cả</x-public.button>
                     @else
                         <h2>Chưa có nguyên liệu</h2>
@@ -53,6 +63,7 @@
                                 <th scope="col">Đơn vị tính</th>
                                 <th scope="col">Tồn hiện tại</th>
                                 <th scope="col">Tồn tối thiểu</th>
+                                <th scope="col">Cảnh báo tồn</th>
                                 <th scope="col">Giá vốn</th>
                                 <th scope="col">Trạng thái</th>
                                 <th scope="col">Thao tác</th>
@@ -66,6 +77,9 @@
                                     <td data-label="Đơn vị tính">{{ $ingredient->unit }}</td>
                                     <td data-label="Tồn hiện tại">{{ $ingredient->current_stock }}</td>
                                     <td data-label="Tồn tối thiểu">{{ $ingredient->minimum_stock }}</td>
+                                    <td data-label="Cảnh báo tồn">
+                                        <span class="sneat-pill {{ in_array($ingredient->stock_level, ['low', 'out'], true) ? 'is-warning' : '' }}">{{ ['out' => 'Hết tồn', 'low' => 'Dưới ngưỡng', 'sufficient' => 'Đủ ngưỡng', 'inactive' => 'Ngừng dùng — không cảnh báo'][$ingredient->stock_level] }}</span>
+                                    </td>
                                     <td data-label="Giá vốn">{{ number_format((float) $ingredient->cost_price, 2, ',', '.') }} ₫</td>
                                     <td data-label="Trạng thái">
                                         <span class="category-status category-status--{{ $ingredient->status === 'active' ? 'active' : 'inactive' }}">{{ $ingredient->status === 'active' ? 'Đang dùng' : 'Ngừng dùng' }}</span>

@@ -2,8 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\Ingredient;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
+use App\Models\ProductRecipe;
+use App\Models\ProductVariant;
 use App\Models\User;
+use App\Services\InventoryService;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -168,5 +175,69 @@ class InventoryImportConcurrencyMySqlTest extends TestCase
             $stock = $movement->after_quantity;
         }
         $this->assertSame($stock, $ingredient->fresh()->current_stock);
+    }
+
+    public function test_preparation_duplicate_competing_items_and_waste_keep_one_consistent_ledger(): void
+    {
+        // Isolated random MySQL database verified in setUp, never the project DB.
+        foreach (['2026_08_14_000001_create_customers_table.php', '2026_08_14_000002_create_areas_table.php',
+            '2026_08_14_000003_create_categories_table.php', '2026_08_14_000006_create_cafe_tables_table.php',
+            '2026_08_14_000007_create_products_table.php', '2026_08_16_000014_create_product_variants_table.php',
+            '2026_08_16_000015_create_reservations_table.php', '2026_08_16_000021_create_product_recipes_table.php',
+            '2026_08_16_000016_create_orders_table.php', '2026_08_16_000017_create_order_items_table.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
+        $first = User::forceCreate(['name' => 'First', 'email' => 'first@example.test', 'password' => 'test-only', 'role' => 'admin', 'status' => 'active']);
+        $second = User::forceCreate(['name' => 'Second', 'email' => 'second@example.test', 'password' => 'test-only', 'role' => 'staff', 'status' => 'active']);
+        $category = Category::forceCreate(['name' => 'Coffee']);
+        $product = Product::forceCreate(['name' => 'Coffee', 'slug' => 'coffee', 'category_id' => $category->id]);
+        $variant = ProductVariant::forceCreate(['product_id' => $product->id, 'name' => 'M', 'price' => '10000.00']);
+        $ingredient = Ingredient::forceCreate(['name' => 'Coffee', 'unit' => 'kg', 'current_stock' => '10.000', 'minimum_stock' => 0, 'cost_price' => 0, 'status' => 'active']);
+        ProductRecipe::forceCreate(['variant_id' => $variant->id, 'ingredient_id' => $ingredient->id, 'quantity' => '3.000']);
+        $makeItem = function () use ($first, $product, $variant) {
+            $order = Order::forceCreate(['order_code' => uniqid('TEST-'), 'user_id' => $first->id, 'order_type' => 'takeaway', 'status' => 'pending', 'ordered_at' => now()]);
+
+            return OrderItem::forceCreate(['order_id' => $order->id, 'product_id' => $product->id, 'variant_id' => $variant->id,
+                'product_name' => 'Coffee', 'variant_name' => 'M', 'quantity' => 1, 'unit_price' => '10000.00', 'subtotal' => '10000.00', 'status' => 'pending']);
+        };
+        $item = $makeItem();
+        $command = ['command' => 'prepare', 'actor' => $first->id, 'item' => $item->id];
+        $results = $this->parallelImports($ingredient, [$command, array_replace($command, ['actor' => $second->id])]);
+        $this->assertCount(1, array_filter($results, 'is_int'));
+        $this->assertContains('domain_rejected', $results);
+        $this->assertSame('7.000', $ingredient->fresh()->current_stock);
+        $this->assertSame('preparing', $item->fresh()->status);
+        $this->assertSame(1, DB::table('inventory_transactions')->count());
+
+        $left = $makeItem();
+        $right = $makeItem();
+        // 7 available, each needs 6: only one may start.
+        $left->forceFill(['quantity' => 2])->save();
+        $right->forceFill(['quantity' => 2])->save();
+        $results = $this->parallelImports($ingredient, [
+            ['command' => 'prepare', 'actor' => $first->id, 'item' => $left->id],
+            ['command' => 'prepare', 'actor' => $second->id, 'item' => $right->id],
+        ]);
+        $this->assertCount(1, array_filter($results, 'is_int'));
+        $this->assertContains('domain_rejected', $results);
+        $this->assertSame('1.000', $ingredient->fresh()->current_stock);
+        $this->assertSame(1, OrderItem::whereIn('id', [$left->id, $right->id])->where('status', 'preparing')->count());
+
+        app(InventoryService::class)->recordImport($ingredient, $first, '2', 'refill', '9001', 'kg');
+        $last = $makeItem();
+        $results = $this->parallelImports($ingredient, [
+            ['command' => 'prepare', 'actor' => $second->id, 'item' => $last->id],
+            ['actor' => $first->id, 'mode' => 'waste', 'key' => '9002', 'quantity' => '3'],
+        ]);
+        $this->assertCount(1, array_filter($results, 'is_int'));
+        $this->assertContains('domain_rejected', $results);
+        $this->assertSame('0.000', $ingredient->fresh()->current_stock);
+        $this->assertSame(4, DB::table('inventory_transactions')->count());
+        $stock = '10.000';
+        foreach (DB::table('inventory_transactions')->orderBy('id')->get() as $movement) {
+            $this->assertSame($stock, $movement->before_quantity);
+            $stock = $movement->after_quantity;
+        }
+        $this->assertSame('0.000', $stock);
     }
 }

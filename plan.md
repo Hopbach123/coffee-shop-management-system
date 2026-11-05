@@ -10,6 +10,10 @@ User-authorized schema-only extension: counter/scheduled/online pickup as define
 
 ## 1. Purpose
 
+### CAFE-INV-BE-006 / feature/inventory-completion — 06/11/2026
+
+Baseline feac9ce2 (PR #34), worktree sạch trên nhánh đã có. User duyệt gộp cảnh báo tồn thấp H03 với hoàn thiện consume H04/H06 và chọn chính sách hợp dự án. Ba bước 30–90 phút: (1) trace/charter và filter+indicator, (2) harden InventoryService hiện có, rule thiếu recipe, nối thông báo/hướng dẫn UI vào endpoint thật; (3) workflow/rollback/ledger integration, MySQL tranh tồn/gửi lặp và hồi quy/build/report. Dependency: Ingredient/Recipe/Order Item/import/adjustment hiện có. AC: low/out/equality/status/query pagination đúng; không trừ khi thiếu recipe/tồn/actor/order sai; atomic/no double consume; concurrency bảo toàn ledger; UI reused, không duplicate workflow. Out of scope: Order/Payment lifecycle mới, auto availability, holds, topping recipe, migration/seed/dependency. Test SQLite memory và disposable MySQL, không đổi DB dự án; browser theo frontend nếu môi trường cho phép, ghi hạn chế trung thực. Không tự commit/push/nhánh kế tiếp.
+
 ### Current task — CAFE-INV-BE-005 / feature/inventory-adjustments (06/11/2026)
 
 User duyệt hoàn thiện H05 sau nhập kho PR #33; baseline dev e6e926e7. Chia ba bước 30–90 phút: (1) rules/token/Service, (2) form/routes/history navigation, (3) validation/rollback/retry/concurrency regression, build và report. Dependencies: Ingredient, auth Admin, inventory ledger và import đã có. Scope: adjustment tăng/giảm, waste, stocktake một nguyên liệu và hướng dẫn. Không sửa consume/Order/Payment, migration, seed hoặc dữ liệu dự án. AC: active Admin only, reason/precision/range, stock không âm/overflow, stocktake stale bị chặn, atomic ledger, retry không cộng hai lần, UI old/error/success/navigation. Test: isolated SQLite workflow, MySQL concurrency nếu môi trường cho phép, suite/build/diff và browser theo frontend standard. Không tự commit/push hoặc task tiếp theo.

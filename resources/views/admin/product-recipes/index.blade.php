@@ -24,7 +24,7 @@
             <h2>Nguyên liệu trong công thức</h2>
             @if ($recipes->isEmpty())
                 <p class="category-empty">Biến thể chưa có công thức. Thêm nguyên liệu bên dưới.</p>
-                <p>Chưa có định lượng nguyên liệu để đối chiếu tiêu hao khi pha. Cần cấu hình trước khi sử dụng nghiệp vụ kho.</p>
+                <p>Chưa có định lượng nguyên liệu. Hệ thống chặn bắt đầu pha cho đến khi Admin cấu hình công thức hợp lệ và đủ tồn kho.</p>
             @else
                 <div class="category-table-wrap" role="region" aria-label="Công thức nguyên liệu" tabindex="0">
                     <table class="category-table">

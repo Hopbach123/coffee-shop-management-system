@@ -701,6 +701,25 @@ class StaffOrderItemManagementTest extends TestCase
         $this->assertDatabaseCount('inventory_transactions', 1);
     }
 
+    public function test_missing_recipe_is_rejected_via_http_and_brewing_uses_existing_command(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant());
+        $route = route('staff.orders.items.status.update', [$order, $item]);
+        $this->actingAs($staff)->get(route('staff.brewing.index'))->assertOk()
+            ->assertSee('Bắt đầu pha')->assertSee($route, false)->assertSee('name="_method" value="PATCH"', false);
+        $this->patchJson($route, ['status' => 'preparing'])->assertUnprocessable()->assertJsonValidationErrors('ingredient');
+        $this->assertSame('pending', $item->fresh()->status);
+        $this->assertDatabaseCount('inventory_transactions', 0);
+        $ingredient = $this->ingredient('2.000');
+        $this->recipe($item, $ingredient, '1.000');
+        $this->patch($route, ['status' => 'preparing'])->assertRedirect(route('staff.orders.show', $order));
+        $this->assertSame('1.000', $ingredient->fresh()->current_stock);
+        $this->assertDatabaseCount('inventory_transactions', 1);
+        $this->get(route('staff.brewing.index'))->assertOk()->assertDontSee('action="'.$route.'"', false);
+    }
+
     public function test_insufficient_stock_rolls_back_pending_to_preparing_transition(): void
     {
         $staff = $this->staff();

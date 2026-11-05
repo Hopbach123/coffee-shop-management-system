@@ -12,6 +12,7 @@ use App\Models\ProductRecipe;
 use App\Models\ProductVariant;
 use App\Models\User;
 use App\Services\InventoryService;
+use DomainException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -245,5 +246,130 @@ class InventoryServiceTest extends TestCase
         $source = file_get_contents(app_path('Services/InventoryService.php'));
 
         $this->assertStringNotContainsString('float', $source);
+    }
+
+    public function test_missing_zero_deleted_ingredient_and_invalid_actor_do_not_consume(): void
+    {
+        $staff = $this->staff();
+        $item = $this->item($staff);
+        $this->assertRejected($item, $staff);
+        $ingredient = $this->ingredient();
+        $this->recipe($item, $ingredient, '0.000');
+        $this->assertRejected($item, $staff);
+        ProductRecipe::query()->update(['quantity' => '1.000']);
+        $ingredient->delete();
+        $this->assertRejected($item, $staff);
+        $ingredient->restore();
+        $staff->forceFill(['status' => 'inactive'])->save();
+        $this->assertRejected($item, $staff);
+        $staff->forceFill(['status' => 'active'])->save();
+        $staff->delete();
+        $this->assertRejected($item, $staff);
+        $this->assertSame('10.000', $ingredient->fresh()->current_stock);
+        $this->assertDatabaseCount('inventory_transactions', 0);
+    }
+
+    public function test_direct_service_rejects_finished_parent_order_and_existing_consume_log(): void
+    {
+        $staff = $this->staff();
+        $item = $this->item($staff);
+        $ingredient = $this->ingredient();
+        $this->recipe($item, $ingredient, '1.000');
+        foreach (['completed', 'cancelled'] as $status) {
+            $item->order->forceFill(['status' => $status])->save();
+            $this->assertRejected($item, $staff);
+        }
+        $item->order->forceFill(['status' => 'pending'])->save();
+        app(InventoryService::class)->startPreparing($item, $staff);
+        $item->forceFill(['status' => 'pending'])->save();
+        $this->assertRejected($item, $staff);
+        $this->assertSame('9.000', $ingredient->fresh()->current_stock);
+        $this->assertDatabaseCount('inventory_transactions', 1);
+    }
+
+    public function test_save_cancellation_at_each_write_rolls_back_all_stock_ledger_and_status(): void
+    {
+        $staff = $this->staff();
+        $item = $this->item($staff, 2);
+        $first = $this->ingredient('5.000');
+        $second = $this->ingredient('5.000');
+        $this->recipe($item, $first, '1.000');
+        $this->recipe($item, $second, '1.000');
+        foreach ([Ingredient::class, InventoryTransaction::class, OrderItem::class] as $model) {
+            $writes = 0;
+            $model::saving(function () use (&$writes, $model) {
+                $writes++;
+
+                return $writes < ($model === OrderItem::class ? 1 : 2);
+            });
+            try {
+                app(InventoryService::class)->startPreparing($item, $staff);
+                $this->fail('Cancelled save must fail the entire preparation.');
+            } catch (\RuntimeException) {
+                $this->assertSame('pending', $item->fresh()->status);
+                $this->assertSame('5.000', $first->fresh()->current_stock);
+                $this->assertSame('5.000', $second->fresh()->current_stock);
+                $this->assertDatabaseCount('inventory_transactions', 0);
+            } finally {
+                $model::flushEventListeners();
+            }
+        }
+        app(InventoryService::class)->startPreparing($item, $staff);
+        $this->assertSame('3.000', $first->fresh()->current_stock);
+        $this->assertSame('3.000', $second->fresh()->current_stock);
+        $this->assertDatabaseCount('inventory_transactions', 2);
+    }
+
+    public function test_import_consume_waste_stocktake_chain_and_history_survive_recipe_edits(): void
+    {
+        $admin = $this->staff();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $item = $this->item($admin, 2);
+        $ingredient = $this->ingredient('0');
+        $this->recipe($item, $ingredient, '0.125');
+        $service = app(InventoryService::class);
+        $service->recordImport($ingredient, $admin, '1.000', 'Opening', '1', 'g');
+        $service->startPreparing($item, $admin);
+        $operation = ['key' => '2', 'ingredient' => $ingredient->id, 'actor' => $admin->id, 'unit' => 'g'];
+        $service->recordAdjustment($ingredient, $admin, 'waste', '0.125', 'Spilled', $operation);
+        $operation = array_replace($operation, ['key' => '3', 'stock' => '0.625', 'ledger' => (int) InventoryTransaction::max('id')]);
+        $service->recordAdjustment($ingredient, $admin, 'stocktake', '0.500', 'Counted', $operation);
+        $before = InventoryTransaction::orderBy('id')->get()->toArray();
+        ProductRecipe::query()->update(['quantity' => '9.000']);
+        $this->assertSame($before, InventoryTransaction::orderBy('id')->get()->toArray());
+        $this->assertSame('0.500', $ingredient->fresh()->current_stock);
+        $stock = '0.000';
+        foreach (InventoryTransaction::orderBy('id')->get() as $movement) {
+            $this->assertSame($stock, $movement->before_quantity);
+            $stock = $movement->after_quantity;
+        }
+        $this->assertSame('0.500', $stock);
+        $this->assertDatabaseCount('inventory_transactions', 4);
+        $this->assertRejected($item, $admin);
+    }
+
+    public function test_exact_stock_is_allowed_and_quantity_overflow_is_rejected(): void
+    {
+        $staff = $this->staff();
+        $item = $this->item($staff, 2);
+        $ingredient = $this->ingredient('0.002');
+        $this->recipe($item, $ingredient, '0.001');
+        app(InventoryService::class)->startPreparing($item, $staff);
+        $this->assertSame('0.000', $ingredient->fresh()->current_stock);
+        $large = $this->item($staff, 2);
+        $this->recipe($large, $ingredient, '999999999.999');
+        $this->assertRejected($large, $staff);
+        $this->assertDatabaseCount('inventory_transactions', 1);
+    }
+
+    private function assertRejected(OrderItem $item, User $actor): void
+    {
+        $statusBefore = $item->fresh()->status;
+        try {
+            app(InventoryService::class)->startPreparing($item, $actor);
+            $this->fail('Expected preparation rejection.');
+        } catch (ValidationException|DomainException) {
+            $this->assertSame($statusBefore, $item->fresh()->status);
+        }
     }
 }
