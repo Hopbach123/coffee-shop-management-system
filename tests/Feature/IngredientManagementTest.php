@@ -238,4 +238,32 @@ class IngredientManagementTest extends TestCase
         $this->delete('/admin/ingredients/'.$ingredient->id)->assertStatus(419);
         $this->get('/admin/ingredients/'.$ingredient->id.'/toggle-status')->assertStatus(405);
     }
+
+    public function test_stock_indicators_boundaries_filters_and_pagination(): void
+    {
+        $this->withoutVite()->actingAs($this->user());
+        $out = $this->ingredient(['name' => 'Empty coffee', 'current_stock' => '0', 'minimum_stock' => '0']);
+        $low = $this->ingredient(['name' => 'Low coffee', 'current_stock' => '0.001', 'minimum_stock' => '0.002']);
+        $equal = $this->ingredient(['name' => 'Equal coffee', 'current_stock' => '0.002', 'minimum_stock' => '0.002']);
+        $inactive = $this->ingredient(['name' => 'Inactive coffee', 'status' => 'inactive', 'current_stock' => '0']);
+        $deleted = $this->ingredient(['name' => 'Deleted coffee', 'current_stock' => '0']);
+        $deleted->delete();
+        $this->assertSame('out', $out->stock_level);
+        $this->assertSame('low', $low->stock_level);
+        $this->assertSame('sufficient', $equal->stock_level);
+        $this->assertSame('inactive', $inactive->stock_level);
+        $this->get('/admin/ingredients')->assertOk()->assertSee('Hết tồn')->assertSee('Dưới ngưỡng')->assertSee('Ngừng dùng — không cảnh báo');
+        $this->get('/admin/ingredients?stock=out')->assertOk()->assertSee('Empty coffee')->assertDontSee('Low coffee')->assertDontSee('Inactive coffee')->assertDontSee('Deleted coffee');
+        $this->get('/admin/ingredients?stock=low')->assertOk()->assertSee('Low coffee')->assertDontSee('Empty coffee')->assertDontSee('Equal coffee');
+        $this->get('/admin/ingredients?stock=sufficient')->assertOk()->assertSee('Equal coffee')->assertDontSee('Low coffee');
+        $this->get('/admin/ingredients?stock=out&search=Missing')->assertOk()->assertSee('Không tìm thấy nguyên liệu');
+        $this->get('/admin/ingredients?stock[]=low')->assertSessionHasErrors('stock');
+        $this->get('/admin/ingredients?stock=unknown')->assertSessionHasErrors('stock');
+        for ($index = 1; $index <= 16; $index++) {
+            $this->ingredient(['name' => 'Low milk '.$index, 'current_stock' => '1', 'minimum_stock' => '2']);
+        }
+        $this->get('/admin/ingredients?stock=low&search=milk')->assertOk()->assertSee('stock=low&amp;search=milk&amp;page=2', false);
+        $this->get('/admin/ingredients?stock=low&search=milk&page=2')->assertOk()->assertSee('Low milk 16')->assertDontSee('Low coffee');
+        $this->assertDatabaseCount('inventory_transactions', 0);
+    }
 }

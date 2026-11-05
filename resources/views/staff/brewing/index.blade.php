@@ -35,6 +35,13 @@
             <small style="color: var(--coffee-text-muted); display: block; margin-top: 0.5rem;">
                 Nhận lúc: {{ $item->created_at?->format('H:i d/m') }}
             </small>
+            @if ($item->status === 'pending' && $item->order)
+                <form method="POST" action="{{ route('staff.orders.items.status.update', [$item->order, $item]) }}">
+                    @csrf @method('PATCH')
+                    <input type="hidden" name="status" value="preparing">
+                    <x-public.button type="submit">Bắt đầu pha</x-public.button>
+                </form>
+            @endif
         </article>
     @empty
         <div class="sneat-card sneat-empty" style="grid-column: 1 / -1;">
@@ -43,6 +50,6 @@
     @endforelse
 </div>
 <p class="sneat-hint" style="margin-top: 1.5rem;">
-    <strong>Quy định vận hành:</strong> Màn hình pha chế phục vụ theo dõi trực quan cho quầy Barista. Việc chuyển trạng thái sang “Đang pha” tự động trừ kho nguyên liệu cần được tích hợp với <code>InventoryService</code> có kiểm tra định lượng và khóa dòng nguyên tử trước khi kích hoạt thao tác mutation.
+    <strong>Quy định vận hành:</strong> Bắt đầu pha kiểm tra công thức và trừ kho theo số phần trong một giao dịch. Thiếu công thức, nguyên liệu ngừng dùng hoặc thiếu tồn thì món vẫn chờ, không ghi tiêu hao. Nhờ Admin cấu hình / nhập kho rồi thử lại. Gửi lại lệnh không trừ kho lần hai; xem kết quả tại chi tiết đơn. Topping chưa có công thức nguyên liệu riêng.
 </p>
 @endsection

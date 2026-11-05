@@ -1,10 +1,13 @@
 <?php
 
 use App\Models\Ingredient;
+use App\Models\OrderItem;
 use App\Models\User;
 use App\Services\InventoryService;
+use App\Services\OrderService;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 require dirname(__DIR__, 2).'/vendor/autoload.php';
 $app = require dirname(__DIR__, 2).'/bootstrap/app.php';
@@ -21,7 +24,12 @@ try {
     $actor = User::findOrFail($input['actor']);
     echo "READY\n";
     flush();
-    if (isset($input['mode'])) {
+    if (($input['command'] ?? null) === 'prepare') {
+        $item = OrderItem::findOrFail($input['item']);
+        app(OrderService::class)->transitionItemStatus($item->order, $item, 'preparing', $actor);
+        echo json_encode(['id' => $item->id], JSON_THROW_ON_ERROR)."\n";
+        exit(0);
+    } elseif (isset($input['mode'])) {
         $movement = app(InventoryService::class)->recordAdjustment(
             $ingredient, $actor, $input['mode'], $input['quantity'], 'concurrent fixture',
             ['key' => $input['key'], 'ingredient' => $ingredient->id, 'actor' => $actor->id,
@@ -33,7 +41,7 @@ try {
         );
     }
     echo json_encode(['id' => $movement->id], JSON_THROW_ON_ERROR)."\n";
-} catch (DomainException $exception) {
+} catch (DomainException|ValidationException $exception) {
     echo json_encode(['error' => 'domain_rejected'], JSON_THROW_ON_ERROR)."\n";
     exit(2);
 } catch (Throwable $exception) {

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Ingredient;
 use App\Models\InventoryTransaction;
+use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductRecipe;
 use App\Models\User;
@@ -18,11 +19,22 @@ class InventoryService
     public function startPreparing(OrderItem $orderItem, User $actor): void
     {
         DB::transaction(function () use ($orderItem, $actor): void {
-            $this->assertActiveStaff($actor);
+            $currentActor = $this->assertActiveStaff($actor);
+
+            $orderId = OrderItem::query()->whereKey($orderItem->getKey())->value('order_id');
+            $order = Order::query()->lockForUpdate()->find($orderId);
+            if ($order === null || $order->status !== 'pending') {
+                throw ValidationException::withMessages(['order' => 'Chỉ được pha món trong đơn đang chờ xử lý.']);
+            }
 
             $lockedItem = OrderItem::query()->lockForUpdate()->find($orderItem->getKey());
-            if ($lockedItem === null || $lockedItem->status !== 'pending') {
+            if ($lockedItem === null || $lockedItem->order_id !== $order->id || $lockedItem->status !== 'pending') {
                 throw ValidationException::withMessages(['order_item' => 'Chỉ có thể bắt đầu pha chế món đang chờ xử lý.']);
+            }
+
+            if (InventoryTransaction::query()->where('type', 'consume')->where('reference_type', 'order_item')
+                ->where('reference_id', $lockedItem->id)->exists()) {
+                throw ValidationException::withMessages(['order_item' => 'Món đã có chứng từ tiêu hao; không được trừ kho lần hai.']);
             }
 
             $requiredByIngredient = $this->requiredQuantities($lockedItem);
@@ -51,7 +63,9 @@ class InventoryService
                 $afterQuantity = $beforeQuantity - $requiredQuantity;
 
                 $ingredient->forceFill(['current_stock' => $this->milliToDecimal($afterQuantity)]);
-                $ingredient->saveOrFail();
+                if (! $ingredient->saveOrFail()) {
+                    throw new \RuntimeException('Stock could not be saved.');
+                }
 
                 $transaction = new InventoryTransaction;
                 $transaction->forceFill([
@@ -63,13 +77,17 @@ class InventoryService
                     'reference_type' => 'order_item',
                     'reference_id' => $lockedItem->getKey(),
                     'note' => null,
-                    'created_by' => $actor->getKey(),
+                    'created_by' => $currentActor->getKey(),
                 ]);
-                $transaction->saveOrFail();
+                if (! $transaction->saveOrFail()) {
+                    throw new \RuntimeException('Stock ledger could not be saved.');
+                }
             }
 
             $lockedItem->forceFill(['status' => 'preparing']);
-            $lockedItem->saveOrFail();
+            if (! $lockedItem->saveOrFail()) {
+                throw new \RuntimeException('Preparation status could not be saved.');
+            }
         }, 3);
     }
 
@@ -89,9 +107,13 @@ class InventoryService
         ProductRecipe::query()
             ->where('variant_id', $item->variant_id)
             ->orderBy('ingredient_id')
+            ->lockForUpdate()
             ->get(['ingredient_id', 'quantity'])
             ->each(function (ProductRecipe $recipe) use (&$requiredByIngredient, $itemQuantity, $maximumMilli): void {
                 $recipeQuantity = $this->decimalToMilli($recipe->getRawOriginal('quantity'));
+                if ($recipeQuantity === 0) {
+                    throw ValidationException::withMessages(['ingredient' => 'Định lượng công thức phải lớn hơn 0.']);
+                }
                 if ($recipeQuantity > intdiv($maximumMilli, $itemQuantity)) {
                     throw ValidationException::withMessages(['quantity' => 'Lượng nguyên liệu cần dùng vượt quá giới hạn cho phép.']);
                 }
@@ -108,21 +130,27 @@ class InventoryService
 
         ksort($requiredByIngredient, SORT_NUMERIC);
 
+        if ($requiredByIngredient === []) {
+            throw ValidationException::withMessages(['ingredient' => 'Biến thể chưa có công thức. Hãy nhờ Admin cấu hình nguyên liệu trước khi pha.']);
+        }
+
         return $requiredByIngredient;
     }
 
-    private function assertActiveStaff(User $actor): void
+    private function assertActiveStaff(User $actor): User
     {
-        $currentActor = User::query()->find($actor->getKey());
+        $currentActor = User::query()->lockForUpdate()->find($actor->getKey());
         if ($currentActor === null || ! $currentActor->canOperateSales()) {
             throw new DomainException('Chỉ tài khoản nội bộ đang hoạt động mới được bắt đầu pha chế.');
         }
+
+        return $currentActor;
     }
 
     private function decimalToMilli(mixed $quantity): int
     {
         $quantity = trim((string) $quantity);
-        if (! preg_match('/^(0|[1-9]\d*)(?:\.(\d{1,3}))?$/', $quantity, $matches)) {
+        if (! preg_match('/\A(0|[1-9]\d{0,8})(?:\.(\d{1,3}))?\z/', $quantity, $matches)) {
             throw new DomainException('Số lượng tồn kho không hợp lệ.');
         }
 
