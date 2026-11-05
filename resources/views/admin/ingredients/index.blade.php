@@ -72,6 +72,9 @@
                                     </td>
                                     <td data-label="Thao tác">
                                         <div class="category-actions">
+                                            @if ($ingredient->status === 'active')
+                                                <x-public.button href="{{ route('admin.ingredients.import.create', $ingredient) }}" variant="outline">Nhập kho</x-public.button>
+                                            @endif
                                             <x-public.button href="{{ route('admin.ingredients.history', $ingredient) }}" variant="outline">Lịch sử kho</x-public.button>
                                             <x-public.button href="{{ route('admin.ingredients.edit', $ingredient) }}" variant="outline">Sửa</x-public.button>
                                             <form method="POST" action="{{ route('admin.ingredients.toggle-status', $ingredient) }}">

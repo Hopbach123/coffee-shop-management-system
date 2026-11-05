@@ -8,6 +8,8 @@ use App\Models\OrderItem;
 use App\Models\ProductRecipe;
 use App\Models\User;
 use DomainException;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -134,5 +136,116 @@ class InventoryService
         }
 
         return intdiv($quantity, 1000).'.'.str_pad((string) ($quantity % 1000), 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Record a stock import and its immutable audit row atomically.
+     */
+    public function recordImport(Ingredient $ingredient, User $actor, string $quantity, ?string $note = null, ?string $operationKey = null, ?string $expectedUnit = null): InventoryTransaction
+    {
+        $quantityInMilliunits = $this->importMilliunits($quantity);
+        if ($operationKey !== null && ! preg_match('/\A[1-9]\d{0,17}\z/', $operationKey)) {
+            throw new DomainException('Mã phiếu nhập không hợp lệ.');
+        }
+        if ($note !== null && mb_strlen($note) > 1000) {
+            throw new DomainException('Ghi chú nhập kho tối đa 1000 ký tự.');
+        }
+
+        return DB::transaction(function () use ($ingredient, $actor, $quantityInMilliunits, $note, $operationKey, $expectedUnit): InventoryTransaction {
+            $currentActor = User::query()->lockForUpdate()->find($actor->getKey());
+            if ($currentActor === null) {
+                throw (new ModelNotFoundException)->setModel(User::class, [$actor->getKey()]);
+            }
+            if ($currentActor->role !== 'admin' || $currentActor->status !== 'active') {
+                throw new DomainException('Chỉ Admin đang hoạt động mới được nhập kho.');
+            }
+
+            $currentIngredient = Ingredient::query()->lockForUpdate()->find($ingredient->getKey());
+            if ($currentIngredient === null) {
+                throw (new ModelNotFoundException)->setModel(Ingredient::class, [$ingredient->getKey()]);
+            }
+
+            if ($operationKey !== null) {
+                $existing = InventoryTransaction::query()->where('ingredient_id', $currentIngredient->id)
+                    ->where('reference_type', 'stock_import')->where('reference_id', $operationKey)->first();
+                if ($existing !== null) {
+                    if ($existing->type !== 'import' || $existing->created_by !== $currentActor->id
+                        || $this->importMilliunits($existing->quantity) !== $quantityInMilliunits || $existing->note !== $note) {
+                        throw new DomainException('Phiếu đã ghi nhận với dữ liệu khác. Hãy mở phiếu mới nếu cần nhập thêm.');
+                    }
+
+                    return $existing;
+                }
+            }
+            if ($currentIngredient->status !== 'active') {
+                throw new DomainException('Nguyên liệu đã ngừng dùng. Hãy kích hoạt trước khi nhập kho.');
+            }
+            if ($expectedUnit !== null && $expectedUnit !== $currentIngredient->unit) {
+                throw new DomainException('Đơn vị nguyên liệu đã thay đổi. Hãy mở lại form nhập kho.');
+            }
+
+            $beforeInMilliunits = $this->importMilliunits($currentIngredient->current_stock, false);
+            $afterInMilliunits = $beforeInMilliunits + $quantityInMilliunits;
+            if ($afterInMilliunits > self::MAX_MILLIUNITS) {
+                throw new DomainException('Lượng tồn sau nhập vượt giới hạn schema.');
+            }
+
+            $currentIngredient->current_stock = $this->importDecimal($afterInMilliunits);
+            if (! $currentIngredient->saveOrFail()) {
+                throw new \RuntimeException('Stock could not be saved.');
+            }
+
+            $transaction = new InventoryTransaction;
+            $transaction->ingredient_id = $currentIngredient->getKey();
+            $transaction->type = 'import';
+            $transaction->quantity = $this->importDecimal($quantityInMilliunits);
+            $transaction->before_quantity = $this->importDecimal($beforeInMilliunits);
+            $transaction->after_quantity = $this->importDecimal($afterInMilliunits);
+            $transaction->reference_type = $operationKey === null ? null : 'stock_import';
+            $transaction->reference_id = $operationKey;
+            $transaction->note = $note;
+            $transaction->created_by = $currentActor->getKey();
+            if (! $transaction->saveOrFail()) {
+                throw new \RuntimeException('Stock ledger could not be saved.');
+            }
+
+            return $transaction;
+        }, 3);
+    }
+
+    /**
+     * Return immutable inventory history for one ingredient, newest first.
+     *
+     * @return Collection<int, InventoryTransaction>
+     */
+    public function historyFor(Ingredient $ingredient): Collection
+    {
+        return InventoryTransaction::query()
+            ->where('ingredient_id', $ingredient->getKey())
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get();
+    }
+
+    private const MAX_MILLIUNITS = 999_999_999_999;
+
+    private function importMilliunits(string $amount, bool $mustBePositive = true): int
+    {
+        if (! preg_match('/\A\d{1,9}(?:\.\d{1,3})?\z/', $amount)) {
+            throw new DomainException('Số lượng phải là số dương, có tối đa ba chữ số thập phân.');
+        }
+
+        [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
+        $milliunits = (int) $whole * 1000 + (int) str_pad($fraction, 3, '0');
+        if (($mustBePositive && $milliunits <= 0) || $milliunits > self::MAX_MILLIUNITS) {
+            throw new DomainException('Số lượng vượt giới hạn cho phép.');
+        }
+
+        return $milliunits;
+    }
+
+    private function importDecimal(int $milliunits): string
+    {
+        return intdiv($milliunits, 1000).'.'.str_pad((string) ($milliunits % 1000), 3, '0', STR_PAD_LEFT);
     }
 }
