@@ -22,6 +22,7 @@ class PublicMenuTest extends TestCase
         $this->assertSame(':memory:', DB::connection()->getDatabaseName());
         (require database_path('migrations/0001_01_01_000000_create_users_table.php'))->up();
         (require database_path('migrations/2026_08_14_000003_create_categories_table.php'))->up();
+        (require database_path('migrations/2026_08_14_000004_create_toppings_table.php'))->up();
         (require database_path('migrations/2026_08_14_000007_create_products_table.php'))->up();
         // The production Variant migration contains MySQL-only CHECK DDL.
         Schema::create('product_variants', function (Blueprint $table): void {

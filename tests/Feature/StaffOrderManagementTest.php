@@ -47,7 +47,18 @@ class StaffOrderManagementTest extends TestCase
             $table->dateTime('completed_at')->nullable();
             $table->timestamps();
         });
+        Schema::create('payments', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('order_id')->constrained('orders');
+            $table->string('payment_code')->unique();
+            $table->string('payment_method');
+            $table->decimal('amount', 15, 2);
+            $table->string('status');
+            $table->foreignId('created_by')->constrained('users');
+            $table->timestamps();
+        });
 
+        (require database_path('migrations/2026_10_27_000003_create_customer_order_requests_tables.php'))->up();
         $this->withoutVite();
     }
 
@@ -161,15 +172,16 @@ class StaffOrderManagementTest extends TestCase
         $this->assertSame('available', $table->fresh()->status);
     }
 
-    public function test_guest_admin_and_inactive_staff_cannot_access_staff_order_operations(): void
+    public function test_admin_can_manage_orders_while_guest_and_inactive_staff_cannot(): void
     {
         $table = $this->table();
         $this->get('/staff/orders')->assertRedirect(route('login'));
         $this->post('/staff/orders', ['order_type' => 'dine_in', 'table_id' => $table->id])->assertRedirect(route('login'));
 
         $admin = User::forceCreate(['name' => 'Admin', 'email' => uniqid('admin-', true).'@example.test', 'password' => 'test-only-password', 'role' => 'admin', 'status' => 'active']);
-        $this->actingAs($admin, 'web')->get('/staff/orders')->assertForbidden();
-        $this->post('/staff/orders', ['order_type' => 'dine_in', 'table_id' => $table->id])->assertForbidden();
+        $this->actingAs($admin, 'web')->get('/staff/orders')->assertOk();
+        $this->post('/staff/orders', ['order_type' => 'dine_in', 'table_id' => $table->id])->assertSessionHasNoErrors();
+        $this->assertSame($admin->id, Order::sole()->user_id);
 
         $inactiveStaff = $this->staff('inactive');
         $this->actingAs($inactiveStaff, 'web')->get('/staff/orders')->assertForbidden();

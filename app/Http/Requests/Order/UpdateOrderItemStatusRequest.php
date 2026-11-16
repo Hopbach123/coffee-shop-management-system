@@ -10,7 +10,7 @@ class UpdateOrderItemStatusRequest extends FormRequest
     {
         $user = $this->user('web');
 
-        return $user !== null && $user->role === 'staff' && $user->status === 'active';
+        return $user !== null && in_array($user->role, ['admin', 'staff'], true) && $user->status === 'active';
     }
 
     public function rules(): array

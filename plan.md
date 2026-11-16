@@ -194,6 +194,8 @@ Chưa có task triển khai riêng: cấu hình thuế/phụ phí, rounding/disc
 
 Mục tiêu: ghi nhận Payment nhất quán sau khi Order cốt lõi ổn định. Invoice/PDF/printing là tùy chọn chưa được phê duyệt.
 
+Extension ngày 27/10/2026: `CAFE-CUSTOMER-POS-WORKFLOW-002` yêu cầu POS tại quán thu tiền trước chuẩn bị; Payment paid không tự completed/trả bàn ở bước này. Các charter cũ bên dưới không cấp quyền dùng served-before-paid hoặc auto-completion cho POS mới. Chia lại workflow theo mục 12.1; chốt completion/dine-in, Order đã tồn tại và yêu cầu web trước backend liên quan. Không đánh dấu code hiện tại đã hỗ trợ extension.
+
 | ID | Tên / mục tiêu | Dependency | Scope và output | Kiểm tra hoàn thành | Ước lượng / mức |
 | --- | --- | --- | --- | --- | --- |
 | `CAFE-PAYMENT-DOC-001` | Chi tiết hóa checkout rules | ORDER-TEST-001 | Bám phương thức `cash`/`bank_transfer`, trạng thái Frozen, không split/partial và tối đa một payment paid | Requirement approval | 30–60 phút / P1 |
@@ -386,3 +388,51 @@ Task chỉ **DONE** khi:
 3. **`CAFE-DB-CORRECTION-001` nếu re-audit xác nhận mismatch.** Không tự sửa migration trong task tài liệu.
 
 `CAFE-DB-004` vẫn BLOCKED cho đến khi re-audit và correction cần thiết đều PASS; không tự động thực thi task kế tiếp.
+
+### 12.1 Extension Customer guest / POS trả trước — 27/10/2026
+
+Quyết định bổ sung: khách web chọn giao món đến địa chỉ và chọn cả chuyển khoản trước lẫn COD, không còn pickup-only. Thêm gate WORKFLOW-002/WEB-DELIVERY-DOC (30–60 phút): thiết kế mapping fulfillment/order_type, địa chỉ/payment-intent snapshot, hai nhánh thu tiền, phí/vùng giao, xác nhận giao/thu và completion; chỉ tài liệu, không tự thêm enum/status/migration. Task giao món backend/UI phân rã 30–90 phút sau review; không mở rộng sang điều phối tài xế, gateway hoặc đối tác ship ngoài yêu cầu. WEB-DB/WEB-ACCEPT/WEB-FE và TEST phải dùng contract giao đến địa chỉ và ngoại lệ COD thay giả định nhận quán/trả trước mọi đơn.
+
+Task cha hiện tại: `CAFE-CUSTOMER-POS-WORKFLOW-002`. User duyệt Customer không cần account, để lại thông tin; phương án A giữ creator nội bộ thật; POS tại quán xác nhận đủ tiền rồi atomic lưu Order/Payment và chuyển preparing. Chưa có UI/backend/migration extension được triển khai bởi task tài liệu này. Chi tiết còn thiếu là gate, không phải assumption để code tiếp.
+
+Xác nhận mới nhất ngày 27/10: POS tại quán và web chuyển khoản trước cần xác nhận đủ tiền rồi mới chuẩn bị; web COD được làm/giao trước và ghi paid khi đã thu tiền lúc nhận. Request/accept/chọn phương thức không tự paid. Thiết kế thao tác giao/thu và completion còn review; không tự thêm gateway, refund, idempotency migration hoặc duyệt Customer limits/retention. Tests phải có cả COD chưa paid nhưng preparing hợp lệ và POS chưa paid bị chặn, không dùng một check paid chung cho mọi nguồn.
+
+Các ID được đặt dưới namespace task cha để không tái sử dụng task cũ. Mỗi task có outcome riêng, tối đa 90 phút; tách tiếp nếu vượt, không tự chạy task kế tiếp.
+
+| Giai đoạn / task | Dependency / gate | Scope và output | Acceptance / Test Plan | Ước lượng |
+| --- | --- | --- | --- | --- |
+| WORKFLOW-002/DOC | Task user hiện tại | Cập nhật 2 contract, requirements, design application-rule và roadmap; không source runtime | Approved/TBD tách rõ; evidence served/paid/completed; static review/diff; giữ work có sẵn | 60–90 phút |
+| WORKFLOW-002/DOC-REVIEW | DOC | Chốt completion, dine-in release, web payment, xử lý tiền thực đã nhận và idempotency proposal; Customer còn limits/TTL/schema | Engineer quyết định trên proposal cụ thể; không TBD ảnh hưởng task implementation | 30–60 phút |
+| WORKFLOW-002/ACCESS-FIX | Quyền Admin/Staff đã duyệt; review owner Inventory | Chỉ đồng bộ actor guards cần cho POS/Order/Inventory; không sửa thuật toán stock | Active Admin/Staff, guest/inactive và actor audit tests; regression | 60–90 phút |
+| WORKFLOW-002/POS-IDEMPOTENCY | DOC-REVIEW duyệt persistence proposal | Migration/model tối thiểu nếu cần; không tự thêm cột/bảng từ DOC | DB test cô lập; repeat same/different payload; actor scope; rollback; MySQL concurrency nếu có | 60–90 phút |
+| WORKFLOW-002/POS-BE | DOC-REVIEW, ACCESS-FIX, POS-IDEMPOTENCY; Order/Payment/Inventory contracts | Service atomic Order/items/toppings/paid/preparing; Controller mỏng | Cash/bank confirmation, stock rollback, 1 Order/paid/consume, không completed/release sớm | Tách Payment operation và orchestrator thành 2 task 60–90 phút nếu cần |
+| WORKFLOW-002/POS-FE | POS-BE | Review tổng, xác nhận nhận tiền, submit/redirect, error/unknown-result handling | Keyboard, 1440/768/375, request fallback, build | 60–90 phút |
+| WORKFLOW-002/COMPLETION | DOC-REVIEW, POS-BE | Completion/trả bàn đúng decision mới; không thu lại tiền hoặc tăng usage lần hai | Paid/preparing chưa completed; final served + rule đã duyệt; competing orders/maintenance; rollback | 60–90 phút |
+| WORKFLOW-002/WEB-DB | Customer schema, giá, tracking/retention được duyệt | Migration request/items/toppings + model riêng, không sửa users.role/creator FK | Schema/FK/precision/history tests trên DB test riêng | Tách DB và Model thành 2 task nếu >90 phút |
+| WORKFLOW-002/WEB-CART | Customer loại đơn/quantity/topping/limits được duyệt; Catalog | Session public cart độc lập pos_cart | Hai session, canonical lines, server money, availability/tampering tests | 60–90 phút |
+| WORKFLOW-002/WEB-SUBMIT | WEB-CART, WEB-DB, quote/contact/idempotency rule | Review + transaction lưu request, không Order/paid/consume | Duplicate, price/status change, rollback, giữ cart khi lỗi | 60–90 phút |
+| WORKFLOW-002/WEB-ACCEPT | WEB-SUBMIT, ACCESS-FIX, web payment/chuẩn bị rule được duyệt | Staff tiếp nhận/từ chối bằng actor thật, OrderService, link một Order | Accept/reject races, snapshot/note/topping, transaction rollback | 60–90 phút |
+| WORKFLOW-002/WEB-TRACK | WEB-SUBMIT, ownership/TTL được duyệt | GET read-only, allowlist, không nhận phone/code làm quyền | Cross-session/token/expiry/enumeration tests | 60–90 phút |
+| WORKFLOW-002/WEB-FE | Các web BE tương ứng | Public cart/contact/review/tracking và Staff inbox theo style hiện có | Render/validation, keyboard, 1440/768/375, build | Tách public cart, tracking và Staff inbox thành các task 60–90 phút |
+| WORKFLOW-002/WEB-OPS | Retention/expiry rule được duyệt, WEB-DB | Expiry/retention đúng scope đã duyệt, không xóa history | Test clock, contact redaction, no sales-history loss | 30–90 phút |
+| WORKFLOW-002/TEST | Các task BE/FE được acceptance riêng | Cross-flow regression + hướng dẫn test thủ công | PublicMenu/Order/POS/Inventory/Payment/Promotion; full suite; phân biệt SQLite và MySQL; git diff --check | Tách automated và manual thành các task 60–90 phút |
+
+Các task runtime chưa READY khi còn gate liên quan. Không dùng việc đã duyệt guest hoặc POS trả trước để mặc định duyệt guest takeover, giá, retention hay thay đổi schema.
+
+### 12.2 CAFE-CUSTOMER-POS-COMPLETE-001 — implementation stages
+
+User approvals on 27/10/2026 resolve POS key persistence, paid mutation guard, completion/table release, receipt failure handling, quote recheck, delivery mapping to takeaway, fixed fee 20000.00 with a separate fee column/formula, request schema principle, seven-day session capability and manual delivery/COD receipt events. See requirements §14 and the current contracts. These approvals do not authorize automatic retention, refund or logistics.
+
+| Stage | Owner / direct scope | Acceptance / verification | State |
+| --- | --- | --- | --- |
+| AUDIT | Integration: Ninh/Đạt | Source gap, baseline and protected worktree inventory | Inspected; baseline 401 pass / 2 fail / 2 skip |
+| ACCESS | Ninh Order/POS; Hợp Inventory actor guard only | Active Admin/Staff; guest/inactive blocked; actor tests | Implemented, regression in progress |
+| PAYMENT | Đạt; Ninh Order completion | Separate prepaid operation; no premature completion/release; paid mutation guard | Implemented, targeted tests |
+| POS | Ninh/Đạt | Durable key + quote review + atomic paid/preparing; HTTP UI, retry/rollback | Implemented, targeted tests; browser QA pending |
+| WEB-SCHEMA | Ninh + Đạt fee/payment intent | New migrations/models only; isolated schema tests | Implemented; MySQL verification pending |
+| WEB-SUBMIT | Ninh | Guest form, immutable request snapshots, duplicate/ownership tests | Implemented, targeted tests in progress |
+| WEB-ACCEPT | Ninh/Đạt | One Order, true actor, transfer/COD preparation gates | Implemented, targeted tests in progress |
+| WEB-DELIVERY | Ninh/Đạt | ready → dispatch → customer receipt/served; COD paid at receipt; tracking | Implemented, verification in progress |
+| REGRESSION | Integration | Full tests/build/routes/diff, browser 1440/768/375, manual guide | Pending final verification |
+
+Do not mark a stage accepted from code alone. Reports record actual checks, MySQL limitations and outstanding decisions separately; no commit/push/merge is authorized.

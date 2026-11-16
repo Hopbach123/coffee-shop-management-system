@@ -46,6 +46,16 @@ class StaffOrderCancellationTest extends TestCase
             $table->dateTime('completed_at')->nullable();
             $table->timestamps();
         });
+        Schema::create('payments', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('order_id')->constrained('orders');
+            $table->string('payment_code')->unique();
+            $table->string('payment_method');
+            $table->decimal('amount', 15, 2);
+            $table->string('status');
+            $table->foreignId('created_by')->constrained('users');
+            $table->timestamps();
+        });
 
         Schema::create('order_items', function (Blueprint $table): void {
             $table->id();
@@ -73,6 +83,7 @@ class StaffOrderCancellationTest extends TestCase
             $table->timestamps();
         });
 
+        (require database_path('migrations/2026_10_27_000003_create_customer_order_requests_tables.php'))->up();
         $this->withoutVite();
     }
 
@@ -250,16 +261,16 @@ class StaffOrderCancellationTest extends TestCase
         }
     }
 
-    public function test_guest_admin_and_inactive_staff_cannot_cancel_orders(): void
+    public function test_admin_can_cancel_orders_while_guest_and_inactive_staff_cannot(): void
     {
         $staff = $this->staff();
         $order = $this->order($staff);
         $route = route('staff.orders.cancel', $order);
 
         $this->patch($route)->assertRedirect(route('login'));
-        $this->actingAs($this->staff('admin'), 'web')->patch($route)->assertForbidden();
+        $this->actingAs($this->staff('admin'), 'web')->patch($route)->assertSessionHasNoErrors();
         $this->actingAs($this->staff('staff', 'inactive'), 'web')->patch($route)->assertForbidden();
-        $this->assertSame('pending', $order->fresh()->status);
+        $this->assertSame('cancelled', $order->fresh()->status);
     }
 
     public function test_client_cannot_override_sensitive_order_or_table_fields_during_cancellation(): void

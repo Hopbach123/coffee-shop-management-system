@@ -29,6 +29,8 @@
         <div class="site-nav__menu" id="primary-menu" data-nav-menu>
             <a href="{{ route('home') }}" @if(request()->routeIs('home')) aria-current="page" @endif>Trang chủ</a>
             <a href="{{ route('menu.index') }}" @if(request()->routeIs('menu.*')) aria-current="page" @endif>Thực đơn</a>
+            <a class="nav-cart" href="{{ route('cart.index') }}" @if(request()->routeIs('cart.*')) aria-current="page" @endif>Giỏ hàng</a>
+            @if(session('customer_order_last_reference'))<a href="{{ route('customer-orders.show', session('customer_order_last_reference')) }}">Yêu cầu của bạn</a>@endif
             <a href="{{ route('home') }}#specials">Ưu đãi</a>
             <a href="{{ route('home') }}#story">Về Maison</a>
             <a href="{{ route('home') }}#reservation">Đặt bàn</a>

@@ -5,6 +5,7 @@
 @section('content')
     <section class="coffee-section public-menu-detail" id="home" aria-labelledby="product-title">
         <div class="coffee-container">
+            @include('public.cart._notices')
             <nav class="public-menu-breadcrumb" aria-label="Đường dẫn">
                 <a href="{{ route('menu.index') }}">Thực đơn</a>
                 <span aria-hidden="true">/</span>
@@ -47,6 +48,7 @@
                             @endforeach
                         </ul>
                     @endif
+                    @include('public.cart._add-form')
                     <x-public.button href="{{ route('menu.index') }}" variant="outline">Quay lại thực đơn</x-public.button>
                 </div>
             </div>

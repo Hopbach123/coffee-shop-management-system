@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Ingredient;
-use App\Models\InventoryTransaction;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderItemTopping;
@@ -62,6 +61,16 @@ class StaffOrderItemManagementTest extends TestCase
             $table->dateTime('completed_at')->nullable();
             $table->timestamps();
         });
+        Schema::create('payments', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('order_id')->constrained('orders');
+            $table->string('payment_code')->unique();
+            $table->string('payment_method');
+            $table->decimal('amount', 15, 2);
+            $table->string('status');
+            $table->foreignId('created_by')->constrained('users');
+            $table->timestamps();
+        });
 
         Schema::create('order_items', function (Blueprint $table): void {
             $table->id();
@@ -113,6 +122,7 @@ class StaffOrderItemManagementTest extends TestCase
             $table->timestamps();
         });
 
+        (require database_path('migrations/2026_10_27_000003_create_customer_order_requests_tables.php'))->up();
         $this->withoutVite();
     }
 
@@ -300,7 +310,7 @@ class StaffOrderItemManagementTest extends TestCase
         }
     }
 
-    public function test_guest_admin_and_inactive_staff_cannot_add_order_items(): void
+    public function test_admin_can_add_items_while_guest_and_inactive_staff_cannot(): void
     {
         $staff = $this->staff();
         $order = $this->order($staff);
@@ -308,9 +318,9 @@ class StaffOrderItemManagementTest extends TestCase
         $payload = ['variant_id' => $variant->id, 'quantity' => 1];
 
         $this->post(route('staff.orders.items.store', $order), $payload)->assertRedirect(route('login'));
-        $this->actingAs($this->staff('active', 'admin'), 'web')->post(route('staff.orders.items.store', $order), $payload)->assertForbidden();
+        $this->actingAs($this->staff('active', 'admin'), 'web')->post(route('staff.orders.items.store', $order), $payload)->assertSessionHasNoErrors();
         $this->actingAs($this->staff('inactive'), 'web')->post(route('staff.orders.items.store', $order), $payload)->assertForbidden();
-        $this->assertDatabaseCount('order_items', 0);
+        $this->assertDatabaseCount('order_items', 1);
     }
 
     public function test_active_staff_can_update_a_pending_item_quantity_and_recalculate_snapshot_totals(): void
@@ -404,7 +414,7 @@ class StaffOrderItemManagementTest extends TestCase
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'pending', 'subtotal' => '0.00', 'total_amount' => '0.00']);
     }
 
-    public function test_guest_admin_and_inactive_staff_cannot_update_or_remove_order_items(): void
+    public function test_admin_can_update_items_while_guest_and_inactive_staff_cannot(): void
     {
         $staff = $this->staff();
         $order = $this->order($staff);
@@ -414,9 +424,9 @@ class StaffOrderItemManagementTest extends TestCase
 
         $this->patch($updateRoute, ['quantity' => 2])->assertRedirect(route('login'));
         $this->delete($deleteRoute)->assertRedirect(route('login'));
-        $this->actingAs($this->staff('active', 'admin'), 'web')->patch($updateRoute, ['quantity' => 2])->assertForbidden();
+        $this->actingAs($this->staff('active', 'admin'), 'web')->patch($updateRoute, ['quantity' => 2])->assertSessionHasNoErrors();
         $this->actingAs($this->staff('inactive'), 'web')->delete($deleteRoute)->assertForbidden();
-        $this->assertDatabaseHas('order_items', ['id' => $item->id, 'quantity' => 1]);
+        $this->assertDatabaseHas('order_items', ['id' => $item->id, 'quantity' => 2]);
     }
 
     public function test_update_and_delete_roll_back_when_order_total_save_fails(): void
@@ -555,7 +565,7 @@ class StaffOrderItemManagementTest extends TestCase
         $this->assertDatabaseHas('order_item_toppings', ['id' => $otherRow->id]);
     }
 
-    public function test_guest_admin_and_inactive_staff_cannot_manage_toppings(): void
+    public function test_admin_can_manage_toppings_while_guest_and_inactive_staff_cannot(): void
     {
         $staff = $this->staff();
         $order = $this->order($staff);
@@ -564,9 +574,9 @@ class StaffOrderItemManagementTest extends TestCase
         $storeRoute = route('staff.orders.items.toppings.store', [$order, $item]);
 
         $this->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertRedirect(route('login'));
-        $this->actingAs($this->staff('active', 'admin'), 'web')->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertForbidden();
+        $this->actingAs($this->staff('active', 'admin'), 'web')->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertSessionHasNoErrors();
         $this->actingAs($this->staff('inactive'), 'web')->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertForbidden();
-        $this->assertDatabaseCount('order_item_toppings', 0);
+        $this->assertDatabaseCount('order_item_toppings', 1);
     }
 
     public function test_topping_changes_roll_back_when_order_total_save_fails(): void
@@ -734,7 +744,8 @@ class StaffOrderItemManagementTest extends TestCase
         $this->patchJson(route('staff.orders.items.status.update', [$completedOrder, $completedItem]), ['status' => 'preparing'])
             ->assertUnprocessable()->assertJsonValidationErrors('order');
 
-        $this->actingAs($this->staff('active', 'admin'), 'web')->patch($authorizedRoute, ['status' => 'preparing'])->assertForbidden();
+        $this->actingAs($this->staff('active', 'admin'), 'web')->patch($authorizedRoute, ['status' => 'preparing'])->assertSessionHasNoErrors();
+        $this->assertSame('preparing', $item->fresh()->status);
         $this->actingAs($this->staff('inactive'), 'web')->patch($authorizedRoute, ['status' => 'preparing'])->assertForbidden();
     }
 }

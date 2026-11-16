@@ -35,9 +35,9 @@
                 </thead>
                 <tbody>@foreach ($orders as $order)<tr>
                         <th scope="row" data-label="Mã đơn">{{ $order->order_code }}</th>
-                        <td data-label="Loại đơn">{{ $order->order_type === 'dine_in' ? 'Tại chỗ' : 'Mang đi' }}</td>
+                        <td data-label="Loại đơn">{{ $order->customerRequest ? 'Giao từ web' : ($order->order_type === 'dine_in' ? 'Tại chỗ' : 'Mang đi') }}</td>
                         <td data-label="Bàn">{{ $order->cafeTable?->table_code ?? '—' }}</td>
-                        <td data-label="Khách hàng">{{ $order->customer?->name ?? 'Khách vãng lai' }}</td>
+                        <td data-label="Khách hàng">{{ $order->customerRequest?->customer_name ?? $order->customer?->name ?? 'Khách vãng lai' }}</td>
                         <td data-label="Trạng thái"><span class="category-status">{{ $order->status }}</span></td>
                         <td data-label="Thời gian">{{ $order->ordered_at?->format('d/m/Y H:i') }}</td>
                         <td data-label="Thao tác"><x-public.button href="{{ route('staff.orders.show', $order) }}" variant="outline">Xem</x-public.button></td>
