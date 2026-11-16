@@ -1,5 +1,11 @@
 # Coffee Shop Management System – Requirements
 
+## Approved extension — Simple Online Pickup (26/10/2026)
+
+Theo yêu cầu user triển khai schema trên feature/schema-template-sync và phạm vi rút gọn mục 7 của bảng phân công: hỗ trợ purchase_type counter (POS), scheduled (hẹn đến lấy), online (web lấy sớm). scheduled/online chỉ takeaway, không shipper/phí giao/gateway/COD/slot/holds/refund tự động. Khách không cần tài khoản; request lưu snapshot liên hệ, món/topping và giờ hẹn nếu scheduled. Staff/Admin duyệt tạo một Order, user_id vẫn bắt buộc là người nhận đơn; UNIQUE request trên Order chống tạo trùng. Request có pending/accepted/rejected/cancelled; giữ các trạng thái Order/món/Payment hiện có. Loại mua không phải status.
+
+Thanh toán cash/bank_transfer; payment_timing on_receipt hoặc prepaid, prepaid chỉ bank_transfer do nhân viên xác nhận thực nhận. Hẹn có pickup_at; online lấy sớm không có giờ hẹn. Token tra cứu lưu SHA-256 hash, submission key chống gửi lặp. Snapshot giá do server tính; thay đổi giá cần khách xác nhận trong workflow sau. Extension này phê duyệt cấu trúc dữ liệu, không tuyên bố Service/UI đã triển khai. Chi tiết vật lý tại database-design.md; schema không thể thay thế transaction accept/payment, kiểm giờ mở, quyền và đối chiếu giá.
+
 ## Approved extension — Dynamic Admin Menu (20/10/2026)
 
 Engineer đã duyệt database-driven Admin navigation theo docs/admin-menu-architecture.md: group/link tối đa 3 cấp; cha inactive ẩn nhánh mà không sửa con; chỉ xóa nút lá không protected; registry bảo vệ admin.home/admin.dashboard.index/admin.menus.index và ancestors/recovery link. Chỉ whitelist named route Admin GET không tham số; permission_key hiện chỉ NULL vì chưa có permission registry. Không thay backend authorization hoặc Catalog. Task8.1 chỉ tạo migration/model/tests nền tảng, chưa seed/CRUD/Sidebar; các workflow trên thuộc task sau.
@@ -102,11 +108,17 @@ Mục tiêu của domain Promotion là hỗ trợ giảm theo phần trăm hoặ
 
 ### 5.8 Inventory
 
+Hoàn thiện kho theo yêu cầu feature/inventory-completion ngày 06/11/2026: cảnh báo trên danh sách Admin cho nguyên liệu đang dùng gồm hết tồn (0), dưới ngưỡng (0 < tồn < tối thiểu), đủ ngưỡng (tồn > 0 và >= tối thiểu). Ngừng dùng không cảnh báo, đã xóa không hiển thị; lọc kết hợp tên và phân trang. Cảnh báo không tự khóa bán/giữ kho. User giao lựa chọn chính sách thiếu công thức: để không bỏ qua tiêu hao khi chưa có stock_mode, mọi biến thể phải có ít nhất một dòng công thức hợp lệ trước khi bắt đầu pha; nếu thiếu, giữ món pending, không trừ tồn/log và báo Admin cấu hình. Chỉ pha khi đơn cha pending, actor nội bộ active, mọi nguyên liệu active/chưa xóa và đủ tồn; tồn, ledger và trạng thái món cùng transaction. Gửi lại lệnh pha đã xử lý bị từ chối nhưng không trừ lần hai. Công thức hiện hành đọc khi pha; sửa sau đó không thay lịch sử đã ghi. Không tự trừ topping, giữ kho hoặc version engine.
+
+Theo yêu cầu hoàn thiện feature/inventory-adjustments ngày 06/11/2026: Admin đang hoạt động ghi điều chỉnh tăng/giảm, hao hụt hoặc kiểm kê một nguyên liệu đang dùng. Lý do bắt buộc tối đa 1000 ký tự; đơn vị theo Ingredient, không quy đổi. Kiểm kê nhập tồn thực tế không âm; hệ thống tính chênh lệch, không cho ghi nếu tồn/lịch sử đã đổi từ lúc mở phiếu và yêu cầu mở phiếu mới. Không chênh lệch thì thông báo không cần điều chỉnh, không tạo movement bằng 0. Admin ghi phiếu là người xác nhận điều chỉnh, chưa có quy trình đề xuất/duyệt hai người. Tồn và movement cùng transaction, chống gửi lặp; lịch sử chỉ đọc. Không thêm schema hoặc thay luồng tiêu hao.
+
 Mục tiêu của domain Inventory là quản lý nguyên liệu, tồn hiện tại, định mức tối thiểu, công thức theo biến thể và lịch sử biến động `import`, `consume`, `adjustment`, `waste`. Tồn kho chỉ bị trừ trong transaction khi Order Item chuyển `pending` sang `preparing`; mọi thay đổi tồn phải có log và không được làm tồn âm. Nhà cung cấp, mua hàng và ERP kho nằm ngoài phạm vi.
 
 Phạm vi rà soát nhập liệu nguyên liệu ngày 13/10/2026 theo yêu cầu user: dùng danh sách đơn vị chuẩn `g`, `kg`, `ml`, `l`, `cái` tại cấu hình ứng dụng, không thêm bảng hoặc enum database. Số lượng và giá vốn tính theo cùng đơn vị; chỉ cho đổi đơn vị khi tồn bằng 0 và chưa có công thức hoặc lịch sử kho. Không tự động quy đổi số lượng. CRUD không được sửa tồn kho. Tên bắt buộc, tối đa 255 ký tự; ngưỡng tồn và giá vốn không âm, đúng độ chính xác và giới hạn migration. Tên trùng không bị cấm bởi baseline hiện tại.
 
 Điều chỉnh theo yêu cầu user: đơn vị nguyên liệu có thêm lựa chọn `other` (Khác). Admin nhập tên đơn vị cụ thể tối đa 50 ký tự, có ít nhất một chữ cái; cho phép chữ Unicode, số, khoảng trắng, dấu chấm, gạch ngang và `/`. Chuẩn hóa chữ thường và khoảng trắng trước khi lưu vào cột `unit` hiện có. Giá trị `other` không được lưu làm đơn vị; tên mới vẫn chịu quy tắc khóa đơn vị khi nguyên liệu đã sử dụng. Danh sách chuẩn là gợi ý lựa chọn, không còn là danh sách đóng.
+
+Quản lý công thức theo biến thể (feature/product-recipes): Admin thêm nguyên liệu đang dùng và chưa xóa; mỗi nguyên liệu chỉ xuất hiện một lần trong một biến thể. Định lượng cho một phần lớn hơn 0, tối đa 3 chữ số thập phân theo DECIMAL(12,3); đơn vị lấy từ Ingredient. Cho phép sửa định lượng hoặc bỏ dòng cấu hình, không thay đổi tồn và lịch sử kho. Nguyên liệu đã xóa/ngừng dùng trong công thức cũ vẫn hiển thị cảnh báo để Admin xử lý; không cho thêm mới. Biến thể tạm hết vẫn được cấu hình, biến thể đã xóa không truy cập được. Sửa dòng không đổi nguyên liệu/biến thể của dòng đó.
 
 ### 5.9 Dashboard
 

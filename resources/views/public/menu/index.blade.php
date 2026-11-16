@@ -12,7 +12,7 @@
             @if ($categories->isNotEmpty())
                 <nav class="public-menu-categories" aria-label="Danh mục thực đơn" data-menu-category-nav @if ($search !== '') hidden @endif>
                     @foreach ($categories as $category)
-                        <a href="#category-{{ $loop->iteration }}">{{ $category->name }}</a>
+                        <a href="#category-{{ $category->id }}">{{ $category->name }}</a>
                     @endforeach
                 </nav>
             @endif
@@ -40,11 +40,11 @@
             @endif
 
             @foreach ($categories as $category)
-                <section class="public-menu-category" id="category-{{ $loop->iteration }}" aria-labelledby="category-title-{{ $loop->iteration }}" data-menu-category>
+                <section class="public-menu-category" id="category-{{ $category->id }}" aria-labelledby="category-title-{{ $category->id }}" data-menu-category>
                     <div class="public-menu-category__heading">
                         <div>
                             <p class="section-heading__eyebrow">Danh mục {{ str_pad((string) $loop->iteration, 2, '0', STR_PAD_LEFT) }}</p>
-                            <h2 id="category-title-{{ $loop->iteration }}">{{ $category->name }}</h2>
+                            <h2 id="category-title-{{ $category->id }}">{{ $category->name }}</h2>
                             @if ($category->description)
                                 <p>{{ $category->description }}</p>
                             @endif
@@ -54,13 +54,13 @@
                     @if ($category->products->isEmpty())
                         <p class="public-menu-category__empty">Danh mục này chưa có món để hiển thị.</p>
                     @else
-                        <div class="public-menu-grid" id="category-products-{{ $loop->iteration }}">
+                        <div class="public-menu-grid" id="category-products-{{ $category->id }}">
                             @foreach ($category->products as $product)
                                 @include('public.menu._product-card', ['product' => $product])
                             @endforeach
                         </div>
                         @if ($category->products->count() > 3)
-                            <x-public.button variant="outline" type="button" class="public-menu-load-more" data-menu-load-more aria-controls="category-products-{{ $loop->iteration }}" aria-label="Xem thêm món trong danh mục {{ $category->name }}" hidden>Xem thêm</x-public.button>
+                            <x-public.button variant="outline" type="button" class="public-menu-load-more" data-menu-load-more aria-controls="category-products-{{ $category->id }}" aria-label="Xem thêm món trong danh mục {{ $category->name }}" hidden>Xem thêm</x-public.button>
                         @endif
                     @endif
                 </section>

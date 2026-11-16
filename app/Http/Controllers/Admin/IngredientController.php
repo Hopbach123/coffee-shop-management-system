@@ -8,22 +8,28 @@ use App\Http\Requests\Admin\UpdateIngredientRequest;
 use App\Models\Ingredient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class IngredientController extends Controller
 {
     public function index(Request $request): View
     {
-        $filters = $request->validate(['search' => ['nullable', 'string', 'max:255']]);
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'stock' => ['nullable', Rule::in(['low', 'out', 'sufficient'])],
+        ]);
         $search = $filters['search'] ?? '';
+        $stock = $filters['stock'] ?? '';
 
         $ingredients = Ingredient::query()
             ->when($search !== '', fn ($query) => $query->where('name', 'like', '%'.$search.'%'))
+            ->when($stock !== '', fn ($query) => $query->stockLevel($stock))
             ->orderBy('id')
             ->paginate(15)
             ->withQueryString();
 
-        return view('admin.ingredients.index', compact('ingredients', 'search'));
+        return view('admin.ingredients.index', compact('ingredients', 'search', 'stock'));
     }
 
     public function create(): View

@@ -191,13 +191,27 @@ class PosOrderWorkflowTest extends TestCase
         $this->assertDatabaseCount('order_items', 0);
     }
 
-    public function test_guest_admin_and_inactive_staff_cannot_operate_pos(): void
+    public function test_active_admin_can_create_order_from_pos_and_cancel_while_pending(): void
+    {
+        $admin = $this->staff('active', 'admin');
+        $variant = $this->variant();
+        $this->actingAs($admin, 'web')->get(route('staff.home'))->assertOk();
+        $this->post(route('staff.pos.add'), ['variant_id' => $variant->id])->assertSessionHasNoErrors();
+        $this->post(route('staff.pos.checkout'), ['order_type' => 'takeaway'])->assertSessionHasNoErrors();
+        $order = Order::firstOrFail();
+        $this->assertSame($admin->id, $order->user_id);
+        $this->assertDatabaseCount('order_items', 1);
+        $this->patch(route('staff.orders.cancel', $order))->assertSessionHasNoErrors();
+        $this->assertSame('cancelled', $order->fresh()->status);
+    }
+
+    public function test_guests_and_inactive_users_cannot_operate_pos(): void
     {
         $variant = $this->variant();
         $this->get(route('staff.home'))->assertRedirect(route('login'));
         $this->post(route('staff.pos.add'), ['variant_id' => $variant->id])->assertRedirect(route('login'));
 
-        $admin = $this->staff('active', 'admin');
+        $admin = $this->staff('inactive', 'admin');
         $this->actingAs($admin, 'web')->get(route('staff.home'))->assertForbidden();
         $this->post(route('staff.pos.add'), ['variant_id' => $variant->id])->assertForbidden();
 

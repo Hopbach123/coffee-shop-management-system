@@ -68,7 +68,7 @@ class OrderService
                         $table->saveOrFail();
                     }
 
-                    $order = new Order();
+                    $order = new Order;
                     $order->forceFill([
                         'order_code' => $this->newOrderCode(),
                         'table_id' => $tableId,
@@ -216,7 +216,7 @@ class OrderService
             $unitPrice = $this->normalizeMoney($variant->getRawOriginal('price'));
             $lineSubtotal = $this->multiplyMoney($unitPrice, $quantity);
 
-            $item = new OrderItem();
+            $item = new OrderItem;
             $item->forceFill([
                 'order_id' => $lockedOrder->getKey(),
                 'product_id' => $product->getKey(),
@@ -294,7 +294,7 @@ class OrderService
                 ->first();
 
             if ($itemTopping === null) {
-                $itemTopping = new OrderItemTopping();
+                $itemTopping = new OrderItemTopping;
                 $itemTopping->forceFill([
                     'order_item_id' => $lockedItem->getKey(),
                     'topping_id' => $topping->getKey(),
@@ -400,8 +400,8 @@ class OrderService
     private function assertActiveStaff(User $actor): void
     {
         $currentActor = User::query()->lockForUpdate()->find($actor->getKey());
-        if ($currentActor === null || $currentActor->role !== 'staff' || $currentActor->status !== 'active') {
-            throw new DomainException('Chỉ nhân viên đang hoạt động mới được tạo đơn hàng.');
+        if ($currentActor === null || ! $currentActor->canOperateSales()) {
+            throw new DomainException('Chỉ tài khoản nội bộ đang hoạt động mới được thao tác đơn hàng.');
         }
     }
 

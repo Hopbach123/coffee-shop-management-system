@@ -79,4 +79,5 @@ class ProductVariantController extends Controller
 
         return redirect()->route('admin.product-variants.index')->with('success', 'Đã xóa biến thể.');
     }
+
 }

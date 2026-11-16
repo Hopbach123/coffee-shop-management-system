@@ -11,7 +11,7 @@ class StoreOrderItemToppingRequest extends FormRequest
     {
         $user = $this->user('web');
 
-        return $user !== null && $user->role === 'staff' && $user->status === 'active';
+        return $user?->canOperateSales() ?? false;
     }
 
     public function rules(): array

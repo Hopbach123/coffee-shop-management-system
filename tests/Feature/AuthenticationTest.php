@@ -22,6 +22,17 @@ class AuthenticationTest extends TestCase
         Route::middleware(['web', 'auth:web'])->get('/auth-test/protected', fn () => 'Protected');
     }
 
+    public function test_public_navigation_uses_existing_routes_and_falls_back_when_features_are_absent(): void
+    {
+        $this->withoutVite();
+        $this->get('/')->assertOk()->assertSee(route('home').'#reservation', false)->assertDontSee('class="nav-cart"', false);
+        Route::get('/test-reservation-form', fn () => 'Reservation')->name('reservation.create');
+        Route::get('/test-customer-cart', fn () => 'Cart')->name('cart.index');
+        Route::getRoutes()->refreshNameLookups();
+        $this->withSession(['customer_cart' => [1 => 2, 2 => 1]])->get('/')
+            ->assertOk()->assertSee(route('reservation.create'), false)->assertSee(route('cart.index'), false)->assertSee('nav-cart-count">3', false);
+    }
+
     private function user(string $role = 'staff', string $status = 'active'): User
     {
         return User::forceCreate([

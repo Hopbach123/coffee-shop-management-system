@@ -1,18 +1,21 @@
 <?php
 
 use App\Http\Controllers\Staff\OrderController;
+use App\Http\Controllers\Staff\OnlineRequestController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Staff\PosController;
 use App\Http\Controllers\Staff\WorkspaceController;
 
 
-Route::middleware('role:staff')->group(function (): void {
+Route::middleware('role:admin,staff')->group(function (): void {
     Route::get('/', [PosController::class, 'index'])->name('home');
     Route::post('/pos/add', [PosController::class, 'add'])->name('pos.add');
     Route::post('/pos/remove', [PosController::class, 'remove'])->name('pos.remove');
     Route::post('/pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
 
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('online-requests', [OnlineRequestController::class, 'index'])->name('online-requests.index');
+    Route::get('online-requests/{onlineRequest}', [OnlineRequestController::class, 'show'])->whereNumber('onlineRequest')->name('online-requests.show');
     Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
     Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
     Route::patch('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
