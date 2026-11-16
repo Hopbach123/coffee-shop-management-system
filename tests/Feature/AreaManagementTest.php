@@ -7,18 +7,22 @@ use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
+use Tests\Concerns\CreatesTableStatusSources;
 use Tests\TestCase;
 
 class AreaManagementTest extends TestCase
 {
+    use CreatesTableStatusSources;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->assertSame('sqlite', DB::connection()->getDriverName());
         $this->assertSame(':memory:', DB::connection()->getDatabaseName());
-        foreach (['0001_01_01_000000_create_users_table.php', '2026_08_14_000002_create_areas_table.php'] as $migration) {
+        foreach (['0001_01_01_000000_create_users_table.php', '2026_08_14_000002_create_areas_table.php', '2026_08_14_000006_create_cafe_tables_table.php'] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
+        $this->prepareStatusReadTables();
         $this->withoutVite();
     }
 

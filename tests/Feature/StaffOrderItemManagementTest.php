@@ -720,6 +720,20 @@ class StaffOrderItemManagementTest extends TestCase
         $this->get(route('staff.brewing.index'))->assertOk()->assertDontSee('action="'.$route.'"', false);
     }
 
+    public function test_active_admin_can_prepare_an_item_using_the_same_inventory_workflow(): void
+    {
+        $admin = $this->staff('active', 'admin');
+        $order = $this->order($admin);
+        $item = $this->item($order, $this->sellableVariant());
+        $ingredient = $this->ingredient('4.000');
+        $this->recipe($item, $ingredient, '1.000');
+        $this->actingAs($admin, 'web')->patch(route('staff.orders.items.status.update', [$order, $item]), ['status' => 'preparing'])
+            ->assertRedirect(route('staff.orders.show', $order));
+        $this->assertSame('preparing', $item->fresh()->status);
+        $this->assertSame('3.000', $ingredient->fresh()->current_stock);
+        $this->assertDatabaseCount('inventory_transactions', 1);
+    }
+
     public function test_insufficient_stock_rolls_back_pending_to_preparing_transition(): void
     {
         $staff = $this->staff();

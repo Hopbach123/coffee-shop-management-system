@@ -1,0 +1,44 @@
+/* Only Area/Table POS pages; retain the internal theme without changing shared shell. */
+:is(.area-overview,.floor-plan,.table-menu,.checkout-summary,.estimate-print) {
+    --pos-muted: color-mix(in srgb, var(--coffee-text-muted) 70%, var(--coffee-text));
+    overflow-wrap: anywhere;
+}
+:is(.area-overview,.floor-plan,.table-menu,.checkout-summary) :is(.category-heading>div,.category-field,form,section,aside,details) { min-width:0; }
+.sneat-app :is(.area-overview,.floor-plan,.table-menu,.checkout-summary) .coffee-button {
+    min-height:48px; max-width:100%; white-space:normal;
+    background:var(--coffee-cocoa); border-color:var(--coffee-cocoa);
+}
+.sneat-app :is(.area-overview,.floor-plan,.table-menu,.checkout-summary) .coffee-button--outline {
+    background:var(--coffee-surface); color:var(--coffee-cocoa);
+}
+.sneat-app :is(.area-overview,.floor-plan,.table-menu,.checkout-summary) .category-delete {
+    color:var(--coffee-text); border-color:var(--coffee-danger); background:var(--coffee-surface);
+}
+.sneat-app :is(.area-overview,.floor-plan,.table-menu,.checkout-summary) :is(input,select,textarea) { min-height:48px; font-size:1rem; }
+.sneat-app :is(.area-overview,.floor-plan,.table-menu,.checkout-summary) .category-field :is(input,select,textarea) { min-height:48px; }
+:is(.area-overview,.floor-plan,.table-menu,.checkout-summary,.estimate-print) :is(a,button,input,select,textarea,summary,[tabindex]):focus-visible {
+    outline:3px solid var(--coffee-focus); outline-offset:3px;
+}
+:is(.area-overview,.floor-plan,.table-menu,.checkout-summary,.estimate-print) .coffee-button:disabled {
+    opacity:.65; cursor:not-allowed; box-shadow:none;
+}
+:is(.area-overview,.floor-plan,.table-menu,.checkout-summary,.estimate-print) .coffee-button:active:not(:disabled) { transform:translateY(1px); }
+:is(.area-overview,.floor-plan,.table-menu,.checkout-summary) :is(.category-heading p:last-child,.area-scope,.area-created,.area-description,.area-summary-item dt,.area-results-heading p,.floor-table-details dt) { color:var(--pos-muted); }
+:is(.area-overview,.floor-plan,.table-menu,.checkout-summary) .category-pagination nav { max-width:100%; overflow-wrap:anywhere; }
+:is(.area-overview,.floor-plan,.table-menu,.checkout-summary) .category-pagination nav a { min-width:48px; min-height:48px; }
+.floor-table-card:has(.coffee-button:hover) { border-inline-start:3px solid var(--table-color); }
+.floor-plan .floor-table-card { border-top:4px solid var(--table-color); }
+.floor-plan .floor-table-card--maintenance { border-top-style:dashed; }
+.area-overview .category-status { color:var(--coffee-text); white-space:normal; }
+.floor-plan-actions[data-status-refresh-scope] { align-items:center; padding:var(--space-sm); border:1px solid var(--coffee-border); border-radius:var(--radius-sm); }
+[data-status-refresh-scope] p { flex:1 1 18rem; margin:0; }
+@media (max-width:48rem) {
+    :is(.area-overview,.floor-plan,.table-menu,.checkout-summary) .category-heading { align-items:stretch; }
+    :is(.area-overview,.floor-plan,.table-menu,.checkout-summary) .category-heading>div { flex-basis:100%; }
+    :is(.table-menu,.checkout-summary) .category-heading>.coffee-button { flex:1 1 12rem; }
+}
+@media (prefers-reduced-motion:reduce) {
+    :is(.area-overview,.floor-plan,.table-menu,.checkout-summary,.estimate-print) *,
+    :is(.area-overview,.floor-plan,.table-menu,.checkout-summary,.estimate-print) *::before,
+    :is(.area-overview,.floor-plan,.table-menu,.checkout-summary,.estimate-print) *::after { animation:none; transition:none; scroll-behavior:auto; }
+}

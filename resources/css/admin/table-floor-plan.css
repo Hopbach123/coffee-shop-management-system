@@ -1,0 +1,43 @@
+/* Read-only floor plan, using the existing internal theme. */
+.floor-plan { display: grid; gap: var(--space-md); min-width: 0; }
+.floor-plan .category-heading { margin-bottom: 0; }
+.floor-plan-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.floor-plan .coffee-button, .floor-area-links a { min-height: 48px; white-space: normal; }
+.floor-plan a:focus-visible, .floor-plan button:focus-visible, .floor-plan input:focus-visible, .floor-plan select:focus-visible { outline: 3px solid var(--coffee-focus); outline-offset: 3px; }
+.floor-areas p, .floor-scope, .floor-integration-note { font-size: .875rem; margin: 0 0 var(--space-sm); color: var(--coffee-text); }
+.floor-area-links { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.floor-area-links a { display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-sm); border: 1px solid var(--coffee-border); border-radius: var(--radius-sm); max-width: 100%; overflow-wrap: anywhere; color: var(--coffee-text); }
+.floor-area-links a[aria-current], .floor-area-links a:hover { border-color: var(--coffee-espresso); background: var(--coffee-surface-alt); color: var(--coffee-espresso); }
+.floor-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-md); align-items: end; }
+.floor-filters .category-field { min-width: 0; }
+.floor-filters .floor-plan-actions { grid-column: 1 / -1; }
+.floor-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-md); margin: 0; }
+.floor-summary dt { color: var(--coffee-text); }
+.floor-summary dd { margin: var(--space-xs) 0 0; font-size: 1.75rem; font-weight: 700; }
+.floor-results { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-sm); }
+.floor-results h2 { margin: 0; font-size: 1.125rem; }
+.floor-results p { margin: 0; }
+.floor-table-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-md); }
+.floor-table-card { --table-color: var(--coffee-text-muted); display: flex; flex-direction: column; gap: var(--space-sm); border-top: 4px solid var(--table-color); overflow-wrap: anywhere; }
+.floor-table-card--available { --table-color: var(--coffee-success); }
+.floor-table-card--occupied { --table-color: var(--coffee-espresso); }
+.floor-table-card--maintenance { --table-color: var(--coffee-text-muted); border-top-style: dashed; }
+.floor-table-card--reserved { --table-color: var(--coffee-accent); }
+.floor-table-card--conflict { --table-color: var(--coffee-danger); }
+.floor-table-card--unknown { --table-color: var(--coffee-text-muted); }
+.floor-table-card-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-xs); }
+.floor-table-symbol { display: grid; place-items: center; width: 52px; height: 52px; background: var(--coffee-surface-alt); color: var(--table-color); border-radius: var(--radius-md); }
+.floor-table-status { color: var(--coffee-text); font-weight: 650; }
+.floor-table-card h3 { margin: 0; font-size: 1.5rem; }
+.floor-table-name { margin: 0; color: var(--coffee-text); }
+.floor-table-details { display: grid; gap: var(--space-sm); margin: 0; padding-top: var(--space-sm); border-top: 1px solid var(--coffee-border); }
+.floor-table-details div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-sm); }
+.floor-table-details dt { color: var(--coffee-text-muted); }
+.floor-table-details dd { margin: 0; }
+.floor-table-context { margin: 0; font-size: .875rem; }
+.floor-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-md); align-items: start; }
+.floor-detail-grid h2 { font-size: 1.25rem; margin-top: 0; }
+@media (max-width: 48rem) { .floor-detail-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 75rem) { .floor-table-grid, .floor-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 48rem) { .floor-filters { grid-template-columns: minmax(0, 1fr); } .floor-table-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 36rem) { .floor-plan .category-heading { align-items: stretch; } .floor-summary .sneat-card, .floor-table-card { padding: var(--space-md); } .floor-plan-actions .coffee-button { flex: 1; } }
