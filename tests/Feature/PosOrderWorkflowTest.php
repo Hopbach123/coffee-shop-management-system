@@ -190,10 +190,17 @@ class PosOrderWorkflowTest extends TestCase
             'received_confirmation' => '1', 'checkout_key' => session('pos_checkout_attempt.key')], $overrides);
     }
 
+    private function recipe(ProductVariant $variant): void
+    {
+        $ingredient = Ingredient::forceCreate(['name' => 'POS coffee', 'unit' => 'g', 'current_stock' => '100.000', 'status' => 'active']);
+        ProductRecipe::forceCreate(['variant_id' => $variant->id, 'ingredient_id' => $ingredient->id, 'quantity' => '1.500']);
+    }
+
     public function test_active_staff_can_checkout_a_takeaway_cart_through_order_service(): void
     {
         $staff = $this->staff();
         $variant = $this->variant();
+        $this->recipe($variant);
 
         $this->actingAs($staff, 'web')->post(route('staff.pos.add'), ['variant_id' => $variant->id])
             ->assertRedirect(route('staff.home'));
@@ -230,6 +237,7 @@ class PosOrderWorkflowTest extends TestCase
     {
         $staff = $this->staff();
         $variant = $this->variant();
+        $this->recipe($variant);
         $table = $this->table();
 
         $this->actingAs($staff, 'web')->withSession(['pos_cart' => [$variant->id => 2]])->get(route('staff.home'))->assertOk();
@@ -343,5 +351,18 @@ class PosOrderWorkflowTest extends TestCase
         $this->assertDatabaseCount('payments', 0);
         $this->assertDatabaseCount('inventory_transactions', 0);
         $this->assertSame('1.000', $ingredient->fresh()->current_stock);
+    }
+
+    public function test_variant_without_recipe_cannot_create_a_paid_pos_order(): void
+    {
+        $actor = $this->staff();
+        $variant = $this->variant();
+        $this->actingAs($actor)->post(route('staff.pos.add'), ['variant_id' => $variant->id]);
+        $this->get(route('staff.home'))->assertOk();
+        $this->postJson(route('staff.pos.checkout'), $this->checkoutPayload())
+            ->assertUnprocessable()->assertJsonValidationErrors('ingredient')->assertSessionHas('pos_cart');
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertDatabaseCount('inventory_transactions', 0);
     }
 }

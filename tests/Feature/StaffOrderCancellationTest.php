@@ -270,7 +270,7 @@ class StaffOrderCancellationTest extends TestCase
         $this->patch($route)->assertRedirect(route('login'));
         $this->actingAs($this->staff('admin', 'inactive'), 'web')->patch($route)->assertForbidden();
         $this->actingAs($this->staff('staff', 'inactive'), 'web')->patch($route)->assertForbidden();
-        $this->assertSame('cancelled', $order->fresh()->status);
+        $this->assertSame('pending', $order->fresh()->status);
     }
 
     public function test_client_cannot_override_sensitive_order_or_table_fields_during_cancellation(): void

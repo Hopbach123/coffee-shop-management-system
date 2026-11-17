@@ -19,6 +19,7 @@ class CustomerPickupFlowTest extends TestCase
         $this->assertSame('sqlite', DB::connection()->getDriverName());
         $this->assertSame(':memory:', DB::connection()->getDatabaseName());
         (require database_path('migrations/2026_08_14_000003_create_categories_table.php'))->up();
+        (require database_path('migrations/2026_08_14_000004_create_toppings_table.php'))->up();
         (require database_path('migrations/2026_08_14_000007_create_products_table.php'))->up();
         Schema::create('product_variants', function (Blueprint $table): void {
             $table->id();
@@ -30,14 +31,6 @@ class CustomerPickupFlowTest extends TestCase
             $table->timestamps();
         });
         (require database_path('migrations/2026_10_13_000001_create_pickup_requests_table.php'))->up();
-                        \Illuminate\Support\Facades\Route::middleware('web')->group(function () {
-            \Illuminate\Support\Facades\Route::get('/cart', [\App\Http\Controllers\Public\CartController::class, 'index'])->name('cart.index');
-            \Illuminate\Support\Facades\Route::post('/cart', [\App\Http\Controllers\Public\CartController::class, 'add'])->name('cart.add');
-            \Illuminate\Support\Facades\Route::patch('/cart', [\App\Http\Controllers\Public\CartController::class, 'update'])->name('cart.update');
-            \Illuminate\Support\Facades\Route::get('/checkout', [\App\Http\Controllers\Public\CartController::class, 'checkout'])->name('cart.checkout');
-            \Illuminate\Support\Facades\Route::post('/checkout', [\App\Http\Controllers\Public\CartController::class, 'place'])->name('cart.place');
-            \Illuminate\Support\Facades\Route::get('/checkout/confirmation', [\App\Http\Controllers\Public\CartController::class, 'confirmation'])->name('cart.confirmation');
-        });        \Illuminate\Support\Facades\Route::getRoutes()->refreshNameLookups();
         $this->withoutVite();
     }
 
@@ -51,9 +44,13 @@ class CustomerPickupFlowTest extends TestCase
     public function test_guest_can_add_to_cart_and_prices_are_recalculated_on_server(): void
     {
         $variant = $this->variant();
-        $this->post(route('cart.add'), ['variant_id' => $variant->id, 'quantity' => 2, 'unit_price' => '0.01'])
-            ->assertRedirect(route('cart.index'));
-        $this->get(route('cart.index'))->assertOk()->assertSee('Cà phê sữa đá')->assertSee('70.000đ');
+        $this->get(route('menu.show', $variant->product->slug))->assertOk()
+            ->assertSee(route('cart.add'), false)->assertSee(route('cart.items.store'), false);
+        $deliveryDraft = ['delivery-line' => ['quantity' => 3]];
+        $this->withSession(['customer_order_cart' => $deliveryDraft])
+            ->post(route('cart.add'), ['variant_id' => $variant->id, 'quantity' => 2, 'unit_price' => '0.01'])
+            ->assertRedirect(route('pickup.cart.index'));
+        $this->get(route('pickup.cart.index'))->assertOk()->assertSee('Cà phê sữa đá')->assertSee('70.000đ');
         $this->get(route('cart.checkout'))->assertOk()->assertSee('70.000đ');
         $this->post(route('cart.place'), [
             'customer_name' => 'Nguyễn Văn A', 'customer_phone' => '0901234567',
@@ -64,8 +61,9 @@ class CustomerPickupFlowTest extends TestCase
         $this->assertSame('70000.00', $request->subtotal);
         $this->assertSame(2, $request->items[0]['quantity']);
         $this->assertSame('pending', $request->status);
-        $this->get(route('cart.confirmation'))->assertOk()->assertSee($request->reference);
-        $this->get(route('cart.index'))->assertOk()->assertSee('Giỏ hàng đang trống');
+        $this->get(route('cart.confirmation'))->assertOk()->assertSee($request->reference)
+            ->assertSessionHas('customer_order_cart', $deliveryDraft);
+        $this->get(route('pickup.cart.index'))->assertOk()->assertSee('Giỏ hàng đang trống');
     }
 
     public function test_unavailable_variant_cannot_be_added_and_checkout_requires_cart(): void

@@ -344,7 +344,7 @@ class StaffOrderItemManagementTest extends TestCase
         $this->post(route('staff.orders.items.store', $order), $payload)->assertRedirect(route('login'));
         $this->actingAs($this->staff('inactive', 'admin'), 'web')->post(route('staff.orders.items.store', $order), $payload)->assertForbidden();
         $this->actingAs($this->staff('inactive'), 'web')->post(route('staff.orders.items.store', $order), $payload)->assertForbidden();
-        $this->assertDatabaseCount('order_items', 1);
+        $this->assertDatabaseCount('order_items', 0);
     }
 
     public function test_active_staff_can_update_a_pending_item_quantity_and_recalculate_snapshot_totals(): void
@@ -450,7 +450,7 @@ class StaffOrderItemManagementTest extends TestCase
         $this->delete($deleteRoute)->assertRedirect(route('login'));
         $this->actingAs($this->staff('inactive', 'admin'), 'web')->patch($updateRoute, ['quantity' => 2])->assertForbidden();
         $this->actingAs($this->staff('inactive'), 'web')->delete($deleteRoute)->assertForbidden();
-        $this->assertDatabaseHas('order_items', ['id' => $item->id, 'quantity' => 2]);
+        $this->assertDatabaseHas('order_items', ['id' => $item->id, 'quantity' => 1]);
     }
 
     public function test_update_and_delete_roll_back_when_order_total_save_fails(): void
@@ -600,7 +600,7 @@ class StaffOrderItemManagementTest extends TestCase
         $this->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertRedirect(route('login'));
         $this->actingAs($this->staff('inactive', 'admin'), 'web')->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertForbidden();
         $this->actingAs($this->staff('inactive'), 'web')->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertForbidden();
-        $this->assertDatabaseCount('order_item_toppings', 1);
+        $this->assertDatabaseCount('order_item_toppings', 0);
     }
 
     public function test_topping_changes_roll_back_when_order_total_save_fails(): void
