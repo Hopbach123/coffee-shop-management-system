@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\ProductRecipeController;
 use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\ReservationController;
+use App\Http\Controllers\Admin\TableDetailController;
 use App\Http\Controllers\Admin\ToppingController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
@@ -44,6 +45,7 @@ Route::get('reservations/{reservation}', [ReservationController::class, 'show'])
 
 Route::get('tables', [CafeTableController::class, 'index'])->name('tables.index');
 Route::get('tables/create', [CafeTableController::class, 'create'])->name('tables.create');
+Route::get('tables/{cafe_table}/detail', [TableDetailController::class, 'show'])->whereNumber('cafe_table')->name('tables.show');
 Route::post('tables', [CafeTableController::class, 'store'])->name('tables.store');
 Route::get('tables/{cafe_table}/edit', [CafeTableController::class, 'edit'])->name('tables.edit');
 Route::put('tables/{cafe_table}', [CafeTableController::class, 'update'])->name('tables.update');

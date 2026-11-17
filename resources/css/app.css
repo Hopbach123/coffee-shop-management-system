@@ -3,12 +3,17 @@
 @import './auth/login.css';
 @import './auth/internal.css';
 @import './admin/categories.css';
+@import './admin/areas.css';
+@import './admin/table-floor-plan.css';
 @import './admin/products.css';
 @import './admin/promotions.css';
 @import './admin/dashboard.css';
 @import './admin/menu-sortable.css';
 @import './admin/sidebar.css';
 @import './staff/orders.css';
+@import './staff/table-menu.css';
+@import './staff/checkout-summary.css';
+@import './staff/table-pos-polish.css';
 @import './public/menu.css';
 @import './public/cart.css';
 @import './public/shop-location.css';

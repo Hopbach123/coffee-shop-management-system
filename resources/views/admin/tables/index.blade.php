@@ -4,7 +4,10 @@
     <section class="category-page" aria-labelledby="page-title">
         <div class="category-heading">
             <div><p class="section-heading__eyebrow">Maison du Café · Quản trị</p><h1 id="page-title">Quản lý bàn</h1><p>Danh sách bàn và khu vực của quán.</p></div>
-            <x-public.button href="{{ route('admin.tables.create') }}">Thêm bàn</x-public.button>
+            <div class="category-form-actions">
+                <x-public.button href="{{ route('admin.tables.index', ['view' => 'floor']) }}" variant="outline">Sơ đồ bàn</x-public.button>
+                <x-public.button href="{{ route('admin.tables.create') }}">Thêm bàn</x-public.button>
+            </div>
         </div>
         @if (session('success')) <p class="category-notice category-notice--success" role="status">{{ session('success') }}</p> @endif
         @if ($errors->any())

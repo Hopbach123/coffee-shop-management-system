@@ -10,6 +10,10 @@ use App\Http\Controllers\Staff\WorkspaceController;
 
 
 Route::middleware('role:admin,staff')->group(function (): void {
+    Route::get('tables/{table}/orders/{order}/checkout', [\App\Http\Controllers\Staff\TableCheckoutController::class, 'show'])->whereNumber(['table', 'order'])->name('table-checkout.show');
+    Route::get('tables/{table}/orders/{order}/estimate', [\App\Http\Controllers\Staff\TableCheckoutController::class, 'print'])->whereNumber(['table', 'order'])->name('table-checkout.print');
+    Route::get('tables/{table}/orders/{order}/menu', [\App\Http\Controllers\Staff\TableOrderController::class, 'index'])->whereNumber(['table', 'order'])->name('table-order.index');
+    Route::post('tables/{table}/orders/{order}/items', [\App\Http\Controllers\Staff\TableOrderController::class, 'store'])->whereNumber(['table', 'order'])->name('table-order.store');
     Route::get('/', [PosController::class, 'index'])->name('home');
     Route::post('/pos/add', [PosController::class, 'add'])->name('pos.add');
     Route::post('/pos/remove', [PosController::class, 'remove'])->name('pos.remove');

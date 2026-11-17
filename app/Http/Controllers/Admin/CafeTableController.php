@@ -9,11 +9,14 @@ use App\Http\Requests\Admin\UpdateCafeTableStatusRequest;
 use App\Models\Area;
 use App\Models\CafeTable;
 use App\Services\CafeTableManagementService;
+use App\Services\TableStatusReadService;
+use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -84,6 +87,10 @@ class CafeTableController extends Controller
 
     public function index(Request $request): View
     {
+        if ($request->query('view') === 'floor') {
+            return $this->floorPlan($request);
+        }
+
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:20'],
             'area_id' => ['nullable', 'integer', Rule::exists('areas', 'id')],
@@ -99,6 +106,40 @@ class CafeTableController extends Controller
         $transitions = CafeTableManagementService::STATUS_TRANSITIONS;
 
         return view('admin.tables.index', compact('tables', 'areas', 'filters', 'statuses', 'transitions'));
+    }
+
+    private function floorPlan(Request $request): View
+    {
+        $tables = $areas = $summary = null;
+        $filters = [];
+        $statuses = TableStatusReadService::LABELS;
+        $observedAt = CarbonImmutable::now(config('app.timezone'));
+        try {
+            $filters = $request->validate([
+                'search' => ['nullable', 'string', 'max:100'],
+                'area_id' => ['nullable', 'integer', Rule::exists('areas', 'id')->whereNull('deleted_at')],
+                'status' => ['nullable', Rule::in(array_keys($statuses))],
+            ]);
+            $query = app(TableStatusReadService::class)->query($observedAt)
+                ->forFloorPlan(array_diff_key($filters, ['status' => true]))
+                ->when($filters['status'] ?? null, fn ($query, $value) => $query->where('display_status', $value));
+            $summary = (clone $query)->select([])->selectRaw("COUNT(*) as total,
+                COALESCE(SUM(CASE WHEN display_status = 'available' THEN 1 ELSE 0 END), 0) as available,
+                COALESCE(SUM(CASE WHEN display_status = 'occupied' THEN 1 ELSE 0 END), 0) as occupied,
+                COALESCE(SUM(CASE WHEN display_status = 'maintenance' THEN 1 ELSE 0 END), 0) as maintenance,
+                COALESCE(SUM(CASE WHEN display_status = 'reserved' THEN 1 ELSE 0 END), 0) as reserved,
+                COALESCE(SUM(CASE WHEN display_status = 'conflict' THEN 1 ELSE 0 END), 0) as conflict,
+                COALESCE(SUM(CASE WHEN display_status = 'unknown' THEN 1 ELSE 0 END), 0) as unknown")->first();
+            $tables = $query->with('area:id,name,status')->orderByDesc('created_at')->orderByDesc('id')
+                ->paginate(15)->withQueryString();
+            $areas = Area::query()->withCount('cafeTables')->orderBy('name')->orderBy('id')
+                ->get(['id', 'name', 'status']);
+        } catch (QueryException $exception) {
+            Log::warning('Table floor plan query failed.', ['sql_state' => $exception->errorInfo[0] ?? null]);
+            $tables = $areas = $summary = null;
+        }
+
+        return view('admin.tables.floor-plan', compact('tables', 'areas', 'summary', 'filters', 'statuses', 'observedAt'));
     }
 
     public function create(): View

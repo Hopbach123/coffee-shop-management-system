@@ -11,6 +11,12 @@
                 <p class="order-detail__intro">{{ $isWebDelivery ? 'Đơn giao từ web' : ($order->order_type === 'dine_in' ? 'Đơn tại chỗ' : 'Đơn mang đi') }} · tạo lúc {{ $order->ordered_at?->format('d/m/Y H:i') }}</p>
             </div>
             <div class="order-detail__item-actions">
+                @if ($order->order_type === 'dine_in' && $order->table_id)
+                    <x-public.button :href="route('staff.table-checkout.show', [$order->table_id, $order->id])" variant="outline">Xem tạm tính</x-public.button>
+                    @if ($canEdit)
+                        <x-public.button :href="route('staff.table-order.index', [$order->table_id, $order->id])" variant="outline">Gọi món tại bàn</x-public.button>
+                    @endif
+                @endif
                 <x-public.button href="{{ route('staff.orders.payments.show', $order) }}" variant="outline">Thanh toán / Lịch sử</x-public.button>
                 @if($isWebDelivery)<x-public.button href="{{ route('staff.customer-orders.show', $order->customerRequest) }}" variant="outline">Giao món / Thu COD</x-public.button>@endif
                 @if ($canCancel)
@@ -27,7 +33,7 @@
         <div class="order-detail__overview">
             <section class="category-panel order-detail__facts" aria-label="Thông tin đơn hàng">
                 <div class="order-detail__fact"><span>Khách hàng</span><strong>{{ $order->customerRequest?->customer_name ?? $order->customer?->name ?? 'Khách vãng lai' }}</strong>@if ($isWebDelivery)<small>{{ $order->customerRequest->customer_phone }}</small><small>{{ $order->customerRequest->customer_address }}</small>@elseif ($order->customer?->phone)<small>{{ $order->customer->phone }}</small>@endif</div>
-                <div class="order-detail__fact"><span>Bàn phục vụ</span><strong>{{ $order->cafeTable?->table_code ?? '—' }}</strong><small>{{ $order->order_type === 'dine_in' ? 'Phục vụ tại quán' : 'Không áp dụng' }}</small></div>
+                <div class="order-detail__fact"><span>Bàn phục vụ</span><strong>{{ $order->cafeTable?->table_code ?? '—' }}</strong><small>{{ $order->order_type === 'dine_in' ? 'Phục vụ tại quán' : 'Không áp dụng' }}</small>@if ($order->cafeTable?->area)<small>{{ $order->cafeTable->area->name }}</small>@endif</div>
                 <div class="order-detail__fact"><span>Nhân viên tạo</span><strong>{{ $order->creator?->name ?? '—' }}</strong><small>{{ $order->note ?: 'Không có ghi chú' }}</small></div>
             </section>
             <aside class="category-panel order-detail__total" aria-label="Tổng thanh toán"><h2>TỔNG KẾT TÀI CHÍNH</h2>

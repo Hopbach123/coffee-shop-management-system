@@ -76,7 +76,8 @@ class OrderController extends Controller
     {
         $this->assertActiveStaff($request);
         $order->load([
-            'cafeTable:id,table_code,table_name',
+            'cafeTable:id,area_id,table_code,table_name',
+            'cafeTable.area:id,name',
             'customer:id,name,phone',
             'creator:id,name',
             'customerRequest',
