@@ -10,7 +10,7 @@ class UpdateOrderItemToppingQuantityRequest extends FormRequest
     {
         $user = $this->user('web');
 
-        return $user !== null && in_array($user->role, ['admin', 'staff'], true) && $user->status === 'active';
+        return $user?->canOperateSales() ?? false;
     }
 
     public function rules(): array

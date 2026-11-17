@@ -1,6 +1,22 @@
 # Coffee Shop Management System – Implementation Plan
 
+## UI audit follow-up — CAFE-UI-WORKFLOW-001 (26/10/2026)
+
+User requests UI gap report and implementation in existing template. Audit source/routes then deliver read-only request inbox/detail, recipe/ledger access from parent pages, real payment history in Order, and preparation actions via existing endpoints. No duplicate online/payment write workflow or recipe CRUD from another branch. Browser verification at 375/768/1440 required before full UI DONE. Services for public submit/tracking, accept/reject, payment/movement writes remain separately scoped dependencies; missing writes must be reported, never simulated success. AC/test: middleware/PII, filters and missing-schema state, correct parent links, queue excludes finished Orders, actual existing preparation command, build, regressions and browser limitation report. Split into audit/design and screen/tests substeps; no automatic subsequent module implementation.
+
+## Current extension task — CAFE-DB-ONLINE-001 (26/10/2026)
+
+User-authorized schema-only extension: counter/scheduled/online pickup as defined in requirements/database-design. Dependency: existing catalog/user/customer/Order migrations. Scope: additive four migrations, specification, MySQL schema regression tests, upgrade/rollback evidence. Out of scope: Service/UI, gateway/shipper/holds, seed import and generated models. AC: correct three tables/FKs/CHECK/unique/indexes; legacy data/defaults preserved; reject invalid values and duplicate links; fresh migrations and empty rollback succeed; rollback of populated new schema refused. Test on isolated disposable MySQL database, never migrate:fresh coffee_shop. Estimate two sequential reviewable substeps (specification/migrations and tests/report, 30–90 minutes each). Stop after schema delivery; UI/workflow/SQL v2 require subsequent tasks.
+
 ## 1. Purpose
+
+### CAFE-INV-BE-006 / feature/inventory-completion — 06/11/2026
+
+Baseline feac9ce2 (PR #34), worktree sạch trên nhánh đã có. User duyệt gộp cảnh báo tồn thấp H03 với hoàn thiện consume H04/H06 và chọn chính sách hợp dự án. Ba bước 30–90 phút: (1) trace/charter và filter+indicator, (2) harden InventoryService hiện có, rule thiếu recipe, nối thông báo/hướng dẫn UI vào endpoint thật; (3) workflow/rollback/ledger integration, MySQL tranh tồn/gửi lặp và hồi quy/build/report. Dependency: Ingredient/Recipe/Order Item/import/adjustment hiện có. AC: low/out/equality/status/query pagination đúng; không trừ khi thiếu recipe/tồn/actor/order sai; atomic/no double consume; concurrency bảo toàn ledger; UI reused, không duplicate workflow. Out of scope: Order/Payment lifecycle mới, auto availability, holds, topping recipe, migration/seed/dependency. Test SQLite memory và disposable MySQL, không đổi DB dự án; browser theo frontend nếu môi trường cho phép, ghi hạn chế trung thực. Không tự commit/push/nhánh kế tiếp.
+
+### Current task — CAFE-INV-BE-005 / feature/inventory-adjustments (06/11/2026)
+
+User duyệt hoàn thiện H05 sau nhập kho PR #33; baseline dev e6e926e7. Chia ba bước 30–90 phút: (1) rules/token/Service, (2) form/routes/history navigation, (3) validation/rollback/retry/concurrency regression, build và report. Dependencies: Ingredient, auth Admin, inventory ledger và import đã có. Scope: adjustment tăng/giảm, waste, stocktake một nguyên liệu và hướng dẫn. Không sửa consume/Order/Payment, migration, seed hoặc dữ liệu dự án. AC: active Admin only, reason/precision/range, stock không âm/overflow, stocktake stale bị chặn, atomic ledger, retry không cộng hai lần, UI old/error/success/navigation. Test: isolated SQLite workflow, MySQL concurrency nếu môi trường cho phép, suite/build/diff và browser theo frontend standard. Không tự commit/push hoặc task tiếp theo.
 
 Tài liệu này là roadmap triển khai chính thức của Coffee Shop Management System. Roadmap xác định thứ tự phụ thuộc từ nền tảng, dữ liệu, xác thực, nghiệp vụ cốt lõi, frontend, kiểm thử đến bàn giao.
 

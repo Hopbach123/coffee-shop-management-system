@@ -310,7 +310,31 @@ class StaffOrderItemManagementTest extends TestCase
         }
     }
 
-    public function test_admin_can_add_items_while_guest_and_inactive_staff_cannot(): void
+    public function test_active_admin_can_manage_items_toppings_and_prepare_with_audited_stock(): void
+    {
+        $admin = $this->staff('active', 'admin');
+        $order = $this->order($admin);
+        $variant = $this->sellableVariant();
+        $ingredient = Ingredient::forceCreate(['name' => 'Coffee', 'unit' => 'g', 'current_stock' => '10.000', 'minimum_stock' => 0, 'cost_price' => 1, 'status' => 'active']);
+        ProductRecipe::forceCreate(['variant_id' => $variant->id, 'ingredient_id' => $ingredient->id, 'quantity' => '1.500']);
+        $this->actingAs($admin, 'web')->post(route('staff.orders.items.store', $order), ['variant_id' => $variant->id, 'quantity' => 1])->assertSessionHasNoErrors();
+        $item = $order->orderItems()->firstOrFail();
+        $this->patch(route('staff.orders.items.update', [$order, $item]), ['quantity' => 2])->assertSessionHasNoErrors();
+        $topping = $this->topping();
+        $this->post(route('staff.orders.items.toppings.store', [$order, $item]), ['topping_id' => $topping->id, 'quantity' => 1])->assertSessionHasNoErrors();
+        $line = $item->orderItemToppings()->firstOrFail();
+        $this->patch(route('staff.orders.items.toppings.update', [$order, $item, $line]), ['quantity' => 2])->assertSessionHasNoErrors();
+        $this->delete(route('staff.orders.items.toppings.destroy', [$order, $item, $line]))->assertSessionHasNoErrors();
+        foreach (['preparing', 'ready', 'served'] as $status) {
+            $this->patch(route('staff.orders.items.status.update', [$order, $item]), ['status' => $status])->assertSessionHasNoErrors();
+            $this->assertSame($status, $item->fresh()->status);
+        }
+        $this->assertSame('7.000', $ingredient->fresh()->current_stock);
+        $this->assertDatabaseHas('inventory_transactions', ['ingredient_id' => $ingredient->id, 'created_by' => $admin->id, 'quantity' => '3.000']);
+        $this->assertSame($admin->id, $order->fresh()->user_id);
+    }
+
+    public function test_guests_and_inactive_users_cannot_add_order_items(): void
     {
         $staff = $this->staff();
         $order = $this->order($staff);
@@ -318,7 +342,7 @@ class StaffOrderItemManagementTest extends TestCase
         $payload = ['variant_id' => $variant->id, 'quantity' => 1];
 
         $this->post(route('staff.orders.items.store', $order), $payload)->assertRedirect(route('login'));
-        $this->actingAs($this->staff('active', 'admin'), 'web')->post(route('staff.orders.items.store', $order), $payload)->assertSessionHasNoErrors();
+        $this->actingAs($this->staff('inactive', 'admin'), 'web')->post(route('staff.orders.items.store', $order), $payload)->assertForbidden();
         $this->actingAs($this->staff('inactive'), 'web')->post(route('staff.orders.items.store', $order), $payload)->assertForbidden();
         $this->assertDatabaseCount('order_items', 1);
     }
@@ -414,7 +438,7 @@ class StaffOrderItemManagementTest extends TestCase
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'pending', 'subtotal' => '0.00', 'total_amount' => '0.00']);
     }
 
-    public function test_admin_can_update_items_while_guest_and_inactive_staff_cannot(): void
+    public function test_guests_and_inactive_users_cannot_update_or_remove_order_items(): void
     {
         $staff = $this->staff();
         $order = $this->order($staff);
@@ -424,7 +448,7 @@ class StaffOrderItemManagementTest extends TestCase
 
         $this->patch($updateRoute, ['quantity' => 2])->assertRedirect(route('login'));
         $this->delete($deleteRoute)->assertRedirect(route('login'));
-        $this->actingAs($this->staff('active', 'admin'), 'web')->patch($updateRoute, ['quantity' => 2])->assertSessionHasNoErrors();
+        $this->actingAs($this->staff('inactive', 'admin'), 'web')->patch($updateRoute, ['quantity' => 2])->assertForbidden();
         $this->actingAs($this->staff('inactive'), 'web')->delete($deleteRoute)->assertForbidden();
         $this->assertDatabaseHas('order_items', ['id' => $item->id, 'quantity' => 2]);
     }
@@ -565,7 +589,7 @@ class StaffOrderItemManagementTest extends TestCase
         $this->assertDatabaseHas('order_item_toppings', ['id' => $otherRow->id]);
     }
 
-    public function test_admin_can_manage_toppings_while_guest_and_inactive_staff_cannot(): void
+    public function test_guests_and_inactive_users_cannot_manage_toppings(): void
     {
         $staff = $this->staff();
         $order = $this->order($staff);
@@ -574,7 +598,7 @@ class StaffOrderItemManagementTest extends TestCase
         $storeRoute = route('staff.orders.items.toppings.store', [$order, $item]);
 
         $this->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertRedirect(route('login'));
-        $this->actingAs($this->staff('active', 'admin'), 'web')->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertSessionHasNoErrors();
+        $this->actingAs($this->staff('inactive', 'admin'), 'web')->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertForbidden();
         $this->actingAs($this->staff('inactive'), 'web')->post($storeRoute, ['topping_id' => $topping->id, 'quantity' => 1])->assertForbidden();
         $this->assertDatabaseCount('order_item_toppings', 1);
     }
@@ -688,6 +712,25 @@ class StaffOrderItemManagementTest extends TestCase
         $this->assertDatabaseCount('inventory_transactions', 1);
     }
 
+    public function test_missing_recipe_is_rejected_via_http_and_brewing_uses_existing_command(): void
+    {
+        $staff = $this->staff();
+        $order = $this->order($staff);
+        $item = $this->item($order, $this->sellableVariant());
+        $route = route('staff.orders.items.status.update', [$order, $item]);
+        $this->actingAs($staff)->get(route('staff.brewing.index'))->assertOk()
+            ->assertSee('Bắt đầu pha')->assertSee($route, false)->assertSee('name="_method" value="PATCH"', false);
+        $this->patchJson($route, ['status' => 'preparing'])->assertUnprocessable()->assertJsonValidationErrors('ingredient');
+        $this->assertSame('pending', $item->fresh()->status);
+        $this->assertDatabaseCount('inventory_transactions', 0);
+        $ingredient = $this->ingredient('2.000');
+        $this->recipe($item, $ingredient, '1.000');
+        $this->patch($route, ['status' => 'preparing'])->assertRedirect(route('staff.orders.show', $order));
+        $this->assertSame('1.000', $ingredient->fresh()->current_stock);
+        $this->assertDatabaseCount('inventory_transactions', 1);
+        $this->get(route('staff.brewing.index'))->assertOk()->assertDontSee('action="'.$route.'"', false);
+    }
+
     public function test_insufficient_stock_rolls_back_pending_to_preparing_transition(): void
     {
         $staff = $this->staff();
@@ -744,8 +787,7 @@ class StaffOrderItemManagementTest extends TestCase
         $this->patchJson(route('staff.orders.items.status.update', [$completedOrder, $completedItem]), ['status' => 'preparing'])
             ->assertUnprocessable()->assertJsonValidationErrors('order');
 
-        $this->actingAs($this->staff('active', 'admin'), 'web')->patch($authorizedRoute, ['status' => 'preparing'])->assertSessionHasNoErrors();
-        $this->assertSame('preparing', $item->fresh()->status);
+        $this->actingAs($this->staff('inactive', 'admin'), 'web')->patch($authorizedRoute, ['status' => 'preparing'])->assertForbidden();
         $this->actingAs($this->staff('inactive'), 'web')->patch($authorizedRoute, ['status' => 'preparing'])->assertForbidden();
     }
 }

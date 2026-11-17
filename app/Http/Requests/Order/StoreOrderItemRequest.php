@@ -11,7 +11,7 @@ class StoreOrderItemRequest extends FormRequest
     {
         $user = $this->user('web');
 
-        return $user !== null && in_array($user->role, ['admin', 'staff'], true) && $user->status === 'active';
+        return $user?->canOperateSales() ?? false;
     }
 
     protected function prepareForValidation(): void

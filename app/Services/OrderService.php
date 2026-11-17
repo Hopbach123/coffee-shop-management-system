@@ -462,7 +462,7 @@ class OrderService
     private function assertActiveStaff(User $actor): void
     {
         $currentActor = User::query()->lockForUpdate()->find($actor->getKey());
-        if ($currentActor === null || ! in_array($currentActor->role, ['admin', 'staff'], true) || $currentActor->status !== 'active') {
+        if ($currentActor === null || ! $currentActor->canOperateSales()) {
             throw new DomainException('Chỉ Admin hoặc Staff đang hoạt động được thao tác đơn hàng.');
         }
     }

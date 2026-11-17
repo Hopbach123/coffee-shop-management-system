@@ -44,6 +44,11 @@ class User extends Authenticatable
         return '';
     }
 
+    public function canOperateSales(): bool
+    {
+        return ! $this->trashed() && $this->status === 'active' && in_array($this->role, ['admin', 'staff'], true);
+    }
+
     public function reservationsCreated(): HasMany
     {
         return $this->hasMany(Reservation::class, 'created_by');

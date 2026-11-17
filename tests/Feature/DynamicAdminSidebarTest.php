@@ -43,6 +43,20 @@ class DynamicAdminSidebarTest extends TestCase
         return app(AdminMenuSidebarService::class)->build($user ?? $this->admin, $route)['tree'];
     }
 
+    public function test_recipe_and_stock_import_pages_activate_their_parent_menu(): void
+    {
+        $this->menu('Variants', null, 'admin.product-variants.index');
+        $this->menu('Ingredients', null, 'admin.ingredients.index');
+        foreach (['admin.product-recipes.index', 'admin.product-variants.recipe', 'admin.product-variants.recipes'] as $route) {
+            $active = array_values(array_filter($this->tree($route), fn ($node) => $node['active']));
+            $this->assertCount(1, $active);
+            $this->assertSame('admin.product-variants.index', $active[0]['route']);
+        }
+        $active = array_values(array_filter($this->tree('admin.ingredients.import.create'), fn ($node) => $node['active']));
+        $this->assertCount(1, $active);
+        $this->assertSame('admin.ingredients.index', $active[0]['route']);
+    }
+
     public function test_empty_or_missing_table_keeps_admin_recovery_and_never_seeds(): void
     {
         $this->get('/admin/menus')->assertOk()->assertSee('Chưa có menu hiển thị.')->assertSee('Quản lý menu');

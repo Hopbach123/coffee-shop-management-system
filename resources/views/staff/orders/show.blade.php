@@ -30,7 +30,7 @@
                 <div class="order-detail__fact"><span>Bàn phục vụ</span><strong>{{ $order->cafeTable?->table_code ?? '—' }}</strong><small>{{ $order->order_type === 'dine_in' ? 'Phục vụ tại quán' : 'Không áp dụng' }}</small></div>
                 <div class="order-detail__fact"><span>Nhân viên tạo</span><strong>{{ $order->creator?->name ?? '—' }}</strong><small>{{ $order->note ?: 'Không có ghi chú' }}</small></div>
             </section>
-            <aside class="category-panel order-detail__total" aria-label="Tổng thanh toán">
+            <aside class="category-panel order-detail__total" aria-label="Tổng thanh toán"><h2>TỔNG KẾT TÀI CHÍNH</h2>
                 <span>Tạm tính</span><strong><x-public.money :amount="$order->subtotal" /></strong>
                 @if ($order->discount_amount !== '0.00')<small>Giảm giá: <x-public.money :amount="$order->discount_amount" /></small>@endif
                 @if ($order->tax_amount !== '0.00')<small>Thuế: <x-public.money :amount="$order->tax_amount" /></small>@endif
@@ -84,4 +84,58 @@
             </section>
         @endif
     </section>
+<section class="sneat-card">
+    <div class="sneat-card-heading">
+        <h2>Lịch sử thanh toán thực tế (Payment Records)</h2>
+        <span class="sneat-pill is-info">Dữ liệu thực tế</span>
+    </div>
+    @if($order->payments->isNotEmpty())
+        <div class="sneat-responsive">
+            <table class="sneat-datatable">
+                <thead>
+                    <tr>
+                        <th>Mã thanh toán</th>
+                        <th>Phương thức</th>
+                        <th>Số tiền</th>
+                        <th>Mã giao dịch ngân hàng</th>
+                        <th>Trạng thái</th>
+                        <th>Thời gian</th>
+                        <th>Người ghi nhận</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($order->payments as $payment)
+                        <tr>
+                            <td><strong>{{ $payment->payment_code }}</strong></td>
+                            <td>
+                                @if($payment->payment_method === 'cash')
+                                    💵 Tiền mặt
+                                @elseif($payment->payment_method === 'bank_transfer')
+                                    🏦 Chuyển khoản ngân hàng
+                                @else
+                                    {{ $payment->payment_method }}
+                                @endif
+                            </td>
+                            <td><strong><x-public.money :amount="$payment->amount" /></strong></td>
+                            <td>{{ $payment->transaction_code ?: '—' }}</td>
+                            <td>
+                                <span class="sneat-pill {{ $payment->status === 'paid' ? 'is-success' : ($payment->status === 'failed' ? 'is-danger' : 'is-warning') }}">
+                                    {{ ['pending'=>'Chờ thu tiền','paid'=>'Đã thanh toán','failed'=>'Thất bại','refunded'=>'Hoàn tiền'][$payment->status] ?? $payment->status }}
+                                </span>
+                            </td>
+                            <td>{{ $payment->paid_at ? $payment->paid_at->format('d/m/Y H:i') : ($payment->created_at?->format('d/m/Y H:i') ?? '—') }}</td>
+                            <td>{{ $payment->creator?->name ?? '—' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @else
+        <div style="padding: 1.5rem; text-align: center; color: var(--coffee-text-muted);">
+            <p style="margin: 0 0 0.5rem 0;">Chưa có bản ghi thanh toán nào được ghi nhận cho đơn hàng này.</p>
+            <small>Đơn hàng được tạo ở trạng thái pending; chưa phát sinh giao dịch thu tiền.</small>
+        </div>
+    @endif
+</section>
+
 @endsection

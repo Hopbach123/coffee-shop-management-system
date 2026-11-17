@@ -21,6 +21,7 @@ use DomainException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -83,6 +84,9 @@ class OrderController extends Controller
             'orderItems' => fn ($query) => $query->with('orderItemToppings')->orderBy('id'),
         ]);
 
+        $paymentsAvailable = Schema::hasTable('payments');
+        $order->setRelation('payments', $paymentsAvailable ? $order->payments()->with('creator')->orderByDesc('id')->get() : collect());
+
         $variants = ProductVariant::query()
             ->where('status', 'available')
             ->whereHas('product', fn ($query) => $query->where('status', 'available'))
@@ -104,7 +108,7 @@ class OrderController extends Controller
         $canCancel = $order->status === 'pending' && ! $paid
             && $order->orderItems->every(fn (OrderItem $item): bool => $item->status === 'pending');
 
-        return view('staff.orders.show', compact('order', 'variants', 'toppings', 'canCancel', 'canEdit', 'canStartPreparing', 'isWebDelivery'));
+        return view('staff.orders.show', compact('order', 'variants', 'toppings', 'canCancel', 'canEdit', 'canStartPreparing', 'isWebDelivery', 'paymentsAvailable'));
     }
 
     public function cancel(Request $request, Order $order, OrderService $service): RedirectResponse
@@ -251,7 +255,6 @@ class OrderController extends Controller
 
     private function assertActiveStaff(Request $request): void
     {
-        abort_unless($request->user('web')?->status === 'active'
-            && in_array($request->user('web')?->role, ['admin', 'staff'], true), 403);
+        abort_unless($request->user('web')?->canOperateSales(), 403);
     }
 }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Staff\OrderController;
 use App\Http\Controllers\Staff\PaymentController;
 use App\Http\Controllers\Staff\CustomerOrderRequestController;
+use App\Http\Controllers\Staff\OnlineRequestController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Staff\PosController;
 use App\Http\Controllers\Staff\WorkspaceController;
@@ -21,6 +22,8 @@ Route::middleware('role:admin,staff')->group(function (): void {
     Route::post('/customer-orders/{customerRequest}/deliver', [CustomerOrderRequestController::class, 'deliver'])->name('customer-orders.deliver');
 
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('online-requests', [OnlineRequestController::class, 'index'])->name('online-requests.index');
+    Route::get('online-requests/{onlineRequest}', [OnlineRequestController::class, 'show'])->whereNumber('onlineRequest')->name('online-requests.show');
     Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
     Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
     Route::patch('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');

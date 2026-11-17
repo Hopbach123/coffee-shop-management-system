@@ -119,7 +119,6 @@ class PosController extends Controller
 
     private function assertActiveStaff(Request $request): void
     {
-        abort_unless($request->user('web')?->status === 'active'
-            && in_array($request->user('web')?->role, ['admin', 'staff'], true), 403);
+        abort_unless($request->user('web')?->canOperateSales(), 403);
     }
 }
