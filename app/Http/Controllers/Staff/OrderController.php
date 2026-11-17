@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Order\StoreOrderRequest;
 use App\Http\Requests\Order\StoreOrderItemRequest;
 use App\Http\Requests\Order\StoreOrderItemToppingRequest;
+use App\Http\Requests\Order\StoreOrderRequest;
 use App\Http\Requests\Order\UpdateOrderItemQuantityRequest;
 use App\Http\Requests\Order\UpdateOrderItemStatusRequest;
 use App\Http\Requests\Order\UpdateOrderItemToppingQuantityRequest;
@@ -32,7 +32,7 @@ class OrderController extends Controller
         $this->assertActiveStaff($request);
 
         $orders = Order::query()
-            ->with(['cafeTable:id,table_code,table_name', 'customer:id,name,phone', 'creator:id,name'])
+            ->with(['cafeTable:id,table_code,table_name', 'customer:id,name,phone', 'creator:id,name', 'customerRequest'])
             ->orderByDesc('ordered_at')
             ->orderByDesc('id')
             ->paginate(15);
@@ -80,6 +80,8 @@ class OrderController extends Controller
             'cafeTable.area:id,name',
             'customer:id,name,phone',
             'creator:id,name',
+            'customerRequest',
+            'payments',
             'orderItems' => fn ($query) => $query->with('orderItemToppings')->orderBy('id'),
         ]);
 
@@ -100,10 +102,14 @@ class OrderController extends Controller
             ->orderBy('id')
             ->get(['id', 'name', 'price']);
 
-        $canCancel = $order->status === 'pending'
+        $paid = $order->payments->contains('status', 'paid');
+        $isWebDelivery = $order->customerRequest !== null;
+        $canEdit = $order->status === 'pending' && ! $paid && ! $isWebDelivery;
+        $canStartPreparing = ! ($order->customerRequest?->payment_option === 'bank_transfer_prepaid' && ! $paid);
+        $canCancel = $order->status === 'pending' && ! $paid
             && $order->orderItems->every(fn (OrderItem $item): bool => $item->status === 'pending');
 
-        return view('staff.orders.show', compact('order', 'variants', 'toppings', 'canCancel', 'paymentsAvailable'));
+        return view('staff.orders.show', compact('order', 'variants', 'toppings', 'canCancel', 'canEdit', 'canStartPreparing', 'isWebDelivery', 'paymentsAvailable'));
     }
 
     public function cancel(Request $request, Order $order, OrderService $service): RedirectResponse

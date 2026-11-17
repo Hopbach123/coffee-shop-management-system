@@ -1,5 +1,12 @@
 # Coffee Shop Database Design
 
+## Approved workflow change — Customer guest / POS prepayment (27/10/2026)
+
+Subsequent user decision (27/10): web orders are delivered to the submitted name/phone/address, replacing the pickup-only proposal. Delivery is approved as a fulfillment goal, not as an enum/schema change: orders.order_type currently remains dine_in/takeaway. Explicit fulfillment metadata versus an extended order_type requires a separate design/migration review. Do not silently map delivery to takeaway, add shipping fees, reuse tax for delivery charges, or treat served as delivered without an approved state/completion mapping. Proposed address storage belongs to the request snapshot; no customer-master or migration change is performed here.
+
+`CAFE-CUSTOMER-POS-WORKFLOW-002` approves account-free public order requests and in-store POS prepayment. Customer requests become Orders only when an actual internal actor accepts them; orders.user_id remains NOT NULL. The request/header-items-toppings extension is approved in principle only; detailed migration design remains under review in docs/CUSTOMER_ORDER_CONTRACT.md. No schema or status set is changed by this documentation task.
+
+For in-store POS, confirmation of actual receipt precedes atomic Order + item/topping + paid persistence and pending-to-preparing transitions. The latest user answer approves both bank-transfer prepayment and COD for web delivery: prepayment requires verified funds before preparing; COD explicitly allows preparing/delivery before paid, with paid recorded only after actual collection on receipt. Web submission/acceptance/payment-option selection is not paid. COD is a web-only exception, not permission to bypass POS prepayment. A proposed request payment_option stores intent; COD is not a new payments.payment_method enum value (cash/bank_transfer remain unchanged). The former global served-before-payment rule does not govern these new operations. Paid does not imply immediate completed/table release. Delivery/completion, internal collection actors, failures and existing-Order compatibility still require the contracts in docs/PAYMENT_CHECKOUT_CONTRACT.md. No physical schema or migration is changed by this documentation update.
 ## Approved extension — Simple Online Pickup (26/10/2026)
 
 User yêu cầu triển khai schema theo phạm vi đơn giản đã chốt. Phần Frozen v1.2 bên dưới là baseline lịch sử 18 bảng; sau admin_menus và ba bảng dưới, thiết kế mở rộng có 22 bảng nghiệp vụ/cấu hình. Không xóa/sửa migration cũ. Đích MySQL 8.0.16+ có CHECK enforced (môi trường local MySQL 8.4). Không thêm shipper/gateway/holds.
@@ -619,7 +626,7 @@ Application rules and future implementation ownership:
 | Snapshot capture and amount calculation | Values are copied at operation time | OrderService/PromotionService |
 | Promotion eligibility, cap, usage limit, one-time increment | Time, counters, order values, locking | PromotionService + PaymentService |
 | At most one paid payment and no partial/split payment | Conditional uniqueness; MySQL portability | PaymentService transaction/locking |
-| Payment requires all non-cancelled items served | Cross-row aggregate | PaymentService |
+| POS and web bank-transfer prepayment require actual receipt before preparation; approved web COD allows preparation/delivery first and paid only upon actual collection | Cross-row/operation preconditions; delivery/collection/completion and existing-Order compatibility gates in docs/PAYMENT_CHECKOUT_CONTRACT.md | PaymentService and workflow orchestration; not implemented by this documentation change |
 | Stock deduction at pending to preparing | Recipe aggregation and locking | InventoryService transaction |
 | No negative stock; consume audit actor/reference | Cross-row atomic workflow | InventoryService |
 | reference_type/reference_id validity | Polymorphic reference has no physical FK | InventoryService |
@@ -735,3 +742,16 @@ The declaration freezes the target design, not the current migration implementat
 - Re-audit may begin after engineer review of this frozen design.
 - CAFE-DB-004 must remain blocked until CAFE-DB-001, CAFE-DB-002, and CAFE-DB-003 re-audits pass and CAFE-DB-CORRECTION-001 either passes or is confirmed unnecessary.
 - This document does not create/modify migrations, run database commands, create/modify models, create seeders/factories, install dependencies, implement business logic, commit, push, or start the next task.
+
+## 24. Approved Customer/POS extension — 27/10/2026
+
+The historical Frozen declaration above describes the 18-table baseline. User explicitly approved the following extensions in `CAFE-CUSTOMER-POS-COMPLETE-001`; existing migrations remain unchanged.
+
+- `orders.pos_checkout_key_hash CHAR(64) NULL UNIQUE`, `pos_checkout_payload_hash CHAR(64) NULL`: durable POS checkout result, scoped to existing creator and canonical payload. Legacy/non-POS values stay null.
+- `orders.delivery_fee DECIMAL(15,2) NOT NULL DEFAULT 0`: non-negative; replace the row CHECK formula with `total_amount = subtotal - discount_amount + tax_amount + delivery_fee`. POS uses 0; web request snapshots 20000.00. Rollback refuses to discard nonzero Order fees.
+- Three request tables follow `docs/CUSTOMER_ORDER_CONTRACT.md` §5 with immutable item/topping snapshots, contact/address, bank_transfer_prepaid/cod intent, key/payload/capability hashes and UNIQUE nullable Order link. `orders.user_id` remains required; customer_id is not linked from a self-declared phone.
+- Request header stores quoted_subtotal, delivery_fee, quoted_total; formula quoted_total = quoted_subtotal + delivery_fee. Access capability expires after 7 days; no unapproved request acceptance TTL or automatic retention task.
+- Request `dispatched_at` / `delivered_at` record the approved manual delivery events. No delivery enum or driver role is added. Order type remains takeaway by explicit user choice; the request relation identifies delivery.
+- MySQL is the schema/constraint/concurrency target. SQLite tests exercise application behavior and migration shape, not MySQL locking or CHECK enforcement.
+
+Migrations: `2026_10_27_000001_add_pos_checkout_keys_to_orders_table`, `000002_add_delivery_fee_to_orders_table`, `000003_create_customer_order_requests_tables`. Request-table rollback drops extension history and must not run on real requests without a data preservation plan.

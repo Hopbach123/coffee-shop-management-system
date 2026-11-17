@@ -17,6 +17,7 @@
         ['label' => 'WORKSPACE', 'links' => [
             ['route'=>'staff.home','text'=>'Bán hàng / POS','icon'=>'bag'],
             ['route'=>'staff.orders.index','text'=>'Đơn hàng','icon'=>'receipt'],
+            ['route'=>'staff.customer-orders.index','text'=>'Đơn giao từ web','icon'=>'receipt'],
             ['route'=>'staff.pickups.index','text'=>'Online & hẹn','icon'=>'box'],
             ['route'=>'staff.brewing.index','text'=>'Pha chế','icon'=>'chef'],
             ['route'=>'staff.tables.index','text'=>'Sơ đồ bàn','icon'=>'table'],

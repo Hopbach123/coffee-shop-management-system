@@ -35,7 +35,8 @@ class PromotionService
             $discount = $this->calculateDiscount($promotion, $lockedOrder->subtotal);
             $discountCents = $this->cents($discount);
             $totalCents = $this->cents($lockedOrder->subtotal) - $discountCents
-                + $this->cents($lockedOrder->tax_amount);
+                + $this->cents($lockedOrder->tax_amount)
+                + $this->cents($lockedOrder->getRawOriginal('delivery_fee') ?? '0.00');
 
             $snapshot = new OrderPromotion;
             $snapshot->order_id = $lockedOrder->getKey();

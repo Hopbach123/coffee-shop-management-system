@@ -47,7 +47,18 @@ class StaffOrderManagementTest extends TestCase
             $table->dateTime('completed_at')->nullable();
             $table->timestamps();
         });
+        Schema::create('payments', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('order_id')->constrained('orders');
+            $table->string('payment_code')->unique();
+            $table->string('payment_method');
+            $table->decimal('amount', 15, 2);
+            $table->string('status');
+            $table->foreignId('created_by')->constrained('users');
+            $table->timestamps();
+        });
 
+        (require database_path('migrations/2026_10_27_000003_create_customer_order_requests_tables.php'))->up();
         $this->withoutVite();
     }
 

@@ -5,6 +5,7 @@
 @section('content')
     <section class="coffee-section public-menu-detail" id="home" aria-labelledby="product-title">
         <div class="coffee-container">
+            @include('public.cart._notices')
             <nav class="public-menu-breadcrumb" aria-label="Đường dẫn">
                 <a href="{{ route('menu.index') }}">Thực đơn</a>
                 <span aria-hidden="true">/</span>
@@ -47,14 +48,9 @@
                             @endforeach
                         </ul>
                     @endif
-                    @if(\Illuminate\Support\Facades\Route::has('cart.add') && $product->status === 'available' && $product->productVariants->contains('status', 'available'))
-                        <form class="storefront-add-form" action="{{ route('cart.add') }}" method="POST">@csrf
-                            <label for="choose-variant">Chọn kích cỡ</label><select name="variant_id" id="choose-variant" required>
-                            @foreach($product->productVariants->where('status', 'available') as $variant)<option value="{{ $variant->id }}">{{ $variant->name }} — {{ number_format((float)$variant->price,0,',','.') }}đ</option>@endforeach
-                            </select><label for="choose-quantity">Số lượng</label><input type="number" id="choose-quantity" name="quantity" min="1" max="20" value="1" required><button class="coffee-button coffee-button--primary" type="submit">+ Thêm vào giỏ hàng</button>
-                        </form>
-                    @endif
-                    <x-public.button href="{{ route('menu.index') }}" variant="outline">← Quay lại thực đơn</x-public.button>
+                    @include('public.cart._add-form')
+                    @include('public.cart._pickup-form')
+                    <x-public.button href="{{ route('menu.index') }}" variant="outline">Quay lại thực đơn</x-public.button>
                 </div>
             </div>
         </div>

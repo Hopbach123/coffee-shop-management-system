@@ -5,9 +5,11 @@ namespace App\Services;
 use App\Models\Area;
 use App\Models\CafeTable;
 use App\Models\Customer;
+use App\Models\CustomerOrderRequest;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderItemTopping;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Topping;
@@ -137,6 +139,18 @@ class OrderService
         }, 3);
     }
 
+    /** Web delivery is explicitly mapped to takeaway, with no table or Customer master link. */
+    public function createForDelivery(User $actor, ?string $note, string $deliveryFee): Order
+    {
+        return DB::transaction(function () use ($actor, $note, $deliveryFee): Order {
+            $order = $this->create(['order_type' => 'takeaway', 'note' => $note], $actor);
+            $order->forceFill(['delivery_fee' => $this->normalizeMoney($deliveryFee)]);
+            $this->recalculateTotals($order);
+
+            return $order;
+        });
+    }
+
     /**
      * Cancel a pending order without deleting its historical item or topping snapshots.
      * Inventory is intentionally not restored here: only pending items are cancellable.
@@ -150,6 +164,7 @@ class OrderService
             if ($lockedOrder === null || $lockedOrder->status !== 'pending') {
                 throw ValidationException::withMessages(['order' => 'Chỉ có thể hủy đơn đang chờ xử lý.']);
             }
+            $this->assertUnpaidForMutation($lockedOrder);
 
             $items = OrderItem::query()
                 ->where('order_id', $lockedOrder->getKey())
@@ -163,23 +178,7 @@ class OrderService
             $lockedOrder->forceFill(['status' => 'cancelled']);
             $lockedOrder->saveOrFail();
 
-            if ($lockedOrder->order_type === 'dine_in' && $lockedOrder->table_id !== null) {
-                $table = CafeTable::withTrashed()->lockForUpdate()->find($lockedOrder->table_id);
-
-                if ($table !== null && ! $table->trashed() && $table->status === 'occupied') {
-                    $hasAnotherPendingOrder = Order::query()
-                        ->where('table_id', $table->getKey())
-                        ->where('order_type', 'dine_in')
-                        ->where('status', 'pending')
-                        ->where('id', '!=', $lockedOrder->getKey())
-                        ->lockForUpdate()
-                        ->exists();
-
-                    if (! $hasAnotherPendingOrder) {
-                        $table->forceFill(['status' => 'available'])->saveOrFail();
-                    }
-                }
-            }
+            $this->releaseTableIfFree($lockedOrder);
 
             return $lockedOrder;
         }, 3);
@@ -198,6 +197,8 @@ class OrderService
             if ($lockedOrder === null || $lockedOrder->status !== 'pending') {
                 throw ValidationException::withMessages(['order' => 'Chỉ có thể thêm món vào đơn đang chờ xử lý.']);
             }
+            $this->assertUnpaidForMutation($lockedOrder);
+            $this->assertCustomerConfigurationUnchanged($lockedOrder);
 
             $variant = ProductVariant::query()->lockForUpdate()->find($attributes['variant_id']);
             $product = $variant === null
@@ -367,12 +368,17 @@ class OrderService
     {
         return DB::transaction(function () use ($order, $item, $nextStatus, $actor): OrderItem {
             $this->assertActiveStaff($actor);
-            $lockedOrder = $this->lockedPendingOrder($order);
+            $lockedOrder = $this->lockedPendingOrder($order, true);
             $lockedItem = $this->lockedItemForStatus($lockedOrder, $item);
+            $customerRequest = CustomerOrderRequest::where('order_id', $lockedOrder->id)->first();
 
             if ($nextStatus === 'preparing') {
                 if ($lockedItem->status !== 'pending') {
                     throw ValidationException::withMessages(['order_item' => 'Món phải ở trạng thái chờ trước khi bắt đầu pha chế.']);
+                }
+                if ($customerRequest?->payment_option === 'bank_transfer_prepaid'
+                    && ! Payment::where('order_id', $lockedOrder->id)->where('status', 'paid')->exists()) {
+                    throw ValidationException::withMessages(['payment' => 'Đơn web chuyển khoản phải được xác nhận nhận đủ tiền trước khi pha chế.']);
                 }
 
                 $this->inventoryService->startPreparing($lockedItem, $actor);
@@ -389,30 +395,106 @@ class OrderService
             if ($expectedCurrentStatus === null || $lockedItem->status !== $expectedCurrentStatus) {
                 throw ValidationException::withMessages(['status' => 'Chuyển trạng thái món không hợp lệ.']);
             }
+            if ($nextStatus === 'served' && $customerRequest !== null && $customerRequest->delivered_at === null) {
+                throw ValidationException::withMessages(['order_item' => 'Đơn giao web chỉ phục vụ xong qua thao tác xác nhận giao thành công.']);
+            }
 
             $lockedItem->forceFill(['status' => $nextStatus]);
             $lockedItem->saveOrFail();
 
+            if ($nextStatus === 'served') {
+                $this->completePaidOrderIfAllServed($lockedOrder);
+            }
+
             return $lockedItem;
         }, 3);
+    }
+
+    /** The caller must hold the Order transaction; paid alone never completes an unserved Order. */
+    public function completePaidOrderIfAllServed(Order $order): bool
+    {
+        if (DB::transactionLevel() === 0) {
+            throw new DomainException('Cần transaction để hoàn tất đơn đã thanh toán.');
+        }
+
+        $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->getKey());
+        if ($lockedOrder->status === 'completed') {
+            return false;
+        }
+        if ($lockedOrder->status !== 'pending') {
+            throw ValidationException::withMessages(['order' => 'Đơn không ở trạng thái có thể hoàn tất.']);
+        }
+
+        $items = OrderItem::query()->where('order_id', $lockedOrder->getKey())
+            ->orderBy('id')->lockForUpdate()->get(['id', 'status']);
+        if (! $items->contains('status', 'served')
+            || $items->contains(fn (OrderItem $item): bool => ! in_array($item->status, ['served', 'cancelled'], true))
+            || ! Payment::query()->where('order_id', $lockedOrder->getKey())
+                ->where('status', 'paid')->lockForUpdate()->exists()) {
+            return false;
+        }
+
+        $lockedOrder->forceFill(['status' => 'completed', 'completed_at' => now()])->saveOrFail();
+        $this->releaseTableIfFree($lockedOrder);
+
+        return true;
+    }
+
+    private function releaseTableIfFree(Order $order): void
+    {
+        if ($order->order_type !== 'dine_in' || $order->table_id === null) {
+            return;
+        }
+
+        $table = CafeTable::withTrashed()->lockForUpdate()->find($order->table_id);
+        if ($table === null || $table->trashed() || $table->status !== 'occupied') {
+            return;
+        }
+
+        $anotherPendingOrder = Order::query()->where('table_id', $table->getKey())
+            ->where('order_type', 'dine_in')->where('status', 'pending')
+            ->where('id', '!=', $order->getKey())->lockForUpdate()->exists();
+        if (! $anotherPendingOrder) {
+            $table->forceFill(['status' => 'available'])->saveOrFail();
+        }
     }
 
     private function assertActiveStaff(User $actor): void
     {
         $currentActor = User::query()->lockForUpdate()->find($actor->getKey());
         if ($currentActor === null || ! $currentActor->canOperateSales()) {
-            throw new DomainException('Chỉ tài khoản nội bộ đang hoạt động mới được thao tác đơn hàng.');
+            throw new DomainException('Chỉ Admin hoặc Staff đang hoạt động được thao tác đơn hàng.');
         }
     }
 
-    private function lockedPendingOrder(Order $order): Order
+    private function lockedPendingOrder(Order $order, bool $forLifecycle = false): Order
     {
         $lockedOrder = Order::query()->lockForUpdate()->find($order->getKey());
         if ($lockedOrder === null || $lockedOrder->status !== 'pending') {
             throw ValidationException::withMessages(['order' => 'Chỉ có thể chỉnh sửa món trong đơn đang chờ xử lý.']);
         }
 
+        if (! $forLifecycle) {
+            $this->assertUnpaidForMutation($lockedOrder);
+            $this->assertCustomerConfigurationUnchanged($lockedOrder);
+        }
+
         return $lockedOrder;
+    }
+
+    private function assertUnpaidForMutation(Order $order): void
+    {
+        if (Payment::query()->where('order_id', $order->getKey())
+            ->where('status', 'paid')->lockForUpdate()->exists()) {
+            throw ValidationException::withMessages(['order' => 'Đơn đã thanh toán không thể sửa món hoặc hủy.']);
+        }
+    }
+
+    private function assertCustomerConfigurationUnchanged(Order $order): void
+    {
+        if (CustomerOrderRequest::where('order_id', $order->id)->exists()) {
+            throw ValidationException::withMessages(['order' => 'Cấu hình đơn web đã chốt với khách; không thể sửa món hoặc topping.']);
+        }
     }
 
     private function lockedPendingItem(Order $order, OrderItem $item): OrderItem
@@ -454,6 +536,22 @@ class OrderService
         return 'ORD-'.now()->format('YmdHis').'-'.Str::upper(Str::random(8));
     }
 
+    /** Payment caller already holds the Order lock inside its transaction. */
+    public function refreshTotalsForPayment(Order $order): void
+    {
+        if (DB::transactionLevel() === 0) {
+            throw new DomainException('Cần transaction để xác minh tổng thanh toán.');
+        }
+
+        $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->getKey());
+        if ($lockedOrder->status !== 'pending') {
+            throw new DomainException('Đơn không còn ở trạng thái thanh toán.');
+        }
+
+        $this->recalculateTotals($lockedOrder);
+        $order->refresh();
+    }
+
     private function recalculateTotals(Order $order): void
     {
         $subtotalInCents = 0;
@@ -474,13 +572,14 @@ class OrderService
 
         $discountInCents = $this->moneyToCents($order->getRawOriginal('discount_amount'));
         $taxInCents = $this->moneyToCents($order->getRawOriginal('tax_amount'));
+        $deliveryFeeInCents = $this->moneyToCents($order->getAttribute('delivery_fee') ?? '0.00');
         if ($discountInCents > $subtotalInCents) {
             throw new DomainException('Giảm giá hiện tại không hợp lệ với tổng tiền món.');
         }
 
         $order->forceFill([
             'subtotal' => $this->moneyFromCents($subtotalInCents),
-            'total_amount' => $this->moneyFromCents($subtotalInCents - $discountInCents + $taxInCents),
+            'total_amount' => $this->moneyFromCents($subtotalInCents - $discountInCents + $taxInCents + $deliveryFeeInCents),
         ]);
         $order->saveOrFail();
     }

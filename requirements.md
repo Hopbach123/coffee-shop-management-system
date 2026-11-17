@@ -71,6 +71,7 @@ Customer là khách hàng của quán cà phê. Trong phiên bản đầu:
 - Có thể xem thông tin thực đơn.
 - Có thể xem thông tin giới thiệu về quán.
 - Có thể tham gia quy trình đặt bàn khi chức năng này được triển khai.
+- Extension được user xác nhận ngày 27/10/2026 (`CAFE-CUSTOMER-POS-WORKFLOW-002`): khách chọn món trên website và để lại tên, số điện thoại, địa chỉ, không cần đăng ký/đăng nhập; user chọn giao món đến địa chỉ khách nhập. Các thông tin này gắn với yêu cầu giao món; không tự thêm trường cá nhân khác từ dấu “...”. Khách gửi yêu cầu; nhân viên tiếp nhận mới tạo Order bằng tài khoản nội bộ thật. Không thêm role customer vào users hoặc dùng actor nội bộ giả. Giao đến địa chỉ là phạm vi mới được duyệt; phí/phạm vi giao, thao tác xác nhận giao và phương thức thu từ xa chưa được tự quyết.
 
 Tài khoản Customer không thuộc yêu cầu bắt buộc của phiên bản đầu.
 
@@ -98,9 +99,19 @@ Mục tiêu của domain Menu là quản lý sản phẩm quán cung cấp. Ph�
 
 Mục tiêu của domain Order là hỗ trợ đơn `dine_in` và `takeaway`. Phạm vi gồm tạo đơn, liên kết với Staff, bàn và reservation khi phù hợp, thêm/cập nhật/hủy món, topping và ghi chú, cùng việc tính các giá trị đơn. Vòng đời Order gồm `pending`, `completed`, `cancelled`; tiến độ món nằm ở Order Item với `pending`, `preparing`, `ready`, `served`, `cancelled`. Thuế/phụ phí mặc định bằng 0 cho đến khi có cấu hình nghiệp vụ mới được duyệt.
 
+Extension Customer đã chọn phương án A: yêu cầu public có dữ liệu header/items/toppings, Staff tiếp nhận mới tạo Order; `orders.user_id` tiếp tục bắt buộc và là người tiếp nhận thực sự. Cấu trúc ba bảng được chọn ở mức nguyên tắc; chi tiết schema, loại đơn web, chốt giá, quyền sửa/hủy, tracking, limits và retention chưa được mặc định phê duyệt. Chi tiết và trạng thái quyết định tại `docs/CUSTOMER_ORDER_CONTRACT.md`.
+
 ### 5.6 Payment
 
 Mục tiêu của domain Payment là ghi nhận lịch sử thử thanh toán bằng `cash` hoặc `bank_transfer`, với trạng thái `pending`, `paid`, `failed`, `refunded`. Phiên bản 1 không hỗ trợ split/partial payment; một Order có thể có nhiều lần thử nhưng tối đa một Payment `paid`. Tích hợp cổng thanh toán bên ngoài không thuộc phạm vi hiện tại.
+
+Quy tắc chung đã duyệt: Admin/Staff active xác nhận đã nhận đủ tiền thực tế trước khi ghi paid cho cash/bank_transfer; mã giao dịch chuyển khoản không bắt buộc. Không tạo mới pending/failed trong bản checkout này nhưng giữ lịch sử cũ; validation failure không tạo failed Payment. Promotion đã áp dụng giữ snapshot, kiểm tra quota và tăng lượt dùng qua public contract PromotionService khi paid. Tổng thanh toán phải lớn hơn 0, không split/partial hoặc paid trùng.
+
+Thay đổi POS tại quán được user xác nhận ngày 27/10/2026 (`CAFE-CUSTOMER-POS-WORKFLOW-002`): chọn món → kiểm tra tổng server → nhận tiền → xác nhận nhận đủ tiền → lưu Order + món/topping + Payment paid → chuyển món pending → preparing qua InventoryService. Persistence và chuyển preparing phải atomic; lưu Order trước Payment trong cùng transaction vì FK không làm đổi thứ tự thao tác của người dùng. Sau transaction này không tự completed hoặc trả bàn sớm. Payment paid, Order status và Item status là ba chiều độc lập.
+
+User xác nhận ngày 27/10/2026: POS tại quán nhận đủ tiền rồi mới làm món. Với web giao đến địa chỉ, câu trả lời mới nhất “cả 2” duyệt hai lựa chọn: (1) chuyển khoản trước, nhân viên xác nhận nhận tiền thật rồi mới chuẩn bị/giao; (2) COD, quán được chuẩn bị/giao trước, chỉ ghi paid sau xác nhận thu tiền khi khách nhận hàng. COD là ngoại lệ được duyệt cho web đối với rule trả trước, không thay rule POS. Gửi request, chọn phương thức hoặc Staff tiếp nhận không tự là paid; không thêm gateway hoặc xác nhận chuyển khoản tự động.
+
+Contract ngày 26/10/2026 yêu cầu served trước paid và completed/trả bàn cùng thanh toán là baseline lịch sử, **đã được thay thế theo từng operation mới**. Không áp điều kiện served trước paid hoặc auto-completion cũ cho POS/web chuyển khoản trước; COD có nhánh thu khi nhận riêng, không coi chọn COD là paid. Compatibility với Order cũ, thời điểm completed/trả bàn và thao tác ghi thu/giao thành công cho web cần chốt riêng. DB rollback không hoàn lại tiền đã nhận ngoài thực tế: khi lỗi phải giữ cart/key hoặc trạng thái nghiệp vụ phù hợp, báo chưa hoàn tất ghi nhận và kiểm tra kết quả theo idempotency trước khi thử lại/thu thêm. Chi tiết, proposal xử lý ngoại lệ và các gate còn chờ tại `docs/PAYMENT_CHECKOUT_CONTRACT.md`.
 
 ### 5.7 Promotion
 
@@ -142,6 +153,7 @@ Biểu đồ, kỳ báo cáo và cách tổng hợp cụ thể là TBD.
 - **FR-12 – Trang công khai:** Hệ thống phải cho phép Customer xem thông tin quán và thực đơn mà không yêu cầu tài khoản trong phiên bản đầu.
 - **FR-13 – Trải nghiệm hiển thị:** Các trang công khai phải đáp ứng phù hợp trên các kích thước màn hình phổ biến.
 - **FR-14 – Tương tác cục bộ:** Hệ thống có thể hỗ trợ các tương tác phù hợp mà không yêu cầu tải lại toàn bộ trang, miễn là không làm thay đổi phạm vi nghiệp vụ được phê duyệt.
+- **FR-15 – Customer gửi yêu cầu giao món (extension 27/10/2026):** Khách không cần tài khoản chọn món/topping, để lại tên/phone/địa chỉ và chọn chuyển khoản trước hoặc COD; Staff tiếp nhận tạo Order chính thức bằng actor thật để giao đến địa chỉ. Không tự ghi paid từ lựa chọn khách; chi tiết ghi nhận thu/giao, phí/phạm vi/trạng thái giao và schema còn TBD phải chốt trước implementation; không mở quyền vận hành Staff cho Customer.
 
 ## 7. Role and Responsibility Matrix
 
@@ -155,6 +167,7 @@ Biểu đồ, kỳ báo cáo và cách tổng hợp cụ thể là TBD.
 | Xem Menu | Có | Có | Có |
 | Quản lý Menu | Quản lý | TBD nếu có quyền giới hạn trong tương lai | Không |
 | Vận hành Order nội bộ | Theo dõi và thực hiện như Staff | Thực hiện | Không trong phiên bản đầu |
+| Gửi yêu cầu món qua website (extension 27/10/2026) | Tiếp nhận theo quyền nội bộ | Tiếp nhận | Guest gửi yêu cầu và chỉ xem dữ liệu được phép; không cần account |
 | Payment | Theo dõi và xử lý như Staff | Xử lý | Là bên tham gia thanh toán, không vận hành hệ thống nội bộ |
 | Quản lý Promotion | Quản lý | TBD | Không |
 | Inventory | Quản lý | Chỉ xem/thao tác nếu được phê duyệt sau – TBD | Không |
@@ -182,6 +195,7 @@ Quy tắc truy cập được engineer xác nhận ngày 09/10/2026: Admin có t
 - Dashboard và báo cáo tổng quan.
 - Website công khai của quán.
 - Thực đơn công khai.
+- Customer gửi yêu cầu giao món đến địa chỉ, không cần tài khoản; POS tại quán thu tiền trước chuẩn bị theo extension `CAFE-CUSTOMER-POS-WORKFLOW-002`; các quyết định chi tiết còn TBD không được suy đoán.
 - Giao diện công khai đáp ứng nhiều kích thước màn hình.
 - Tương tác không tải lại toàn trang tại các vị trí phù hợp.
 
@@ -194,7 +208,7 @@ Các nội dung sau nằm ngoài phạm vi, trừ khi được bổ sung bằng 
 - Chấm công nhân viên.
 - Quy trình mua hàng từ nhà cung cấp.
 - Hệ thống kế toán đầy đủ.
-- Vận hành giao nhận.
+- Tích hợp đối tác giao vận, định tuyến/điều phối tài xế và vận hành giao nhận nâng cao. Yêu cầu giao món web đến địa chỉ khách là ngoại lệ được user duyệt ngày 27/10/2026; không tự mở rộng sang các tính năng giao vận nêu trên.
 - Tích hợp sàn thương mại hoặc marketplace.
 - Cổng thanh toán trực tuyến phức tạp.
 - Ứng dụng di động native.
@@ -245,3 +259,22 @@ Engineer và AI Agent không được âm thầm mở rộng phạm vi nghiệp 
 1. Báo cáo rõ mâu thuẫn.
 2. Yêu cầu hoặc ghi nhận việc phê duyệt thay đổi yêu cầu.
 3. Cập nhật yêu cầu trước khi hiện thực nếu thay đổi đó làm thay đổi phạm vi hoặc hành vi đã được duyệt.
+
+## 14. Customer/POS completion approvals — 27/10/2026
+
+Theo task `CAFE-CUSTOMER-POS-COMPLETE-001` và các câu trả lời trực tiếp trong chat:
+
+- Web: guest gửi yêu cầu giao món, tên/điện thoại/địa chỉ; không tài khoản và không ghi đè Customer master. Staff/Admin active tiếp nhận mới tạo một Order bằng actor thật.
+- User chọn **ánh xạ giao web vào takeaway**; request liên kết giữ địa chỉ và ý nghĩa giao hàng, không thêm order_type delivery. Không được coi mọi takeaway là giao tận nơi.
+- Phí giao cố định **20.000 VND mỗi yêu cầu web**; lưu snapshot `delivery_fee` riêng. Tổng Order = subtotal − discount + tax + delivery_fee; POS phí giao 0. Không đưa phí giao vào tax.
+- Chốt giá/phí khi khách gửi; nếu catalog/cấu hình/giá thay đổi trước tiếp nhận, không tự đổi đơn, yêu cầu khách kiểm tra và gửi lại.
+- Order từ yêu cầu web giữ nguyên cấu hình đã chốt: không cho Staff thêm/sửa/xóa món hoặc topping kể cả COD chưa thu tiền.
+- Chuyển khoản trước: tiếp nhận → xác minh thực nhận đủ → paid → preparing. COD: tiếp nhận → preparing khi chưa paid → giao → khách nhận và trả đủ → paid. COD không phải enum payment_method.
+- POS: review tổng server → xác nhận đã nhận đủ tiền → atomic Order/items/topping/paid/preparing. Chốt lại quote trước lưu; lệch giá phải đối soát, không âm thầm thu giá mới.
+- Đã paid: chặn thêm/sửa/xóa món/topping và hủy; lifecycle vẫn tiếp tục. Đơn chỉ completed khi đã paid, có ít nhất một món served và mọi món chưa hủy đều served. Trả bàn occupied khi completed và không còn pending dine-in khác; không ghi đè maintenance.
+- Giao web: mọi món ready mới bắt đầu giao; Admin/Staff xác nhận khách thực nhận mới chuyển ready → served. COD phải xác nhận thu đủ ở cùng thao tác nhận hàng; lưu thời điểm bắt đầu giao/giao thành công.
+- Theo dõi web bằng session và capability khó đoán, hiệu lực 7 ngày; phone/ID/mã hiển thị không là quyền. Chưa duyệt tài khoản/khôi phục quyền qua phone.
+- Đã duyệt persistence idempotency: request/items/toppings có snapshot/contact/payment intent, key hash và link Order duy nhất; POS key hash unique + payload hash trên Order. Request lặp cùng owner/key/payload trả kết quả cũ.
+- Lỗi ghi nhận sau khi nhận tiền: rollback dữ liệu, giữ cart/key, thông báo kiểm tra trước khi retry; không tự hoàn tiền hoặc thu lần hai.
+
+Retention/xóa thông tin liên hệ, rate limit nghiệp vụ, hủy/sửa public và xử lý giao thất bại còn chờ quyết định; không tự triển khai refund, logistics hoặc xóa lịch sử.

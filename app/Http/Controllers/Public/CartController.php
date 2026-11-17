@@ -16,7 +16,7 @@ class CartController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('public.cart.index', ['cart' => $this->cartDetails($request)]);
+        return view('public.cart.pickup-index', ['cart' => $this->cartDetails($request)]);
     }
 
     public function add(Request $request): RedirectResponse
@@ -29,7 +29,7 @@ class CartController extends Controller
         $cart[$id] = min(20, ($cart[$id] ?? 0) + $data['quantity']);
         $request->session()->put('customer_cart', $cart);
 
-        return redirect()->route('cart.index')->with('success', 'Đã thêm món vào giỏ hàng.');
+        return redirect()->route('pickup.cart.index')->with('success', 'Đã thêm món vào giỏ hàng.');
     }
 
     public function update(Request $request): RedirectResponse
@@ -44,7 +44,7 @@ class CartController extends Controller
         }
         $request->session()->put('customer_cart', $cart);
 
-        return redirect()->route('cart.index');
+        return redirect()->route('pickup.cart.index');
     }
 
     public function checkout(Request $request): View

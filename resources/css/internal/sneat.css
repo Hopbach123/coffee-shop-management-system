@@ -1616,3 +1616,5 @@
     color: #746458;
     font-weight: 500;
 }
+@media(max-width:1024px){.sneat-chart-grid{grid-template-columns:1fr}}@media(max-width:480px){.sneat-chart-bars{height:190px;gap:4px}.sneat-chart-column>span{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.sneat-chart-bar{transition:none}}
