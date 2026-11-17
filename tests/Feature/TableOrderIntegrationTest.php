@@ -117,6 +117,7 @@ class TableOrderIntegrationTest extends TestCase
         (require database_path('migrations/2026_08_14_000002_create_areas_table.php'))->up();
         (require database_path('migrations/2026_08_14_000006_create_cafe_tables_table.php'))->up();
         $this->prepareStatusReadTables();
+        (require database_path('migrations/2026_10_27_000003_create_customer_order_requests_tables.php'))->up();
         $this->withoutVite();
     }
 
@@ -178,6 +179,13 @@ class TableOrderIntegrationTest extends TestCase
                 ->assertSee('action="'.route('staff.orders.items.update', [$order, $item]).'"', false)
                 ->assertSee('action="'.route('staff.orders.items.toppings.update', [$order, $item, $line]).'"', false);
 
+            $payment->forceFill(['status' => 'paid'])->save();
+            $this->get(route('staff.orders.show', $order))->assertOk()
+                ->assertSee(route('staff.orders.payments.show', $order))
+                ->assertSee(route('staff.table-checkout.show', [$table, $order]))
+                ->assertDontSee('Gọi món tại bàn')->assertDontSee('Hủy đơn')
+                ->assertDontSee('action="'.route('staff.orders.items.store', $order).'"', false)
+                ->assertDontSee('action="'.route('staff.orders.items.toppings.store', [$order, $item]).'"', false);
             $order->forceFill(['status' => 'completed', 'completed_at' => now()])->save();
             $this->get(route('staff.orders.show', $order))->assertOk()
                 ->assertSee($payment->payment_code)->assertSee('Extra shot')
