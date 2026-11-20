@@ -46,6 +46,7 @@ try {
     echo array_key_exists('table_id', $exception->errors()) ? "conflict\n" : "invalid\n";
 } catch (Throwable $exception) {
     // No SQL, credentials or contact data in subprocess output.
+    fwrite(STDERR, get_class($exception).' code='.(string) $exception->getCode().' file='.basename($exception->getFile()).':'.$exception->getLine()."\n");
     echo "error\n";
     exit(1);
 }

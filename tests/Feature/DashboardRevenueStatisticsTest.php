@@ -58,7 +58,7 @@ class DashboardRevenueStatisticsTest extends TestCase
     public function test_empty_data_returns_exact_zero_and_preserves_order_kpi(): void
     {
         $this->assertSame(['available' => true, 'amount' => '0.00', 'reason' => null], app(RevenueStatisticsService::class)->summarize());
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertOk()->assertSee('Tổng đơn hàng')->assertSee('Tổng thanh toán thành công')
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertOk()->assertSee('Tổng đơn hàng')->assertSee('Tổng thanh toán thành công')
             ->assertSee('0,00 VNĐ')->assertSee('không phải doanh thu thuần')->assertDontSee('Chưa xác định');
     }
 
@@ -70,7 +70,7 @@ class DashboardRevenueStatisticsTest extends TestCase
         $this->payment($order, 'refunded', '100.00');
         $this->payment($order, 'paid', '12.34');
         $this->assertSame('12.34', app(RevenueStatisticsService::class)->summarize()['amount']);
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard?date=2000-01-01')->assertOk()->assertSee('12,34 VNĐ')
+        $this->actingAs($this->admin, 'web')->get('/admin?date=2000-01-01')->assertOk()->assertSee('12,34 VNĐ')
             ->assertViewHas('orderStatistics', fn ($value) => $value['total'] === 1)->assertDontSee('PRIVATE-PAY-');
     }
 
@@ -88,7 +88,7 @@ class DashboardRevenueStatisticsTest extends TestCase
         $this->payment($this->order('cancelled'), 'paid', '100.25', ['transaction_code' => 'PRIVATE-REFERENCE']);
         $this->payment($this->order(), 'paid', '100.25', ['transaction_code' => 'PRIVATE-REFERENCE']);
         $this->assertSame('200.50', app(RevenueStatisticsService::class)->summarize()['amount']);
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertOk()->assertSee('200,50 VNĐ')->assertDontSee('PRIVATE-REFERENCE');
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertOk()->assertSee('200,50 VNĐ')->assertDontSee('PRIVATE-REFERENCE');
     }
 
     public function test_multiple_paid_per_order_marks_value_unavailable_without_choosing_or_repairing(): void
@@ -98,7 +98,7 @@ class DashboardRevenueStatisticsTest extends TestCase
         $this->payment($order, 'paid', '30.00');
         $before = DB::table('payments')->get()->toJson();
         $this->assertSame(['available' => false, 'amount' => null, 'reason' => 'multiple_paid_per_order'], app(RevenueStatisticsService::class)->summarize());
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertOk()->assertSee('Chưa xác định — cần kiểm tra dữ liệu thanh toán.')
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertOk()->assertSee('Chưa xác định — cần kiểm tra dữ liệu thanh toán.')
             ->assertDontSee('50,00 VNĐ')->assertDontSee('0,00 VNĐ')->assertSee('Tổng đơn hàng');
         $this->assertSame($before, DB::table('payments')->get()->toJson());
     }
@@ -132,7 +132,7 @@ class DashboardRevenueStatisticsTest extends TestCase
         $before = [DB::table('orders')->get()->toJson(), DB::table('payments')->get()->toJson()];
         $this->actingAs($this->admin, 'web');
         DB::enableQueryLog();
-        $this->get('/admin/dashboard')->assertOk();
+        $this->get('/admin')->assertOk();
         $queries = DB::getQueryLog();
         DB::disableQueryLog();
         DB::flushQueryLog();
@@ -152,11 +152,11 @@ class DashboardRevenueStatisticsTest extends TestCase
 
     public function test_revenue_uses_existing_admin_authorization(): void
     {
-        $this->get('/admin/dashboard')->assertRedirect(route('login'));
-        $this->getJson('/admin/dashboard')->assertUnauthorized();
+        $this->get('/admin')->assertRedirect(route('login'));
+        $this->getJson('/admin')->assertUnauthorized();
         $this->admin->forceFill(['role' => 'staff'])->save();
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertForbidden();
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertForbidden();
         $this->admin->forceFill(['role' => 'admin'])->save();
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertOk()->assertSee('Tổng thanh toán thành công');
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertOk()->assertSee('Tổng thanh toán thành công');
     }
 }

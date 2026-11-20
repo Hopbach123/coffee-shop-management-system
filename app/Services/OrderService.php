@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Area;
 use App\Models\CafeTable;
 use App\Models\Customer;
+use App\Models\OnlineOrderRequest;
 use App\Models\CustomerOrderRequest;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -17,6 +18,7 @@ use App\Models\User;
 use DomainException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -24,11 +26,11 @@ class OrderService
 {
     public function __construct(private readonly InventoryService $inventoryService) {}
 
-    public function create(array $attributes, User $actor): Order
+    public function create(array $attributes, User $actor, ?string $operationCode = null): Order
     {
         for ($attempt = 0; $attempt < 3; $attempt++) {
             try {
-                return DB::transaction(function () use ($attributes, $actor): Order {
+                return DB::transaction(function () use ($attributes, $actor, $operationCode): Order {
                     $this->assertActiveStaff($actor);
                     $orderType = $attributes['order_type'];
                     $customerId = $attributes['customer_id'] ?? null;
@@ -70,9 +72,27 @@ class OrderService
                         $table->saveOrFail();
                     }
 
-                    $order = new Order;
-                    $order->forceFill([
-                        'order_code' => $this->newOrderCode(),
+                    $purchaseType = $attributes['purchase_type'] ?? 'counter';
+                    if (! in_array($purchaseType, ['counter', 'scheduled', 'online'], true)) {
+                        throw ValidationException::withMessages(['purchase_type' => 'Loại mua không hợp lệ.']);
+                    }
+
+                    $onlineRequestId = isset($attributes['online_request_id']) ? (int) $attributes['online_request_id'] : null;
+                    if ($purchaseType === 'counter') {
+                        if ($onlineRequestId !== null) {
+                            throw ValidationException::withMessages(['online_request_id' => 'Đơn tại quầy không được liên kết với yêu cầu trực tuyến.']);
+                        }
+                    } else {
+                        if ($onlineRequestId === null) {
+                            throw ValidationException::withMessages(['online_request_id' => 'Đơn trực tuyến/hẹn trước phải liên kết với yêu cầu đặt hàng.']);
+                        }
+                        if ($orderType !== 'takeaway' || $tableId !== null) {
+                            throw ValidationException::withMessages(['order_type' => 'Đơn trực tuyến/hẹn trước chỉ hỗ trợ mang đi và không được gán bàn.']);
+                        }
+                    }
+
+                    $orderData = [
+                        'order_code' => $operationCode ?? $this->newOrderCode(),
                         'table_id' => $tableId,
                         'customer_id' => $customerId,
                         'user_id' => $actor->getKey(),
@@ -86,7 +106,15 @@ class OrderService
                         'note' => $attributes['note'] ?? null,
                         'ordered_at' => now(),
                         'completed_at' => null,
-                    ]);
+                    ];
+
+                    if (Schema::hasColumn('orders', 'purchase_type')) {
+                        $orderData['purchase_type'] = $purchaseType;
+                        $orderData['online_request_id'] = $onlineRequestId;
+                    }
+
+                    $order = new Order;
+                    $order->forceFill($orderData);
                     $order->saveOrFail();
 
                     return $order;
@@ -107,13 +135,13 @@ class OrderService
      *
      * @param  array<int, array{variant_id: mixed, quantity: mixed}>  $items
      */
-    public function createWithItems(array $attributes, array $items, User $actor): Order
+    public function createWithItems(array $attributes, array $items, User $actor, ?string $operationCode = null): Order
     {
         if ($items === []) {
             throw ValidationException::withMessages(['cart' => 'Chưa có món trong đơn.']);
         }
 
-        return DB::transaction(function () use ($attributes, $items, $actor): Order {
+        return DB::transaction(function () use ($attributes, $items, $actor, $operationCode): Order {
             foreach ($items as $item) {
                 if (! is_array($item)
                     || ! isset($item['variant_id'], $item['quantity'])
@@ -126,7 +154,7 @@ class OrderService
                 }
             }
 
-            $order = $this->create($attributes, $actor);
+            $order = $this->create($attributes, $actor, $operationCode);
 
             foreach ($items as $item) {
                 $this->addItem($order, [
@@ -136,6 +164,29 @@ class OrderService
             }
 
             return Order::query()->findOrFail($order->getKey());
+        }, 3);
+    }
+
+    /** Server-generated intent; actor row serializes simultaneous POS submissions. */
+    public function createPosOnce(array $attributes, array $items, User $actor, string $key): Order
+    {
+        return DB::transaction(function () use ($attributes, $items, $actor, $key): Order {
+            $this->assertActiveStaff($actor);
+            $code = 'POS-'.substr(hash('sha256', $actor->getKey().':'.$key), 0, 40);
+            $existing = Order::where('order_code', $code)->first();
+            if ($existing) {
+                $expected = collect($items)->map(fn ($line) => [(int) $line['variant_id'], (int) $line['quantity']])->sort()->values()->all();
+                $actual = $existing->orderItems()->get()->map(fn ($line) => [(int) $line->variant_id, (int) $line->quantity])->sort()->values()->all();
+                if ($expected !== $actual || $existing->order_type !== $attributes['order_type']
+                    || (string) $existing->table_id !== (string) (($attributes['order_type'] === 'dine_in') ? ($attributes['table_id'] ?? null) : null)
+                    || (string) $existing->note !== (string) ($attributes['note'] ?? null)) {
+                    throw ValidationException::withMessages(['cart' => 'Thao tác tạo đơn đã được dùng với nội dung khác.']);
+                }
+
+                return $existing;
+            }
+
+            return $this->createWithItems(array_replace($attributes, ['purchase_type' => 'counter']), $items, $actor, $code);
         }, 3);
     }
 
@@ -160,7 +211,7 @@ class OrderService
         return DB::transaction(function () use ($order, $actor): Order {
             $this->assertActiveStaff($actor);
 
-            $lockedOrder = Order::query()->lockForUpdate()->find($order->getKey());
+            $lockedOrder = $this->lockLifecycleOrder($order);
             if ($lockedOrder === null || $lockedOrder->status !== 'pending') {
                 throw ValidationException::withMessages(['order' => 'Chỉ có thể hủy đơn đang chờ xử lý.']);
             }
@@ -175,6 +226,10 @@ class OrderService
                 throw ValidationException::withMessages(['order_item' => 'Không thể hủy đơn đã có món đang hoặc đã pha chế.']);
             }
 
+            if (Schema::hasTable('payments') && $lockedOrder->payments()->where('status', 'paid')->lockForUpdate()->first() !== null) {
+                throw ValidationException::withMessages(['order' => 'Đơn đã thu tiền cần quán xử lý thủ công, không tự hủy.']);
+            }
+
             $lockedOrder->forceFill(['status' => 'cancelled']);
             $lockedOrder->saveOrFail();
 
@@ -182,6 +237,227 @@ class OrderService
 
             return $lockedOrder;
         }, 3);
+    }
+
+    /**
+     * Accept an online or scheduled order request and create the corresponding Order.
+     * Idempotency: if already accepted, returns the existing Order without double creation.
+     */
+    public function acceptOnlineRequest(OnlineOrderRequest $request, User $actor): Order
+    {
+        return DB::transaction(function () use ($request, $actor): Order {
+            $this->assertActiveStaff($actor);
+
+            $lockedRequest = OnlineOrderRequest::query()->lockForUpdate()->find($request->getKey());
+            if ($lockedRequest === null) {
+                throw ValidationException::withMessages(['request' => 'Yêu cầu không tồn tại.']);
+            }
+
+            if ($lockedRequest->status === 'accepted') {
+                $existingOrder = Order::query()->where('online_request_id', $lockedRequest->id)->first();
+                if ($existingOrder !== null) {
+                    return $existingOrder;
+                }
+            }
+
+            if ($lockedRequest->status !== 'pending') {
+                throw ValidationException::withMessages(['request' => 'Chỉ có thể tiếp nhận yêu cầu đang ở trạng thái chờ duyệt.']);
+            }
+
+            if ($lockedRequest->purchase_type === 'scheduled') {
+                app(ScheduledPickupService::class)->validateTime(
+                    $lockedRequest->pickup_at->timezone('Asia/Ho_Chi_Minh')->format('Y-m-d\TH:i')
+                );
+            }
+
+            $lockedRequest->load(['items.toppings', 'items.variant.product.category']);
+            if ($lockedRequest->items->isEmpty()) {
+                throw ValidationException::withMessages(['request' => 'Yêu cầu không có món nào.']);
+            }
+
+            // Verify variants, toppings, availability, and reconfirm prices
+            foreach ($lockedRequest->items as $item) {
+                $variant = ProductVariant::query()->lockForUpdate()->find($item->variant_id);
+                if ($variant === null || $variant->status !== 'available' || $variant->trashed()) {
+                    throw ValidationException::withMessages(['variant' => 'Món "'.$item->product_name.'" hiện không còn khả dụng để phục vụ.']);
+                }
+
+                $product = Product::query()->lockForUpdate()->find($variant->product_id);
+                if ($product === null || $product->status !== 'available' || $product->trashed()) {
+                    throw ValidationException::withMessages(['product' => 'Sản phẩm "'.$item->product_name.'" hiện không còn khả dụng.']);
+                }
+
+                if (! $product->category || $product->category->status !== 'active' || $product->category->trashed()) {
+                    throw ValidationException::withMessages(['product' => 'Danh mục đã ngừng bán.']);
+                }
+
+                $currentUnitPrice = $this->normalizeMoney($variant->getRawOriginal('price'));
+                $snapshotUnitPrice = $this->normalizeMoney($item->getRawOriginal('unit_price'));
+                if ($currentUnitPrice !== $snapshotUnitPrice) {
+                    throw ValidationException::withMessages(['price' => 'Giá món "'.$item->product_name.'" đã thay đổi từ '.$snapshotUnitPrice.' sang '.$currentUnitPrice.'. Vui lòng liên hệ khách xác nhận lại.']);
+                }
+
+                foreach ($item->toppings as $toppingItem) {
+                    $topping = Topping::query()->lockForUpdate()->find($toppingItem->topping_id);
+                    if ($topping === null || $topping->status !== 'available' || $topping->trashed()) {
+                        throw ValidationException::withMessages(['topping' => 'Topping "'.$toppingItem->topping_name.'" hiện không còn khả dụng.']);
+                    }
+
+                    $currentToppingPrice = $this->normalizeMoney($topping->getRawOriginal('price'));
+                    $snapshotToppingPrice = $this->normalizeMoney($toppingItem->getRawOriginal('price'));
+                    if ($currentToppingPrice !== $snapshotToppingPrice) {
+                        throw ValidationException::withMessages(['price' => 'Giá topping "'.$toppingItem->topping_name.'" đã thay đổi. Vui lòng liên hệ khách xác nhận lại.']);
+                    }
+                }
+            }
+
+            $lockedRequest->forceFill([
+                'status' => 'accepted',
+                'accepted_by' => $actor->getKey(),
+                'accepted_at' => now(),
+            ]);
+            $lockedRequest->saveOrFail();
+
+            $order = $this->create([
+                'order_type' => 'takeaway',
+                'purchase_type' => $lockedRequest->purchase_type,
+                'online_request_id' => $lockedRequest->id,
+                'customer_id' => $lockedRequest->customer_id,
+                'note' => $lockedRequest->note,
+            ], $actor);
+
+            foreach ($lockedRequest->items as $reqItem) {
+                $orderItem = new OrderItem;
+                $unitPrice = $this->normalizeMoney($reqItem->getRawOriginal('unit_price'));
+                $quantity = (int) $reqItem->quantity;
+                $lineSubtotal = $this->multiplyMoney($unitPrice, $quantity);
+
+                $orderItem->forceFill([
+                    'order_id' => $order->getKey(),
+                    'product_id' => $reqItem->variant->product_id,
+                    'variant_id' => $reqItem->variant_id,
+                    'product_name' => $reqItem->product_name,
+                    'variant_name' => $reqItem->variant_name,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'topping_amount' => '0.00',
+                    'subtotal' => $lineSubtotal,
+                    'note' => $reqItem->note,
+                    'status' => 'pending',
+                ]);
+                $orderItem->saveOrFail();
+
+                foreach ($reqItem->toppings as $reqTopping) {
+                    $orderTopping = new OrderItemTopping;
+                    $orderTopping->forceFill([
+                        'order_item_id' => $orderItem->getKey(),
+                        'topping_id' => $reqTopping->topping_id,
+                        'topping_name' => $reqTopping->topping_name,
+                        'price' => $this->normalizeMoney($reqTopping->getRawOriginal('price')),
+                        'quantity' => (int) $reqTopping->quantity,
+                    ]);
+                    $orderTopping->saveOrFail();
+                }
+
+                $this->recalculateItemAndOrderTotals($order, $orderItem);
+            }
+
+            return Order::query()->findOrFail($order->getKey());
+        }, 3);
+    }
+
+    /**
+     * Reject an online or scheduled order request with a required reason.
+     * Does NOT create an Order.
+     */
+    public function rejectOnlineRequest(OnlineOrderRequest $request, string $reason, User $actor): OnlineOrderRequest
+    {
+        return DB::transaction(function () use ($request, $reason, $actor): OnlineOrderRequest {
+            $this->assertActiveStaff($actor);
+
+            $lockedRequest = OnlineOrderRequest::query()->lockForUpdate()->find($request->getKey());
+            if ($lockedRequest === null || $lockedRequest->status !== 'pending') {
+                throw ValidationException::withMessages(['request' => 'Chỉ có thể từ chối yêu cầu đang ở trạng thái chờ duyệt.']);
+            }
+
+            $trimmedReason = trim($reason);
+            if ($trimmedReason === '') {
+                throw ValidationException::withMessages(['rejection_reason' => 'Lý do từ chối là bắt buộc.']);
+            }
+
+            $lockedRequest->forceFill([
+                'status' => 'rejected',
+                'rejection_reason' => $trimmedReason,
+            ]);
+            $lockedRequest->saveOrFail();
+
+            return $lockedRequest;
+        }, 3);
+    }
+
+    /**
+     * Complete an order.
+     * Condition: All items must be served AND order must be fully paid.
+     */
+    public function complete(Order $order, User $actor): Order
+    {
+        return DB::transaction(function () use ($order, $actor): Order {
+            $this->assertActiveStaff($actor);
+
+            $lockedOrder = $this->lockLifecycleOrder($order);
+            if ($lockedOrder?->status === 'completed') {
+                return $lockedOrder;
+            }
+            if ($lockedOrder === null || $lockedOrder->status !== 'pending') {
+                throw ValidationException::withMessages(['order' => 'Chỉ có thể hoàn tất đơn đang chờ xử lý.']);
+            }
+
+            $items = OrderItem::query()
+                ->where('order_id', $lockedOrder->getKey())
+                ->lockForUpdate()
+                ->get();
+
+            if ($items->isEmpty() || $items->contains(fn (OrderItem $item): bool => $item->status !== 'served')) {
+                throw ValidationException::withMessages(['order' => 'Chỉ có thể hoàn tất đơn khi tất cả các món đã được phục vụ/giao (served).']);
+            }
+
+            if (app(PaymentService::class)->settlementForOrder($lockedOrder)['payment_status'] !== 'paid') {
+                throw ValidationException::withMessages(['order' => 'Chỉ có thể hoàn tất đơn khi đã thu đủ tiền.']);
+            }
+
+            $lockedOrder->forceFill([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+            $lockedOrder->saveOrFail();
+
+            if ($lockedOrder->order_type === 'dine_in' && $lockedOrder->table_id !== null) {
+                $table = CafeTable::withTrashed()->lockForUpdate()->find($lockedOrder->table_id);
+                if ($table !== null && ! $table->trashed() && $table->status === 'occupied') {
+                    $hasAnotherPending = Order::query()
+                        ->where('table_id', $table->getKey())
+                        ->where('order_type', 'dine_in')
+                        ->where('status', 'pending')
+                        ->where('id', '!=', $lockedOrder->getKey())
+                        ->lockForUpdate()
+                        ->exists();
+
+                    if (! $hasAnotherPending) {
+                        $table->forceFill(['status' => 'available'])->saveOrFail();
+                    }
+                }
+            }
+
+            return $lockedOrder;
+        }, 3);
+    }
+
+    /**
+     * Record cash or bank settlement for an order at counter or upon pickup.
+     */
+    public function recordPayment(Order $order, array $attributes, User $actor): Payment
+    {
+        return app(PaymentService::class)->recordPaid($order, $attributes, $actor);
     }
 
     /**
@@ -200,6 +476,10 @@ class OrderService
             $this->assertUnpaidForMutation($lockedOrder);
             $this->assertCustomerConfigurationUnchanged($lockedOrder);
 
+            if (Schema::hasTable('payments') && $lockedOrder->payments()->where('status', 'paid')->exists()) {
+                throw ValidationException::withMessages(['order' => 'Không thêm món sau khi đã thu tiền.']);
+            }
+
             $variant = ProductVariant::query()->lockForUpdate()->find($attributes['variant_id']);
             $product = $variant === null
                 ? null
@@ -207,6 +487,10 @@ class OrderService
 
             if ($product === null || $product->status !== 'available') {
                 throw ValidationException::withMessages(['variant_id' => 'Sản phẩm của biến thể này không còn sẵn sàng để bán.']);
+            }
+
+            if (! $product->category || $product->category->trashed() || $product->category->status !== 'active') {
+                throw ValidationException::withMessages(['variant_id' => 'Danh mục sản phẩm đã ngừng bán.']);
             }
 
             if ($variant === null || $variant->status !== 'available') {
@@ -364,13 +648,14 @@ class OrderService
         }, 3);
     }
 
-    public function transitionItemStatus(Order $order, OrderItem $item, string $nextStatus, User $actor): OrderItem
+    public function transitionItemStatus(Order $order, OrderItem $item, string $nextStatus, User $actor, ?string $pickupCode = null): OrderItem
     {
-        return DB::transaction(function () use ($order, $item, $nextStatus, $actor): OrderItem {
+        return DB::transaction(function () use ($order, $item, $nextStatus, $actor, $pickupCode): OrderItem {
             $this->assertActiveStaff($actor);
             $lockedOrder = $this->lockedPendingOrder($order, true);
             $lockedItem = $this->lockedItemForStatus($lockedOrder, $item);
-            $customerRequest = CustomerOrderRequest::where('order_id', $lockedOrder->id)->first();
+            $customerRequest = Schema::hasTable('customer_order_requests')
+                ? CustomerOrderRequest::where('order_id', $lockedOrder->id)->first() : null;
 
             if ($nextStatus === 'preparing') {
                 if ($lockedItem->status !== 'pending') {
@@ -397,6 +682,18 @@ class OrderService
             }
             if ($nextStatus === 'served' && $customerRequest !== null && $customerRequest->delivered_at === null) {
                 throw ValidationException::withMessages(['order_item' => 'Đơn giao web chỉ phục vụ xong qua thao tác xác nhận giao thành công.']);
+            }
+
+            if ($nextStatus === 'served') {
+                // COD delivery records served and its receipt atomically in CustomerOrderService.
+                $collectingCod = $customerRequest?->payment_option === 'cod' && $customerRequest->delivered_at !== null;
+                if (! $collectingCod && (! Schema::hasTable('payments') || app(PaymentService::class)->settlementForOrder($lockedOrder)['payment_status'] !== 'paid')) {
+                    throw ValidationException::withMessages(['payment' => 'Phải thu đủ tiền trước khi giao món.']);
+                }
+                $request = $lockedOrder->onlineOrderRequest;
+                if ($request && ! hash_equals($request->request_code, (string) $pickupCode)) {
+                    throw ValidationException::withMessages(['pickup_code' => 'Mã nhận đồ không hợp lệ.']);
+                }
             }
 
             $lockedItem->forceFill(['status' => $nextStatus]);
@@ -429,8 +726,7 @@ class OrderService
             ->orderBy('id')->lockForUpdate()->get(['id', 'status']);
         if (! $items->contains('status', 'served')
             || $items->contains(fn (OrderItem $item): bool => ! in_array($item->status, ['served', 'cancelled'], true))
-            || ! Payment::query()->where('order_id', $lockedOrder->getKey())
-                ->where('status', 'paid')->lockForUpdate()->exists()) {
+            || app(PaymentService::class)->settlementForOrder($lockedOrder)['payment_status'] !== 'paid') {
             return false;
         }
 
@@ -467,6 +763,28 @@ class OrderService
         }
     }
 
+    /** Match Reservation's area -> table -> Order order before a lifecycle releases a table. */
+    private function lockLifecycleOrder(Order $order): ?Order
+    {
+        $snapshot = Order::query()->find($order->getKey());
+        if ($snapshot?->order_type === 'dine_in' && $snapshot->table_id !== null) {
+            $table = CafeTable::withTrashed()->find($snapshot->table_id);
+            if ($table) {
+                Area::withTrashed()->whereKey($table->area_id)->lockForUpdate()->first();
+                $lockedTable = CafeTable::withTrashed()->whereKey($table->id)->lockForUpdate()->first();
+                if (! $lockedTable || $lockedTable->area_id !== $table->area_id) {
+                    throw ValidationException::withMessages(['order' => 'Bàn đã thay đổi. Vui lòng tải lại đơn.']);
+                }
+            }
+        }
+        $locked = Order::query()->lockForUpdate()->find($order->getKey());
+        if ($locked && ($locked->table_id !== $snapshot?->table_id || $locked->order_type !== $snapshot?->order_type)) {
+            throw ValidationException::withMessages(['order' => 'Bàn hoặc hình thức phục vụ đã thay đổi. Vui lòng tải lại đơn.']);
+        }
+
+        return $locked;
+    }
+
     private function lockedPendingOrder(Order $order, bool $forLifecycle = false): Order
     {
         $lockedOrder = Order::query()->lockForUpdate()->find($order->getKey());
@@ -492,7 +810,7 @@ class OrderService
 
     private function assertCustomerConfigurationUnchanged(Order $order): void
     {
-        if (CustomerOrderRequest::where('order_id', $order->id)->exists()) {
+        if (Schema::hasTable('customer_order_requests') && CustomerOrderRequest::where('order_id', $order->id)->exists()) {
             throw ValidationException::withMessages(['order' => 'Cấu hình đơn web đã chốt với khách; không thể sửa món hoặc topping.']);
         }
     }
@@ -511,6 +829,10 @@ class OrderService
 
         if ($lockedItem->status !== 'pending') {
             throw ValidationException::withMessages(['order_item' => 'Chỉ có thể chỉnh sửa món đang chờ pha chế.']);
+        }
+
+        if (Schema::hasTable('payments') && $order->payments()->where('status', 'paid')->exists()) {
+            throw ValidationException::withMessages(['order' => 'Không đổi món hoặc tổng tiền sau khi đã thu tiền.']);
         }
 
         return $lockedItem;

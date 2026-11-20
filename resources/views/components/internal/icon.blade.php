@@ -23,6 +23,12 @@
         @case('logout') <path d="M9 21H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5M16 17l5-5-5-5M21 12H9"/> @break
         @case('clock') <circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/> @break
         @case('wallet') <rect x="3" y="5" width="18" height="15" rx="2"/><path d="M16 12h5M3 9h18"/> @break
+        @case('edit') <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/> @break
+        @case('trash') <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/> @break
+        @case('eye') <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/> @break
+        @case('check') <polyline points="20 6 9 17 4 12"/> @break
+        @case('upload') <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/> @break
+        @case('filter') <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/> @break
         @default <circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/>
     @endswitch
 </svg>

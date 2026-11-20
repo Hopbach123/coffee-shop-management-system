@@ -1,4 +1,5 @@
 import { initializeMenuSearch } from './public/menu-search.js';
+import { initializeCatalogView } from './admin/catalog-view.js';
 import { initializeTableMenu } from './staff/table-menu.js';
 import { initializeEstimatePrint } from './staff/estimate-print.js';
 import { initializeStatusRefresh } from './admin/table-status.js';
@@ -64,6 +65,10 @@ document.querySelectorAll('[data-menu-category]').forEach((category) => {
 });
 
 initializeMenuSearch();
+// localStorage can be denied by the browser; the gallery must still work.
+let catalogStorage;
+try { catalogStorage = window.localStorage; } catch { catalogStorage = null; }
+initializeCatalogView(document, catalogStorage);
 
 const promotionType = document.querySelector('[data-promotion-discount-type]');
 const promotionMaximum = document.querySelector('[data-promotion-max-discount]');

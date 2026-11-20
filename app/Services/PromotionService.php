@@ -25,6 +25,9 @@ class PromotionService
     {
         return DB::transaction(function () use ($order, $code): OrderPromotion {
             $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->getKey());
+            if ($lockedOrder->payments()->whereIn('status', ['paid', 'refunded'])->exists()) {
+                throw new DomainException('Không thay đổi khuyến mãi hoặc tổng tiền sau khi đã thu tiền.');
+            }
             $promotion = Promotion::query()->where('code', $this->normalizeCode($code))
                 ->lockForUpdate()->first();
             if ($promotion === null) {

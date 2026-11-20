@@ -16,6 +16,7 @@ class CustomerPickupFlowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['shop.opening_time' => '07:00', 'shop.closing_time' => '22:00']);
         $this->assertSame('sqlite', DB::connection()->getDriverName());
         $this->assertSame(':memory:', DB::connection()->getDatabaseName());
         (require database_path('migrations/2026_08_14_000003_create_categories_table.php'))->up();
@@ -54,7 +55,7 @@ class CustomerPickupFlowTest extends TestCase
         $this->get(route('cart.checkout'))->assertOk()->assertSee('70.000đ');
         $this->post(route('cart.place'), [
             'customer_name' => 'Nguyễn Văn A', 'customer_phone' => '0901234567',
-            'pickup_at' => now()->addHour()->format('Y-m-d H:i:s'),
+            'pickup_at' => now('Asia/Ho_Chi_Minh')->setTime(12, 0)->addDay()->format('Y-m-d\TH:i'),
             'subtotal' => '1.00',
         ])->assertRedirect(route('cart.confirmation'));
         $request = PickupRequest::firstOrFail();

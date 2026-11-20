@@ -123,6 +123,10 @@ Public UI có thể giàu hình ảnh hơn internal UI nhưng phải bình tĩnh
 
 ## 11. Admin UI Standard
 
+User-approved V5 adaptation (21/11/2026): 12 fixed Admin entry pages and their child forms use `.admin-v5`, scoped away from Staff/Public and legacy menu editor. `resources/css/admin/v5.css` is imported by the existing internal bundle; warm ivory/espresso/caramel tokens, a subtle warm background, 16px cards, 24–28px titles and 14px data text. Buttons keep the existing 48px targets. A darker action token supports light-text contrast. Product gallery/table is presentation-only; tables group existing paginated records by area; Area/Promotion cards use only existing fields. Keep all request/route/state contracts. Do not treat offline ZIP screenshots as Laravel visual evidence.
+
+Theo user 20/11/2026, menu Admin là danh mục cố định theo chức năng tại `config/admin_navigation.php`, render bởi `components/internal/fixed-admin-sidebar.blade.php`. Các nhóm luôn hiển thị, có tiêu đề/phân cách rõ; active state theo module bao gồm form/recipe/import/history con. Không đọc menu từ database hoặc phụ thuộc seed để có điều hướng. Giữ thu gọn toàn sidebar và mobile drawer hiện có. Khu Staff/POS không trộn vào nhóm quản trị; chuyển workspace bằng nút riêng. Module quản lý menu cũ không xuất hiện trong sidebar và phải nói rõ chỉnh sửa của nó không tác động điều hướng hiện tại.
+
 Admin giữ typography, color tokens, border và focus language chung nhưng ưu tiên data density hợp lý, scanability và thao tác chính xác. Bảng, filter và form phải rõ hơn trang public; giảm script font, texture và decorative composition. Không hy sinh khả năng đọc dữ liệu để giữ phong cách vintage.
 
 ## 12. Staff / POS UI Standard

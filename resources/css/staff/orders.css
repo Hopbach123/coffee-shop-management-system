@@ -12,7 +12,7 @@
 .order-detail__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-md); }
 .order-detail__fact { min-width: 0; display: grid; gap: var(--space-xs); }
 .order-detail__fact > span, .order-detail__total > span, .order-detail__total small { color: var(--coffee-text-muted); font-size: var(--text-caption); }
-.order-detail__fact strong, .order-detail__fact small { overflow-wrap: anywhere; }
+.order-detail__fact strong, .order-detail__fact small { word-break: normal; font-variant-numeric: tabular-nums; }
 .order-detail__fact small { color: var(--coffee-text-muted); }
 .order-detail__total { display: grid; align-content: start; gap: var(--space-xs); background: var(--coffee-cocoa); border-color: var(--coffee-cocoa); color: var(--coffee-on-dark); }
 .order-detail__total > span, .order-detail__total small { color: var(--coffee-on-dark-muted); }

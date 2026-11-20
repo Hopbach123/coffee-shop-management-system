@@ -56,11 +56,31 @@ class DashboardOrderStatisticsTest extends TestCase
             'status' => $status, 'ordered_at' => '2026-01-01 12:00:00'], $attributes));
     }
 
+    public function test_daily_chart_uses_completion_day_and_keeps_zero_days_and_period_bounds(): void
+    {
+        $this->travelTo(now()->setDate(2026, 11, 20)->startOfDay());
+        Schema::table('orders', fn (Blueprint $table) => $table->decimal('total_amount', 15, 2)->default(0));
+        $this->order('completed', ['completed_at' => '2026-11-20 00:00:00', 'total_amount' => 45000]);
+        $this->order('completed', ['completed_at' => '2026-11-13 23:59:59', 'total_amount' => 30000]);
+        $this->order('cancelled', ['completed_at' => '2026-11-20 01:00:00', 'total_amount' => 90000]);
+        $service = app(\App\Services\Dashboard\RevenueStatisticsService::class);
+        $week = $service->dailyCompletedOrders(7);
+        $this->assertCount(7, $week['rows']);
+        $this->assertEquals(45000, $week['total']);
+        $this->assertSame(1, $week['count']);
+        $this->assertEquals(0, $week['rows']->first()['amount']);
+        $this->assertEquals(75000, $service->dailyCompletedOrders(30)['total']);
+        $this->actingAs($this->admin, 'web')->get('/admin?days=30')
+            ->assertOk()->assertViewHas('period', fn ($data) => $data['days'] === 30);
+        $this->get('/admin?days[]=30')->assertOk()
+            ->assertViewHas('period', fn ($data) => $data['days'] === 7);
+    }
+
     public function test_empty_database_returns_integer_zeros_and_renders_honest_definition(): void
     {
         $expected = ['total' => 0, 'by_status' => ['pending' => 0, 'completed' => 0, 'cancelled' => 0]];
         $this->assertSame($expected, app(OrderStatisticsService::class)->summarize());
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertOk()->assertViewIs('admin.dashboard.index')
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertOk()->assertViewIs('admin.home')
             ->assertViewHas('orderStatistics', $expected)->assertSee('Tổng đơn hàng')->assertSee('Chưa có đơn hàng được ghi nhận.')
             ->assertSee('Bao gồm đơn đang xử lý, hoàn tất và đã hủy.')->assertSee('không giới hạn ngày')
             ->assertSee('dashboard-orders__total">0</p>', false)->assertDontSee('NaN');
@@ -75,7 +95,7 @@ class DashboardOrderStatisticsTest extends TestCase
         $this->order('cancelled', ['ordered_at' => '2030-01-01 00:00:00']);
         $expected = ['total' => 4, 'by_status' => ['pending' => 2, 'completed' => 1, 'cancelled' => 1]];
         $this->assertSame($expected, app(OrderStatisticsService::class)->summarize());
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard?status=completed&date=2026-10-19')->assertOk()->assertViewHas('orderStatistics', $expected);
+        $this->actingAs($this->admin, 'web')->get('/admin?status=completed&date=2026-10-19')->assertOk()->assertViewHas('orderStatistics', $expected);
     }
 
     public function test_shared_nullable_and_soft_deleted_masters_do_not_drop_or_duplicate_orders(): void
@@ -102,7 +122,7 @@ class DashboardOrderStatisticsTest extends TestCase
         $before = DB::table('orders')->get()->toJson();
         $this->actingAs($this->admin, 'web');
         DB::enableQueryLog();
-        $this->get('/admin/dashboard')->assertOk();
+        $this->get('/admin')->assertOk();
         $orderQueries = [];
         foreach (DB::getQueryLog() as $query) {
             $sql = $query['query'];
@@ -137,18 +157,18 @@ class DashboardOrderStatisticsTest extends TestCase
         DB::flushQueryLog();
         $this->assertSame(1234, $stats['total']);
         $this->assertCount(3, $stats['by_status']);
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertOk()->assertSee('1.234');
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertOk()->assertSee('1.234');
     }
 
     public function test_dashboard_is_admin_only_and_existing_home_links_to_it(): void
     {
-        $this->get('/admin/dashboard')->assertRedirect(route('login'));
-        $this->getJson('/admin/dashboard')->assertUnauthorized();
+        $this->get('/admin')->assertRedirect(route('login'));
+        $this->getJson('/admin')->assertUnauthorized();
         $this->admin->forceFill(['role' => 'staff'])->save();
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertForbidden();
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertForbidden();
         $this->admin->forceFill(['role' => 'admin'])->save();
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertOk();
-        $this->get('/admin')->assertOk()->assertSee(route('admin.dashboard.index'));
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertOk();
+        $this->get('/admin/dashboard')->assertRedirect(route('admin.home'));
         $route = Route::getRoutes()->getByName('admin.dashboard.index');
         $this->assertSame('admin/dashboard', $route->uri());
         $this->assertSame(['GET', 'HEAD'], $route->methods());

@@ -18,6 +18,18 @@ class AuthenticationTest extends TestCase
         $this->assertSame('sqlite', DB::connection()->getDriverName());
         $this->assertSame(':memory:', DB::connection()->getDatabaseName());
         (require database_path('migrations/0001_01_01_000000_create_users_table.php'))->up();
+        \Illuminate\Support\Facades\Schema::create('payments', function (\Illuminate\Database\Schema\Blueprint $table) {
+            $table->id(); $table->unsignedBigInteger('order_id'); $table->string('status'); $table->decimal('amount', 15, 2);
+        });
+
+
+        foreach (['2026_08_14_000002_create_areas_table.php', '2026_08_14_000006_create_cafe_tables_table.php'] as $migration) {
+            (require database_path('migrations/'.$migration))->up();
+        }
+        \Illuminate\Support\Facades\Schema::create('orders', function (\Illuminate\Database\Schema\Blueprint $table) {
+            $table->id(); $table->string('status'); $table->dateTime('ordered_at');
+        });
+
 
         Route::middleware(['web', 'auth:web'])->get('/auth-test/protected', fn () => 'Protected');
     }

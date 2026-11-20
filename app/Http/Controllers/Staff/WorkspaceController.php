@@ -7,10 +7,10 @@ use App\Models\CafeTable;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PickupRequest;
-use App\Models\Product;
 use App\Models\Reservation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class WorkspaceController extends Controller
@@ -44,8 +44,8 @@ class WorkspaceController extends Controller
 
     public function brewing(): View
     {
-        $items = \Illuminate\Support\Facades\Schema::hasTable('order_items') && \Illuminate\Support\Facades\Schema::hasTable('orders')
-            ? OrderItem::with(['order', 'product', 'productVariant', 'orderItemToppings.topping'])
+        $items = Schema::hasTable('order_items') && Schema::hasTable('orders')
+            ? OrderItem::with(['order.onlineOrderRequest', 'product', 'productVariant', 'orderItemToppings.topping'])
                 ->whereHas('order', function ($query) {
                     $query->whereNotIn('status', ['cancelled', 'completed']);
                 })

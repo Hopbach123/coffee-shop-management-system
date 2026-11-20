@@ -1,27 +1,56 @@
 @extends('layouts.internal')
-@section('title', 'Dashboard')
+@section('title', 'Tổng quan cửa hàng')
 @section('content')
-<div class="sneat-page-title"><div><p>Xin chào, {{ auth('web')->user()->name }} 👋</p><h1>Tổng quan cửa hàng</h1><span>Hôm nay, {{ now()->format('d/m/Y') }} · Dữ liệu từ hệ thống của bạn</span></div><a href="{{ route('admin.products.create') }}" class="sneat-primary">+ Thêm sản phẩm</a></div>
-<div class="sneat-overview-grid">
-  <section class="sneat-welcome"><div><span class="sneat-eyebrow">MAISON DU CAFÉ / ADMIN</span><h2>Chúc một ngày<br>kinh doanh hiệu quả!</h2><p>Quản lý menu, đơn hàng và vận hành quán trong một không gian trực quan.</p><a href="{{ route('staff.home') }}">Mở màn hình POS →</a></div><div class="sneat-welcome-art">☕<span>✦</span></div></section>
-  <div class="sneat-metric"><span class="sneat-metric-icon">↗</span><small>Doanh thu hôm nay</small><strong>{{ number_format((float) $revenue, 0, ',', '.') }} ₫</strong><span>Đơn đã hoàn thành</span></div>
-  <div class="sneat-metric"><span class="sneat-metric-icon second">◫</span><small>Đơn hôm nay</small><strong>{{ $todayOrders }}</strong><span>Đơn phát sinh hôm nay</span></div>
+<div class="bank-overview">
+    <header class="overview-heading">
+        <div><p class="overview-eyebrow">MAISON DU CAFÉ / QUẢN TRỊ</p><h1>Tổng quan cửa hàng</h1><p>Xin chào, {{ auth('web')->user()->name }}. Đây là tình hình kinh doanh của quán.</p></div>
+        <a href="{{ route('staff.home') }}" class="cafe-btn-primary"><x-internal.icon name="bag" size="18" /> Mở POS bán hàng</a>
+    </header>
+    <form class="overview-period" method="GET" action="{{ route('admin.home') }}">
+        <div><span class="overview-eyebrow">KỲ THỐNG KÊ</span><strong>{{ $period['range'] ?? 'Chưa có dữ liệu theo kỳ' }}</strong><small>Ngày Việt Nam · UTC+7 @if($period) · Cập nhật {{ $period['updated_at'] }} @endif</small></div>
+        <div class="overview-period__controls"><label for="overview-days">Khoảng thời gian</label><select id="overview-days" name="days"><option value="7" @selected(($period['days'] ?? 7) === 7)>7 ngày gần nhất</option><option value="30" @selected(($period['days'] ?? 7) === 30)>30 ngày gần nhất</option></select><input type="hidden" name="metric" value="{{ $period['metric'] ?? 'paid' }}"><button class="cafe-btn-secondary" type="submit">Áp dụng</button></div>
+    </form>
+    @if($period)
+    <div class="overview-kpis" aria-label="Chỉ số trong kỳ đã chọn">
+        <section class="overview-kpi overview-kpi--primary"><div class="overview-kpi__label"><span>Tiền đã thu trong kỳ</span><x-internal.icon name="wallet" /></div>
+            @if($period['paid_available'])<p class="overview-kpi__value">@include('admin.dashboard._vnd', ['amount' => $period['paid']])</p><small>Thanh toán paid · theo ngày nhận tiền</small>@else<p class="overview-kpi__unavailable">Cần đối soát dữ liệu</p><small>Thiếu ngày thu hoặc dữ liệu thanh toán chưa xác minh.</small>@endif
+        </section>
+        <section class="overview-kpi"><div class="overview-kpi__label"><span>Giá trị đơn hoàn thành</span><x-internal.icon name="chart" /></div><p class="overview-kpi__value">@include('admin.dashboard._vnd', ['amount' => $period['completed']])</p><small>{{ $period['completed_count'] }} đơn · theo ngày hoàn thành</small></section>
+        <section class="overview-kpi"><div class="overview-kpi__label"><span>Đơn phát sinh trong kỳ</span><x-internal.icon name="receipt" /></div><p class="overview-kpi__value">{{ number_format($period['orders_count'], 0, ',', '.') }} <span>đơn</span></p><small>Bao gồm đơn đang xử lý, hoàn tất và đã hủy.</small></section>
+        <section class="overview-kpi"><div class="overview-kpi__label"><span>Giá trị trung bình / đơn</span><x-internal.icon name="bag" /></div><p class="overview-kpi__value">@if($period['average'] !== null) @include('admin.dashboard._vnd', ['amount' => $period['average']]) @else — @endif</p><small>Chỉ tính đơn hoàn thành trong kỳ</small></section>
+    </div>
+    <div class="overview-main-grid">
+        <section class="overview-panel overview-chart" aria-labelledby="overview-chart-title">
+            <div class="overview-panel__heading"><div><p class="overview-eyebrow">DIỄN BIẾN THEO NGÀY</p><h2 id="overview-chart-title">{{ $period['metric'] === 'paid' ? 'Tiền đã thu' : 'Giá trị đơn hoàn thành' }}</h2></div><span class="overview-unit">Đơn vị: VNĐ</span></div>
+            <nav class="overview-tabs" aria-label="Chọn chỉ số biểu đồ"><a href="{{ route('admin.home', ['days' => $period['days'], 'metric' => 'paid']) }}" @if($period['metric'] === 'paid') aria-current="page" @endif>Tiền đã thu</a><a href="{{ route('admin.home', ['days' => $period['days'], 'metric' => 'completed']) }}" @if($period['metric'] === 'completed') aria-current="page" @endif>Đơn hoàn thành</a></nav>
+            @if($period['metric'] === 'paid' && ! $period['paid_available'])
+                <div class="overview-empty" role="status"><x-internal.icon name="wallet" size="32" /><h3>Chưa thể xác nhận số liệu thu tiền</h3><p>Kiểm tra ngày thu và các khoản thanh toán trùng trước khi sử dụng biểu đồ.</p></div>
+            @else
+                <div class="overview-chart__scroll" tabindex="0" role="region" aria-label="Biểu đồ theo ngày, có thể cuộn ngang trên màn hình nhỏ">
+                    <svg class="overview-chart__svg" viewBox="0 0 800 270" aria-labelledby="daily-svg-title daily-svg-desc" role="img">
+                        <title id="daily-svg-title">{{ $period['metric'] === 'paid' ? 'Tiền đã thu' : 'Giá trị đơn hoàn thành' }} theo ngày</title><desc id="daily-svg-desc">Từ {{ $period['range'] }}. Bảng số liệu đầy đủ ở bên dưới. Di chuột hoặc dùng Tab tới điểm để xem giá trị.</desc>
+                        @foreach($period['ticks'] as $tick)<g class="overview-chart__grid"><line x1="56" x2="744" y1="{{ $tick['y'] }}" y2="{{ $tick['y'] }}" /><text x="46" y="{{ $tick['y'] + 4 }}" text-anchor="end">{{ $tick['label'] }}</text></g>@endforeach
+                        <polygon class="overview-chart__area" points="{{ $period['area'] }}" /><polyline class="overview-chart__line" points="{{ $period['line'] }}" />
+                        @foreach($period['rows'] as $point)
+                            @if($point['show_label'])<text class="overview-chart__date" x="{{ $point['x'] }}" y="250" text-anchor="middle">{{ $point['date'] }}</text>@endif
+                            <g class="overview-chart__point" tabindex="0" role="img" aria-label="{{ $point['full_date'] }}: {{ $point[$period['metric']] }} VNĐ"><title>{{ $point['full_date'] }}: {{ $point[$period['metric']] }} VNĐ</title><circle class="overview-chart__hit" cx="{{ $point['x'] }}" cy="{{ $point['y'] }}" r="11" /><circle cx="{{ $point['x'] }}" cy="{{ $point['y'] }}" r="4" /><g class="overview-chart__tooltip" transform="translate({{ max(56, min(600, $point['x'] - 72)) }},{{ max(0, $point['y'] - 52) }})"><rect width="144" height="42" rx="6" /><text x="10" y="16">{{ $point['date'] }}</text><text x="10" y="32">@include('admin.dashboard._vnd', ['amount' => $point[$period['metric']]])</text></g></g>
+                        @endforeach
+                    </svg>
+                </div>
+                @if(! $period['has_chart_data'])<p class="overview-chart__empty" role="status">Chưa phát sinh số liệu cho chỉ số này trong kỳ đã chọn.</p>@endif
+            @endif
+            <p class="overview-note">Tiền đã thu và đơn hoàn thành ghi nhận ở hai thời điểm khác nhau; không phải doanh thu thuần hay lợi nhuận. Khoản đã hoàn tiền không tính vào tiền paid hiện tại.</p>
+            <details class="overview-data"><summary>Xem số liệu từng ngày</summary><div class="cafe-table-wrap"><table class="cafe-table"><caption class="overview-sr-only">Số liệu theo ngày Việt Nam trong kỳ {{ $period['range'] }}</caption><thead><tr><th scope="col">Ngày</th><th scope="col">Tiền đã thu</th><th scope="col">Đơn hoàn thành</th><th scope="col">Giá trị hoàn thành</th></tr></thead><tbody>@foreach($period['rows'] as $row)<tr><th scope="row">{{ $row['full_date'] }}</th><td>@if($period['paid_available']) @include('admin.dashboard._vnd', ['amount' => $row['paid']]) @else Chưa xác định @endif</td><td>{{ $row['count'] }}</td><td>@include('admin.dashboard._vnd', ['amount' => $row['completed']])</td></tr>@endforeach</tbody></table></div></details>
+        </section>
+        <aside class="overview-side">
+            <section class="overview-panel"><div class="overview-panel__heading"><div><p class="overview-eyebrow">TRONG KỲ ĐÃ CHỌN</p><h2>Trạng thái đơn phát sinh</h2></div></div><div class="overview-statuses">@foreach($orderStatusLabels as $status => $label)<div class="overview-status"><div><span>{{ $label }}</span><strong>{{ $period['statuses'][$status] ?? 0 }}</strong></div><meter min="0" max="{{ max(1, $period['orders_count']) }}" value="{{ $period['statuses'][$status] ?? 0 }}" aria-label="{{ $label }} trên {{ $period['orders_count'] }} đơn">{{ $period['statuses'][$status] ?? 0 }}</meter></div>@endforeach @if($period['unclassified'] > 0)<p class="overview-note">Chưa phân loại: {{ $period['unclassified'] }} đơn cần kiểm tra.</p>@endif</div><a class="overview-text-link" href="{{ route('staff.orders.index') }}">Xem danh sách đơn <x-internal.icon name="arrow" size="16" /></a></section>
+            <section class="overview-panel overview-operations"><p class="overview-eyebrow">VẬN HÀNH HIỆN TẠI</p><h2>Bàn &amp; đơn chờ xử lý</h2><dl><div><dt>Đơn đang xử lý</dt><dd>{{ $orderStatistics['by_status']['pending'] }}</dd></div><div><dt>Bàn trống</dt><dd>{{ $tableStatistics['by_status']['available'] }}</dd></div><div><dt>Bàn đang có khách</dt><dd>{{ $tableStatistics['by_status']['occupied'] }}</dd></div></dl><a class="overview-text-link" href="{{ route('staff.tables.index') }}">Mở sơ đồ bàn <x-internal.icon name="arrow" size="16" /></a></section>
+        </aside>
+    </div>
+    @else
+        <section class="overview-panel overview-empty" role="status"><x-internal.icon name="chart" size="32" /><h2>Chưa thể hiển thị thống kê theo kỳ</h2><p>Dữ liệu thiếu trường ngày hoặc giá trị đơn. Các thống kê toàn bộ thời gian vẫn hiển thị bên dưới.</p></section>
+    @endif
+    <section class="overview-panel overview-recent" aria-labelledby="recent-orders-title"><div class="overview-panel__heading"><div><p class="overview-eyebrow">GIAO DỊCH &amp; VẬN HÀNH</p><h2 id="recent-orders-title">Đơn hàng gần đây</h2></div><a class="overview-text-link" href="{{ route('staff.orders.index') }}">Xem tất cả <x-internal.icon name="arrow" size="16" /></a></div><div class="cafe-table-wrap"><table class="cafe-table"><thead><tr><th scope="col">Mã đơn</th><th scope="col">Thời gian (VN)</th><th scope="col">Nhân viên</th><th scope="col">Hình thức</th><th scope="col">Trạng thái</th><th scope="col">Tổng tiền</th></tr></thead><tbody>@forelse($recentOrders as $order)<tr><th scope="row"><a href="{{ route('staff.orders.show', $order) }}">{{ $order->order_code }}</a></th><td>{{ $order->ordered_at?->copy()->timezone('Asia/Ho_Chi_Minh')->format('d/m/Y H:i') }}</td><td>{{ $order->creator?->name ?? '—' }}</td><td>{{ $order->order_type === 'takeaway' ? 'Mang đi' : 'Tại bàn' }}</td><td><span class="overview-status-label overview-status-label--{{ $order->status }}">{{ $orderStatusLabels[$order->status] ?? 'Chưa phân loại' }}</span></td><td>@include('admin.dashboard._vnd', ['amount' => (string) $order->total_amount])</td></tr>@empty<tr><td colspan="6" class="overview-table-empty">Chưa có đơn hàng để hiển thị.</td></tr>@endforelse</tbody></table></div></section>
+    <details class="overview-panel overview-all-time"><summary>Thống kê toàn bộ thời gian <span>Đơn hàng · Thanh toán · Bàn</span></summary><p class="overview-note">Các số liệu sau không giới hạn ngày, độc lập với bộ lọc ở đầu trang.</p>@include('admin.dashboard._all-time')</details>
 </div>
-<div class="sneat-chart-grid">
-  <section class="sneat-card"><div class="sneat-card-heading"><h2>Doanh thu 7 ngày gần nhất</h2><span>Dữ liệu đơn đã hoàn thành</span></div><div class="sneat-chart-bars" role="img" aria-label="Biểu đồ doanh thu từng ngày trong 7 ngày gần nhất">
-  @foreach($revenueChart as $bar)<div class="sneat-chart-column"><div class="sneat-chart-track" title="{{ $bar['date'] }}: {{ number_format($bar['amount'],0,',','.') }}đ"><div class="sneat-chart-bar" style="height: {{ $bar['height'] }}%"></div></div><span>{{ $bar['date'] }}</span></div>@endforeach
-  </div></section>
-  <section class="sneat-card sneat-chart-summary"><div><span class="sneat-eyebrow">TỔNG DOANH THU</span><h2>7 ngày vừa qua</h2></div><div class="sneat-revenue-ring"><span>{{ $todayOrders }}<small>Đơn hôm nay</small></span></div><strong>{{ number_format($weeklyRevenue,0,',','.') }} ₫</strong><p>Doanh thu được cộng từ các đơn hoàn thành. Không bao gồm yêu cầu online chưa thanh toán.</p></section>
-</div>
-<div class="sneat-stats-grid">
-  <section class="sneat-card"><div class="sneat-card-heading"><h2>Tình hình vận hành</h2><span>Thời điểm hiện tại</span></div><div class="sneat-quick-stats">
-     <div><span>Đơn chờ xử lý</span><strong>{{ $pendingOrders }}</strong><div class="sneat-progress"><i style="width:{{ min(100, $pendingOrders * 10) }}%"></i></div></div>
-     <div><span>Yêu cầu nhận món</span><strong>{{ $pickupPending }}</strong><div class="sneat-progress"><i style="width:{{ min(100, $pickupPending * 10) }}%"></i></div></div>
-     <div><span>Sản phẩm đang quản lý</span><strong>{{ $productsCount }}</strong><div class="sneat-progress"><i style="width:{{ min(100, $productsCount * 2) }}%"></i></div></div>
-     <div><span>Danh mục</span><strong>{{ $categoryCount }}</strong><div class="sneat-progress"><i style="width:{{ min(100, $categoryCount * 8) }}%"></i></div></div>
-  </div></section>
-  <section class="sneat-card sneat-card--highlight"><span class="sneat-eyebrow">QUẢN LÝ NHANH</span><h2>Mọi thứ trong tầm tay</h2><p>Chỉnh sửa thực đơn, cập nhật ưu đãi và theo dõi đơn hàng mà không mất thời gian.</p><div class="sneat-shortcuts"><a href="{{ route('admin.categories.index') }}">Danh mục ↗</a><a href="{{ route('admin.products.index') }}">Sản phẩm ↗</a><a href="{{ route('admin.promotions.index') }}">Khuyến mãi ({{ $promotionCount }}) ↗</a><a href="{{ route('staff.orders.index') }}">Đơn hàng ↗</a></div></section>
-</div>
-<section class="sneat-card sneat-recent"><div class="sneat-card-heading"><h2>Đơn hàng gần đây</h2><a href="{{ route('staff.orders.index') }}">Xem tất cả →</a></div>
-<div class="sneat-responsive"><table class="sneat-datatable"><thead><tr><th>Mã đơn</th><th>Thời gian</th><th>Nhân viên</th><th>Hình thức</th><th>Trạng thái</th><th>Tổng tiền</th></tr></thead><tbody>@forelse($recentOrders as $order)<tr><td><strong>{{ $order->order_code }}</strong></td><td>{{ $order->ordered_at?->format('d/m/Y H:i') }}</td><td>{{ $order->creator?->name ?? '—' }}</td><td>{{ $order->order_type === 'takeaway' ? 'Mang đi' : 'Tại bàn' }}</td><td><span class="sneat-pill {{ $order->status === 'completed' ? 'is-success' : 'is-warning' }}">{{ $order->status }}</span></td><td>{{ number_format((float)$order->total_amount,0,',','.') }}đ</td></tr>@empty<tr><td colspan="6" class="sneat-empty">Chưa có đơn hàng nào. Số liệu sẽ hiển thị khi có giao dịch thật.</td></tr>@endforelse</tbody></table></div></section>
 @endsection

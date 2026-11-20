@@ -1,5 +1,12 @@
 # Coffee Shop Database Design
 
+## Approved extension — Payment receipts (17/11/2026)
+
+Theo task Finance × Sales: additive migration `2026_11_17_000001_add_payment_receipt_contract.php`, không sửa migration payments cũ. Thêm nullable operation_key VARCHAR(64) UNIQUE, payload_hash CHAR(64), received_amount/change_amount DECIMAL(15,2), bank_reference_key CHAR(64) UNIQUE, paid_order_key BIGINT UNSIGNED generated virtual CASE status=paid THEN order_id ELSE NULL UNIQUE. Giữ amount là tiền áp cho đơn, không đổi nghĩa thành tiền khách đưa. Cash received >= amount, change=received-amount; bank received=amount và change0 do writer kiểm. Payload hash gồm Order/actor/method/received/reference chuẩn hóa; không dùng float.
+
+Bank reference trong MVP là mã giao dịch đầy đủ do Staff đối chiếu cho quán, chuẩn hóa trim/ASCII uppercase, hash toàn chuỗi để đặt UNIQUE, không tái sử dụng kể cả receipt đã refunded. Nếu ngân hàng chỉ cấp mã cục bộ phải nhập định danh đầy đủ (ví dụ bank/account/reference), chưa tích hợp nhiều tài khoản tự động. Preflight từ chối duplicate paid/Order và duplicate reference lịch sử trước DDL; backfill bank key nhưng không đổi amount/status/chứng từ. Rows cũ thiếu operation/received/change được giữ NULL, không bịa tiền khách đưa. Rollback từ chối khi đã có receipt operation mới. MySQL DDL không atomic; cần backup và test upgrade trên bản sao trước khi chạy thực tế.
+
+
 ## Approved workflow change — Customer guest / POS prepayment (27/10/2026)
 
 Subsequent user decision (27/10): web orders are delivered to the submitted name/phone/address, replacing the pickup-only proposal. Delivery is approved as a fulfillment goal, not as an enum/schema change: orders.order_type currently remains dine_in/takeaway. Explicit fulfillment metadata versus an extended order_type requires a separate design/migration review. Do not silently map delivery to takeaway, add shipping fees, reuse tax for delivery charges, or treat served as delivered without an approved state/completion mapping. Proposed address storage belongs to the request snapshot; no customer-master or migration change is performed here.

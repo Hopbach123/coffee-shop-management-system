@@ -303,7 +303,7 @@ class CategoryManagementTest extends TestCase
         $this->actingAs($this->user(), 'web');
 
         $this->get('/admin/categories')->assertOk()->assertViewIs('admin.categories.index')
-            ->assertSee('Coffee')->assertSee('Danh mục')->assertSee('Khu vực Admin');
+            ->assertSee('Coffee')->assertSee('Danh mục')->assertSee('KHU VỰC QUẢN TRỊ · ADMIN');
         $this->get('/admin/categories/create')->assertOk()->assertViewIs('admin.categories.create')
             ->assertSee('name="name"', false)->assertSee('name="status"', false);
         $this->get('/admin/categories/'.$category->id.'/edit')->assertOk()->assertViewIs('admin.categories.edit')

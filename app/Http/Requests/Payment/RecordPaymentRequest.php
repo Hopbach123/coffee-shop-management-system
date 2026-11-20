@@ -18,10 +18,11 @@ class RecordPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'operation_key' => ['sometimes', 'required', 'string', 'min:16', 'max:64', 'regex:/^[a-zA-Z0-9_-]+$/'],
             'payment_method' => ['required', Rule::in(['cash', 'bank_transfer'])],
             'received_confirmation' => ['required', 'accepted'],
             'transaction_code' => ['nullable', 'string', 'max:100'],
-            'received_amount' => ['nullable', 'string', 'regex:/\A\d{1,13}(?:\.\d{1,2})?\z/'],
+            'received_amount' => [$this->has('operation_key') ? 'required' : 'nullable', 'string', 'regex:/\A\d{1,13}(?:\.\d{1,2})?\z/'],
         ];
     }
 

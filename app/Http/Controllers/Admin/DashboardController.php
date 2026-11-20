@@ -3,25 +3,25 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Category;
 use App\Models\Order;
-use App\Models\PickupRequest;
-use App\Models\Product;
-use App\Models\Promotion;
 use App\Services\Dashboard\OrderStatisticsService;
+use App\Services\Dashboard\PeriodStatisticsService;
 use App\Services\Dashboard\RevenueStatisticsService;
 use App\Services\Dashboard\TableStatisticsService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
-use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class DashboardController extends Controller
 {
-    public function index(
+    public function home(
+        Request $request,
         OrderStatisticsService $orderStatistics,
         RevenueStatisticsService $revenueStatistics,
         TableStatisticsService $tableStatistics,
+        PeriodStatisticsService $periodStatistics,
     ): View|Response {
         try {
             $orderStats = $orderStatistics->summarize();
@@ -30,6 +30,11 @@ class DashboardController extends Controller
         }
         try {
             $revenueStats = $revenueStatistics->summarize();
+            $days = $request->query('days', '7');
+            $period = $periodStatistics->summarize($days === '30' ? 30 : 7, $revenueStats['available'],
+                $request->query('metric') === 'completed' ? 'completed' : 'paid');
+            $recentOrders = $period && $period['has_order_details']
+                ? Order::with('creator')->latest('ordered_at')->latest('id')->limit(6)->get() : collect();
         } catch (Throwable) {
             return response()->view('admin.dashboard.unavailable', [], 503);
         }
@@ -39,7 +44,9 @@ class DashboardController extends Controller
             return response()->view('admin.dashboard.unavailable', [], 503);
         }
 
-        return view('admin.dashboard.index', [
+        return view('admin.home', [
+            'period' => $period,
+            'recentOrders' => $recentOrders,
             'orderStatistics' => $orderStats,
             'revenueStatistics' => $revenueStats,
             'tableStatistics' => $tableStats,
@@ -48,33 +55,8 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function home(): View
+    public function index(): RedirectResponse
     {
-        $hasOrders = Schema::hasTable('orders');
-        $dailyTotals = $hasOrders ? Order::query()->where('status', 'completed')
-            ->whereDate('completed_at', '>=', today()->subDays(6))->get(['completed_at', 'total_amount'])
-            ->groupBy(fn ($order) => $order->completed_at?->format('Y-m-d'))
-            ->map(fn ($orders) => $orders->sum('total_amount')) : collect();
-        $lastSevenDays = collect(range(6, 0))->map(function ($daysAgo) use ($dailyTotals) {
-            $day = today()->subDays($daysAgo);
-            return ['date' => $day->format('d/m'), 'amount' => (float) ($dailyTotals[$day->format('Y-m-d')] ?? 0)];
-        });
-        $maximum = max(1, (float) $lastSevenDays->max('amount'));
-        $revenueChart = $lastSevenDays->map(fn ($day) => [
-            ...$day,
-            'height' => $day['amount'] > 0 ? max(3, round($day['amount'] * 100 / $maximum)) : 0,
-        ]);
-        return view('admin.home', [
-            'revenueChart' => $revenueChart,
-            'weeklyRevenue' => $lastSevenDays->sum('amount'),
-            'revenue' => $hasOrders ? Order::query()->where('status', 'completed')->whereDate('completed_at', today())->sum('total_amount') : 0,
-            'todayOrders' => $hasOrders ? Order::query()->whereDate('ordered_at', today())->count() : 0,
-            'pendingOrders' => $hasOrders ? Order::query()->where('status', 'pending')->count() : 0,
-            'productsCount' => Schema::hasTable('products') ? Product::count() : 0,
-            'categoryCount' => Schema::hasTable('categories') ? Category::count() : 0,
-            'promotionCount' => Schema::hasTable('promotions') ? Promotion::count() : 0,
-            'pickupPending' => Schema::hasTable('pickup_requests') ? PickupRequest::where('status', 'pending')->count() : 0,
-            'recentOrders' => $hasOrders ? Order::with('creator')->orderByDesc('id')->limit(6)->get() : collect(),
-        ]);
+        return redirect()->route('admin.home');
     }
 }

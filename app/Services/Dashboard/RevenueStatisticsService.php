@@ -6,6 +6,29 @@ use Illuminate\Support\Facades\DB;
 
 class RevenueStatisticsService
 {
+    /** Order completion value is deliberately separate from paid receipt value. */
+    public function dailyCompletedOrders(int $days = 7): ?array
+    {
+        $columns = \Illuminate\Support\Facades\Schema::getColumnListing('orders');
+        if (! in_array('total_amount', $columns, true) || ! in_array('completed_at', $columns, true)) {
+            return null;
+        }
+        $days = $days === 30 ? 30 : 7;
+        $start = today()->subDays($days - 1);
+        $end = today()->addDay();
+        $orders = DB::table('orders')->where('status', 'completed')
+            ->where('completed_at', '>=', $start)->where('completed_at', '<', $end)
+            ->selectRaw('DATE(completed_at) AS day, SUM(total_amount) AS amount, COUNT(*) AS count')
+            ->groupByRaw('DATE(completed_at)')->get()->keyBy('day');
+        $rows = collect(range(0, $days - 1))->map(function ($offset) use ($start, $orders) {
+            $date = $start->copy()->addDays($offset);
+            $row = $orders->get($date->format('Y-m-d'));
+            return ['date' => $date->format('d/m'), 'amount' => (float) ($row->amount ?? 0), 'count' => (int) ($row->count ?? 0)];
+        });
+        $max = max(1, $rows->max('amount'));
+        return ['days' => $days, 'rows' => $rows->map(fn ($row) => [...$row, 'height' => $row['amount'] > 0 ? max(2, $row['amount'] / $max * 100) : 0]), 'total' => $rows->sum('amount'), 'count' => $rows->sum('count')];
+    }
+
     /** Current paid value only, not gross historical receipts or net revenue. */
     public function summarize(): array
     {

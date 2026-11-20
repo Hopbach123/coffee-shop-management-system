@@ -233,7 +233,12 @@ class PaymentWorkflowTest extends TestCase
     {
         $actor = $this->actor();
         $order = $this->order($actor, null, 'ready');
-        app(OrderService::class)->transitionItemStatus($order, $order->orderItems()->sole(), 'served', $actor);
+        try {
+            app(OrderService::class)->transitionItemStatus($order, $order->orderItems()->sole(), 'served', $actor);
+            $this->fail('Unpaid counter handover must be rejected.');
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            $this->assertArrayHasKey('payment', $exception->errors());
+        }
         $this->assertSame('pending', $order->fresh()->status);
         $this->assertNull($order->fresh()->completed_at);
     }

@@ -271,6 +271,8 @@ Low-stock indication chỉ được tạo task khi requirement cụ thể đư�
 
 ### Phase 11 – Dashboard and Reporting
 
+Task được user duyệt 20/11/2026: `ADMIN-OVERVIEW-FINANCIAL-UI-001`, 60–90 phút, tiếp nối consolidation. Goal: hoàn thiện `/admin` theo phân cấp dashboard tài chính trong visual language Maison du Café. Scope: query thống kê theo kỳ, Controller read-only, Blade/CSS và tests; không sửa workflow Sales/Finance/schema. Metric/kỳ đã chốt tại requirements 5.9. Criteria: một URL chính; KPI cùng kỳ 7/30 ngày; phân biệt paid/completed; ngày Việt Nam và zero days đúng; lỗi dữ liệu không giả zero; chart + bảng accessible; responsive 320/768/1024/1440; targeted tests/build. Browser visual QA là cổng nghiệm thu riêng khi công cụ khả dụng. Evidence/report: docs/implementation/ADMIN_OVERVIEW_FINANCIAL_UI_REPORT.md. Không tự triển khai task khác.
+
 Mục tiêu: xây dashboard sau khi Order/Payment đã tạo dữ liệu tin cậy. Chỉ số, kỳ báo cáo và chart cụ thể phải được duyệt trước.
 
 | ID | Tên / mục tiêu | Dependency | Scope và output | Kiểm tra hoàn thành | Ước lượng / mức |
@@ -398,6 +400,10 @@ Task chỉ **DONE** khi:
 - Không tự động thực thi task kế tiếp sau khi cập nhật kế hoạch.
 
 ## 12. Current Next Tasks
+
+User-approved `ADMIN-12-SCREEN-V5` on 21/11/2026 follows `MAISON_DU_CAFE_ADMIN_12_SCREEN_V5.zip` and the Taste/UI engineering prompt. Implementation slices: (1) scope/audit/shared Admin foundation, 30–60m; (2) product/table/area/promotion compositions plus remaining lists/forms, 60–90m; (3) sidebar visual polish, focused tests/build/HTTP and evidence, 30–60m. Preserve 12 items/6 groups, existing 4 real Dashboard period KPIs, backend/DB/routes/security; no package installs or commits. Reference screenshots are prototype-only. Real-browser QA is a separate incomplete acceptance gate while CUA cannot determine browser URL. Report: docs/implementation/ADMIN_12_SCREEN_V5_REPORT.md. Do not implement unrelated modules.
+
+Task user duyệt 20/11/2026 `ADMIN-FIXED-NAV-001` (30–60 phút): thay sidebar Admin đang dùng registry động bằng cấu hình menu cố định, đủ route đầu vào các module thực có; giữ Staff riêng, active state và drawer/collapse hiện tại. Scope: cấu hình/component/layout/CSS/menu-editor notice, tests và report. Không xóa module/dữ liệu menu cũ, không đổi quyền/backend nghiệp vụ/schema. Criteria: 12 link Admin GET không tham số, không truy vấn admin_menus khi render sidebar, nhóm rõ ràng, active đúng ở recipe/import/adjustment/history và form; Staff/guest không có link Admin; tests/build/HTTP pass. Browser visual QA ghi riêng khi chưa khả dụng. Report: docs/implementation/ADMIN_FIXED_NAVIGATION_REPORT.md. Các task roadmap sau không tự thực hiện.
 
 1. **Engineer review CAFE-DB-001B.** Xác nhận `database-design.md` đạt Frozen và không có schema-affecting conflict.
 2. **`CAFE-DB-RE-AUDIT-001`.** Re-audit DB-001/002/003 theo Frozen Design, chỉ sau khi CAFE-DB-001B được chấp nhận.

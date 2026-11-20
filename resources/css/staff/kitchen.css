@@ -1,0 +1,397 @@
+/* ==========================================================================
+   Maison du Café — Staff Kitchen, POS & Order Management UI
+   Harmonized with Sneat Internal Coffee Workspace Theme
+   ========================================================================== */
+
+/* --- Category Filter Bar for POS --- */
+.pos-categories-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+    scrollbar-width: thin;
+}
+
+.pos-category-btn {
+    white-space: nowrap;
+    padding: 7px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--coffee-cocoa);
+    background: var(--coffee-surface);
+    border: 1px solid var(--coffee-border);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pos-category-btn:hover {
+    background: var(--coffee-surface-alt);
+    color: var(--coffee-espresso);
+    border-color: var(--coffee-caramel);
+}
+
+.pos-category-btn.is-active {
+    background: var(--coffee-caramel);
+    color: #ffffff;
+    border-color: var(--coffee-caramel);
+    box-shadow: 0 2px 6px rgba(173, 117, 71, 0.25);
+}
+
+/* --- Kitchen / Barista Brewing Grid & Cards --- */
+.barista-board-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.kitchen-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: 20px;
+}
+
+.kitchen-card-barista {
+    background: #ffffff;
+    border: 1px solid var(--coffee-border);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    box-shadow: 0 2px 10px rgba(44, 27, 20, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    border-top: 4px solid var(--coffee-border);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kitchen-card-barista:hover {
+    box-shadow: 0 6px 18px rgba(44, 27, 20, 0.08);
+}
+
+.kitchen-card-barista.status-pending {
+    border-top-color: var(--coffee-warning);
+}
+
+.kitchen-card-barista.status-preparing {
+    border-top-color: var(--coffee-caramel);
+    background: #fdfaf6;
+}
+
+.kitchen-card-barista.status-ready {
+    border-top-color: var(--coffee-success);
+    background: #fcfdfa;
+}
+
+.kitchen-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.kitchen-order-code {
+    font-size: 1.15rem;
+    font-weight: 700;
+    font-family: var(--font-display);
+    color: var(--coffee-espresso);
+    text-decoration: underline;
+}
+
+.kitchen-order-code:hover {
+    color: var(--coffee-caramel);
+}
+
+.kitchen-channel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.channel-counter {
+    background: #f4eddf;
+    color: var(--coffee-cocoa);
+    border: 1px solid #d9ccba;
+}
+
+.channel-online {
+    background: #ebf5fb;
+    color: #21618c;
+    border: 1px solid #aed6f1;
+}
+
+.channel-scheduled {
+    background: #fef5e7;
+    color: #b9770e;
+    border: 1px solid #f9e79f;
+}
+
+.kitchen-item-title {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    color: var(--coffee-espresso);
+    margin: 0;
+    line-height: 1.25;
+}
+
+.kitchen-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: var(--coffee-text-muted);
+}
+
+.kitchen-item-meta strong {
+    color: var(--coffee-espresso);
+}
+
+.kitchen-toppings-pill {
+    background: #fbf7ef;
+    border: 1px solid #eed9be;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    color: var(--coffee-caramel);
+    font-weight: 600;
+}
+
+.kitchen-note-box {
+    background: #fff8f0;
+    border-left: 3px solid var(--coffee-caramel);
+    padding: 6px 10px;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.85rem;
+    color: var(--coffee-text);
+}
+
+.kitchen-time-info {
+    font-size: 0.8rem;
+    color: var(--coffee-text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.kitchen-card-actions {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px dashed var(--coffee-border);
+}
+
+/* Action buttons */
+.btn-barista-start {
+    width: 100%;
+    min-height: 44px;
+    background: var(--coffee-caramel);
+    color: #ffffff;
+    border: 1px solid #996338;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s ease;
+}
+
+.btn-barista-start:hover {
+    background: var(--coffee-cocoa);
+}
+
+.btn-barista-done {
+    width: 100%;
+    min-height: 44px;
+    background: var(--coffee-success);
+    color: #ffffff;
+    border: 1px solid #23472b;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s ease;
+}
+
+.btn-barista-done:hover {
+    background: #1e3d24;
+}
+
+.btn-barista-serve {
+    width: 100%;
+    min-height: 44px;
+    background: var(--coffee-surface-alt);
+    color: var(--coffee-cocoa);
+    border: 1px solid var(--coffee-border);
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.btn-barista-serve:hover {
+    background: var(--coffee-cocoa);
+    color: #ffffff;
+    border-color: var(--coffee-cocoa);
+}
+
+/* --- Online Request Inbox Enhancement --- */
+.request-summary-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.request-stat-card {
+    background: #ffffff;
+    border: 1px solid var(--coffee-border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.request-stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    background: var(--coffee-surface-alt);
+    color: var(--coffee-caramel);
+    font-size: 1.25rem;
+}
+
+.request-stat-val {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: var(--font-display);
+    color: var(--coffee-espresso);
+    line-height: 1;
+}
+
+.request-stat-label {
+    font-size: 0.8rem;
+    color: var(--coffee-text-muted);
+}
+
+/* Action Bar in Request Show */
+.request-actions-card {
+    background: #ffffff;
+    border: 1px solid var(--coffee-border);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.request-action-buttons {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.handover-code-input {
+    display: block;
+    width: 16rem;
+    max-width: 100%;
+    min-height: 44px;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--coffee-border);
+    border-radius: var(--radius-sm);
+    background: var(--coffee-surface);
+    color: var(--coffee-text);
+}
+
+/* --- 3-Lane Barista Kanban Board --- */
+.kitchen-kanban {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+
+@media (max-width: 992px) {
+    .kitchen-kanban {
+        grid-template-columns: 1fr;
+    }
+}
+
+.kitchen-lane {
+    border: 1px solid var(--cafe-border, #e8dfd5);
+    border-radius: 14px;
+    background: var(--cafe-surface, #fffdfa);
+    box-shadow: 0 4px 16px rgba(55, 34, 24, 0.05);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.kitchen-lane-head {
+    padding: 13px 16px;
+    font-weight: 800;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--cafe-border, #e8dfd5);
+}
+
+.kitchen-lane-head.amber {
+    background: #fff2df;
+    color: #9a691f;
+}
+
+.kitchen-lane-head.blue {
+    background: #edf1f8;
+    color: #3e6d95;
+}
+
+.kitchen-lane-head.green {
+    background: #eaf4ee;
+    color: #276845;
+}
+
+.kitchen-lane-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 180px;
+}
+
+.kitchen-lane-empty {
+    padding: 32px 14px;
+    text-align: center;
+    color: var(--cafe-text-muted, #7c716a);
+    font-size: 12px;
+}
+
+

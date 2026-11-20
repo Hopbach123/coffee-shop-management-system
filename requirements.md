@@ -1,5 +1,9 @@
 # Coffee Shop Management System – Requirements
 
+## Approved extension — Finance/Sales receipts (17/11/2026)
+
+Owner cho phép tích hợp Finance cash/bank trước served, không bắt buộc paid trước preparing. Finance chỉ ghi nhận thực thu/receipt, không tự preparing/consume/completed. Cash nhận đủ tổng server và trả tiền thừa; bank nhận chính xác tổng, Staff xác minh thực nhận và nhập bank reference. Operation key có replay/payload conflict, một paid mỗi Order, bank reference không tái sử dụng tại quán. Sales giao khi paid, hoàn tất khi mọi món served; không sửa tổng sau thu. Không split/partial/gateway/COD/refund tự động. Receipt metadata lưu bằng migration mới; chưa áp dụng lên DB dự án trong task.
+
 ## Approved extension — Simple Online Pickup (26/10/2026)
 
 Theo yêu cầu user triển khai schema trên feature/schema-template-sync và phạm vi rút gọn mục 7 của bảng phân công: hỗ trợ purchase_type counter (POS), scheduled (hẹn đến lấy), online (web lấy sớm). scheduled/online chỉ takeaway, không shipper/phí giao/gateway/COD/slot/holds/refund tự động. Khách không cần tài khoản; request lưu snapshot liên hệ, món/topping và giờ hẹn nếu scheduled. Staff/Admin duyệt tạo một Order, user_id vẫn bắt buộc là người nhận đơn; UNIQUE request trên Order chống tạo trùng. Request có pending/accepted/rejected/cancelled; giữ các trạng thái Order/món/Payment hiện có. Loại mua không phải status.
@@ -8,7 +12,9 @@ Thanh toán cash/bank_transfer; payment_timing on_receipt hoặc prepaid, prepai
 
 ## Approved extension — Dynamic Admin Menu (20/10/2026)
 
-Engineer đã duyệt database-driven Admin navigation theo docs/admin-menu-architecture.md: group/link tối đa 3 cấp; cha inactive ẩn nhánh mà không sửa con; chỉ xóa nút lá không protected; registry bảo vệ admin.home/admin.dashboard.index/admin.menus.index và ancestors/recovery link. Chỉ whitelist named route Admin GET không tham số; permission_key hiện chỉ NULL vì chưa có permission registry. Không thay backend authorization hoặc Catalog. Task8.1 chỉ tạo migration/model/tests nền tảng, chưa seed/CRUD/Sidebar; các workflow trên thuộc task sau.
+Quyết định mới của user ngày 20/11/2026 thay thế điều hướng Admin database-driven: sidebar hiện dùng menu cố định tại config/admin_navigation.php, không phụ thuộc admin_menus hoặc trạng thái dữ liệu menu. Hiển thị các nhóm Tổng quan; Thực đơn & công thức; Nguyên liệu & kho; Không gian & đặt bàn; Khách hàng & ưu đãi; Tài khoản. Chỉ liên kết named route GET Admin thực sự tồn tại, không cần tham số. Size/công thức đi qua danh sách biến thể; nhập kho/kiểm kê/lịch sử đi qua danh sách nguyên liệu rồi chọn bản ghi. Không tạo màn giả hoặc link thiếu ID. Staff/POS giữ khu vực riêng; Admin chuyển qua Mở POS và quay về Quản trị. Backend auth/role/validation không đổi. Giữ dữ liệu và module CRUD menu cũ để bảo toàn công việc, nhưng không dùng nó điều khiển sidebar hiện tại.
+
+Lịch sử trước quyết định này: Engineer đã duyệt database-driven Admin navigation với group/link tối đa 3 cấp; rules và registry vẫn áp dụng cho module menu cũ nếu truy cập trực tiếp, không còn là nguồn của sidebar ứng dụng. Không tự xóa bảng, migration, Model hoặc dữ liệu menu cũ trong task chuyển điều hướng.
 
 ## 1. Document Purpose
 
@@ -135,7 +141,7 @@ Quản lý công thức theo biến thể (feature/product-recipes): Admin thêm
 
 Mục tiêu của domain Dashboard là cung cấp cái nhìn tổng quan cho quản lý. Phạm vi gồm tổng quan doanh thu, thống kê đơn hàng, chỉ số bán sản phẩm và thống kê vận hành cơ bản.
 
-Biểu đồ, kỳ báo cáo và cách tổng hợp cụ thể là TBD.
+Theo yêu cầu gộp trang và thiết kế dashboard được user xác nhận ngày 20/11/2026: `/admin` là trang tổng quan duy nhất; `/admin/dashboard` chuyển về `/admin`. Kỳ chọn 7 hoặc 30 ngày gần nhất gồm hôm nay theo Asia/Ho_Chi_Minh; dữ liệu ngày giờ lưu UTC. KPI theo kỳ gồm tổng Payment đang paid theo paid_at, giá trị/số Order completed theo completed_at, số Order phát sinh theo ordered_at và giá trị trung bình trên đơn completed. Hai cách ghi nhận tiền và hoàn thành đơn được phân biệt rõ; chưa phải doanh thu thuần/lợi nhuận. Payment trùng paid/Order hoặc paid thiếu ngày nhận tiền phải cảnh báo, không trình bày số liệu thu theo kỳ như đã xác minh. Biểu đồ đường chọn tiền đã thu hoặc giá trị hoàn thành, có trục, ngày không phát sinh và bảng số liệu thay thế. Thống kê toàn bộ thời gian và tình trạng bàn hiện tại tách khỏi KPI theo kỳ. Không bổ sung workflow thanh toán/hoàn tiền, schema, thư viện chart hoặc viết dữ liệu từ dashboard.
 
 ## 6. High-Level Functional Requirements
 

@@ -53,6 +53,10 @@ class PaymentController extends Controller
 
     public function store(RecordPaymentRequest $request, Order $order, PaymentService $service): RedirectResponse
     {
+        if ($request->has('operation_key')) {
+            return app(OrderController::class)->storePayment($request, $order, app(\App\Services\OrderService::class));
+        }
+
         try {
             $customerRequest = $order->customerRequest;
             if ($customerRequest?->payment_option === 'cod') {
