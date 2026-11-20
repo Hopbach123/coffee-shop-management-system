@@ -8,6 +8,7 @@ return [
         'admin.toppings.index', 'admin.promotions.index', 'admin.ingredients.index',
         'admin.areas.index', 'admin.tables.index', 'admin.customers.index',
         'admin.users.index', 'admin.reservations.index',
+        'admin.finance.index',
     ],
     'icons' => ['grid', 'layers', 'coffee', 'box', 'plus', 'gift', 'tag', 'chart', 'table', 'users', 'bag', 'calendar', 'receipt'],
     'active_routes' => [

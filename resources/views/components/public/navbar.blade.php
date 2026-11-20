@@ -24,9 +24,10 @@
       <a href="{{ (\Illuminate\Support\Facades\Route::has('reservation.create') ? route('reservation.create') : route('home').'#reservation') }}" @if(request()->routeIs('reservation.*')) aria-current="page" @endif>Đặt bàn</a>
       @if (\Illuminate\Support\Facades\Route::has('cart.index'))
       <a href="{{ route('cart.index') }}" class="nav-cart" @if(request()->routeIs('cart.*')) aria-current="page" @endif>
-        Giỏ hàng <span class="nav-cart-count">{{ collect(session('customer_cart', []))->sum(fn($i) => is_array($i) ? ($i['quantity'] ?? 0) : (int)$i) }}</span>
+        Giỏ hàng <span class="nav-cart-count">{{ collect(session('customer_order_cart', []))->sum('quantity') }}</span>
       </a>
       @endif
+      @if(session('customer_order_last_reference'))<a href="{{ route('customer-orders.show', session('customer_order_last_reference')) }}">Yêu cầu của bạn</a>@endif
       @guest('web')
         <a href="{{ route('login') }}" class="nav-auth-single" title="Đăng nhập hoặc Đăng ký tài khoản">
           <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">

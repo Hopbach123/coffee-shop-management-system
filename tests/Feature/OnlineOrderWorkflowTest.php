@@ -246,7 +246,7 @@ class OnlineOrderWorkflowTest extends TestCase
             'quantity' => 1,
             'toppings' => [$topping1->id],
             'note' => 'Ít đường',
-        ])->assertRedirect(route('cart.index'));
+        ])->assertRedirect(route('pickup.cart.index'));
 
         // Add Line 2: Same variant + Topping 2 + không đá
         $this->post(route('cart.add'), [
@@ -254,7 +254,7 @@ class OnlineOrderWorkflowTest extends TestCase
             'quantity' => 2,
             'toppings' => [$topping2->id],
             'note' => 'Không đá',
-        ])->assertRedirect(route('cart.index'));
+        ])->assertRedirect(route('pickup.cart.index'));
 
         $cart = session('customer_cart');
         $this->assertCount(2, $cart);
@@ -279,10 +279,10 @@ class OnlineOrderWorkflowTest extends TestCase
             'variant_id' => $variant->id,
             'quantity' => 2,
             'unit_price' => 100,
-        ])->assertRedirect(route('cart.index'));
+        ])->assertRedirect(route('pickup.cart.index'));
 
         // Server forces DB price 40.000đ * 2 = 80.000đ
-        $this->get(route('cart.index'))->assertOk()->assertSee('80.000đ');
+        $this->get(route('pickup.cart.index'))->assertOk()->assertSee('80.000đ');
     }
 
     /**
@@ -372,6 +372,9 @@ class OnlineOrderWorkflowTest extends TestCase
             'submission_key' => hash('sha256', 'key1'),
             'tracking_token_hash' => hash('sha256', $token),
         ]);
+
+        $this->actingAs($staff, 'web')->get(route('staff.online-requests.index'))
+            ->assertOk()->assertSee('0988776655');
 
         $item = OnlineOrderRequestItem::forceCreate([
             'request_id' => $request->id,
@@ -841,7 +844,7 @@ class OnlineOrderWorkflowTest extends TestCase
         $this->get(route('cart.checkout'))->assertOk();
         $variant->product->forceFill(['status' => 'unavailable'])->saveOrFail();
         $this->postJson(route('cart.place'), $this->submitPayload())->assertUnprocessable();
-        $this->get(route('cart.index'))->assertOk()->assertSee('Xóa dòng món')->assertDontSee('Tiếp tục đặt món');
+        $this->get(route('pickup.cart.index'))->assertOk()->assertSee('Xóa dòng món')->assertDontSee('Tiếp tục đặt món');
         $this->assertDatabaseCount('online_order_requests', 0);
     }
 

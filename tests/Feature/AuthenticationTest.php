@@ -18,18 +18,31 @@ class AuthenticationTest extends TestCase
         $this->assertSame('sqlite', DB::connection()->getDriverName());
         $this->assertSame(':memory:', DB::connection()->getDatabaseName());
         (require database_path('migrations/0001_01_01_000000_create_users_table.php'))->up();
+        \Illuminate\Support\Facades\Schema::create('payments', function (\Illuminate\Database\Schema\Blueprint $table) {
+            $table->id(); $table->unsignedBigInteger('order_id'); $table->string('status'); $table->decimal('amount', 15, 2);
+        });
+
+
+        foreach (['2026_08_14_000002_create_areas_table.php', '2026_08_14_000006_create_cafe_tables_table.php'] as $migration) {
+            (require database_path('migrations/'.$migration))->up();
+        }
+        \Illuminate\Support\Facades\Schema::create('orders', function (\Illuminate\Database\Schema\Blueprint $table) {
+            $table->id(); $table->string('status'); $table->dateTime('ordered_at');
+        });
+
 
         Route::middleware(['web', 'auth:web'])->get('/auth-test/protected', fn () => 'Protected');
     }
 
-    public function test_public_navigation_uses_existing_routes_and_falls_back_when_features_are_absent(): void
+    public function test_public_navigation_uses_real_reservation_and_delivery_cart_routes(): void
     {
         $this->withoutVite();
-        $this->get('/')->assertOk()->assertSee(route('home').'#reservation', false)->assertDontSee('class="nav-cart"', false);
-        Route::get('/test-reservation-form', fn () => 'Reservation')->name('reservation.create');
-        Route::get('/test-customer-cart', fn () => 'Cart')->name('cart.index');
-        Route::getRoutes()->refreshNameLookups();
-        $this->withSession(['customer_cart' => [1 => 2, 2 => 1]])->get('/')
+        $this->get('/')->assertOk()->assertSee(route('reservation.create'), false)
+            ->assertSee('class="nav-cart"', false)->assertSee('nav-cart-count">0', false);
+        $this->withSession([
+            'customer_order_cart' => ['first' => ['quantity' => 2], 'second' => ['quantity' => 1]],
+            'customer_cart' => [1 => 10],
+        ])->get('/')
             ->assertOk()->assertSee(route('reservation.create'), false)->assertSee(route('cart.index'), false)->assertSee('nav-cart-count">3', false);
     }
 

@@ -1,84 +1,103 @@
 @extends('layouts.internal')
-@section('title', 'Khu vực')
+@section('title', 'Quản lý khu vực')
 @section('content')
-<div class="cafe-page-header">
-    <div>
-        <nav class="cafe-breadcrumbs" aria-label="Điều hướng"><span>Quản trị</span><span>Khu vực</span></nav>
-        <p class="v5-eyebrow">MAISON DU CAFÉ · QUẢN TRỊ</p>
-        <h1 class="cafe-page-title">Khu vực</h1>
-        <p class="cafe-page-subtitle">Danh sách khu vực của quán.</p>
-    </div>
-    <a href="{{ route('admin.areas.create') }}" class="cafe-btn-primary">
-        <x-internal.icon name="plus" size="16" /> Thêm khu vực
-    </a>
-</div>
-
-@if (session('success'))
-    <div class="cafe-notice cafe-notice--success" role="status">{{ session('success') }}</div>
-@endif
-@if ($errors->any())
-    <div class="cafe-notice cafe-notice--error" role="alert">
-        @foreach ($errors->all() as $error)<p>{{ $error }}</p>@endforeach
-    </div>
-@endif
-
-<div class="cafe-card v5-area-panel">
-    <form method="GET" action="{{ route('admin.areas.index') }}" role="search" class="v5-toolbar">
-        <div style="flex:1;min-width:200px;">
-            <label for="area-search" style="display:block;font-size:.8rem;font-weight:600;color:var(--cafe-text-secondary);margin-bottom:.35rem;">Tìm khu vực theo tên</label>
-            <input id="area-search" class="cafe-input" type="search" name="search" value="{{ $search }}" maxlength="100" placeholder="Nhập tên khu vực…"
-                @error('search') aria-invalid="true" aria-describedby="area-search-error" @enderror>
-            @error('search') <p style="font-size:.8rem;color:var(--cafe-danger);margin-top:.25rem;" id="area-search-error" role="alert">{{ $message }}</p> @enderror
+<section class="category-page area-overview" aria-labelledby="page-title">
+    <header class="category-heading">
+        <div>
+            <p class="section-heading__eyebrow">Maison du Café · Không gian quán</p>
+            <h1 id="page-title">Quản lý khu vực</h1>
+            <p>Quan sát không gian, tình trạng bàn và quản lý từng khu vực.</p>
         </div>
-        <div class="v5-toolbar-actions">
-            <button type="submit" class="cafe-btn-secondary">
-                <x-internal.icon name="search" size="15" /> Tìm kiếm
-            </button>
-            @if ($search !== '')
-                <a href="{{ route('admin.areas.index') }}" class="cafe-btn-secondary">Xóa lọc</a>
+        <x-public.button href="{{ route('admin.areas.create') }}"><x-internal.icon name="plus" size="18" /> Thêm khu vực</x-public.button>
+    </header>
+    <form method="GET" action="{{ route('admin.areas.index') }}" class="sneat-card area-filters" role="search" aria-label="Lọc khu vực">
+        <div class="category-field">
+            <label for="area-search">Tìm khu vực theo tên</label>
+            <input id="area-search" type="search" name="search" value="{{ $search }}" maxlength="100" placeholder="Nhập tên khu vực" @error('search') aria-invalid="true" aria-describedby="area-search-error" @enderror>
+            @error('search') <p class="category-field__error" id="area-search-error">{{ $message }}</p> @enderror
+        </div>
+        <div class="category-field">
+            <label for="area-status">Trạng thái khu vực</label>
+            <select id="area-status" name="status" @error('status') aria-invalid="true" aria-describedby="area-status-error" @enderror>
+                <option value="">Tất cả trạng thái</option>
+                <option value="active" @selected($status === 'active')>Đang hoạt động</option>
+                <option value="inactive" @selected($status === 'inactive')>Ngừng hoạt động</option>
+            </select>
+            @error('status') <p class="category-field__error" id="area-status-error">{{ $message }}</p> @enderror
+        </div>
+        <div class="area-filter-actions">
+            <x-public.button type="submit"><x-internal.icon name="search" size="18" /> Tìm kiếm</x-public.button>
+            @if ($search !== '' || $status !== '')
+                <x-public.button href="{{ route('admin.areas.index') }}" variant="outline">Xóa lọc</x-public.button>
             @endif
         </div>
     </form>
-
-    @if ($areas->isEmpty())
-        <div style="padding:3rem;text-align:center;color:var(--cafe-text-secondary);">
-            <x-internal.icon name="grid" size="40" style="opacity:.3;margin-bottom:.75rem;" />
-            <p style="font-weight:600;margin-bottom:.25rem;">
-                {{ $search !== '' ? 'Không tìm thấy khu vực' : 'Chưa có khu vực' }}
-            </p>
-            <p style="font-size:.875rem;">
-                {{ $search !== '' ? 'Thử tên khác hoặc xóa bộ lọc.' : 'Thêm khu vực để lưu thông tin không gian quán.' }}
-            </p>
-            @if ($search !== '')
-                <a href="{{ route('admin.areas.index') }}" class="cafe-btn-secondary">Xem tất cả</a>
-            @endif
+    @if ($areas === null || $summary === null)
+        <div class="sneat-card category-empty" role="alert">
+            <h2>Chưa thể tải khu vực</h2>
+            <p>Dữ liệu thống kê hiện chưa khả dụng. Vui lòng thử lại sau.</p>
+            <x-public.button href="{{ route('admin.areas.index', ['search' => $search, 'status' => $status]) }}" variant="outline">Thử lại</x-public.button>
         </div>
     @else
-        <div class="v5-grid" aria-label="Danh sách khu vực">
-            @foreach($areas as $area)
-                <article class="v5-entity-card"><div class="v5-card-heading"><span class="v5-card-icon"><x-internal.icon name="layers" /></span><span class="cafe-badge {{ $area->status === 'active' ? 'cafe-badge--success' : 'cafe-badge--warning' }}">{{ $area->status === 'active' ? 'Đang hoạt động' : 'Ngừng hoạt động' }}</span></div><h2>{{ $area->name }}</h2><p>{{ $area->description ?? 'Chưa có mô tả khu vực.' }}</p><div class="v5-card-meta"><span>#{{ $area->id }}</span><span>Tạo {{ $area->created_at?->format('d/m/Y H:i') ?? '—' }}</span></div><a href="{{ route('admin.tables.index', ['area_id' => $area->id]) }}" class="cafe-btn-secondary">Xem bàn trong khu vực <x-internal.icon name="arrow" size="16" /></a><div class="v5-card-footer v5-actions">
-                                    <a href="{{ route('admin.areas.edit', $area) }}" class="cafe-btn-icon" aria-label="Sửa khu vực {{ $area->id }}">
-                                        <x-internal.icon name="edit" size="15" />
-                                    </a>
-                                    <form method="POST" action="{{ route('admin.areas.status', $area) }}" onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái khu vực này? Trạng thái bàn và giao dịch được giữ nguyên.');">
-                                        @csrf @method('PATCH')
-                                        <input type="hidden" name="status" value="{{ $area->status === 'active' ? 'inactive' : 'active' }}">
-                                        <button type="submit" class="cafe-btn-secondary">
-                                            {{ $area->status === 'active' ? 'Vô hiệu hóa' : 'Kích hoạt' }}
-                                        </button>
-                                    </form>
-                                    <form method="POST" action="{{ route('admin.areas.destroy', $area) }}" onsubmit="return confirm('Bạn có chắc muốn xóa mềm khu vực này? Chỉ khu vực không có bàn liên kết mới được xóa.');">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="cafe-btn-icon cafe-btn-icon--danger" aria-label="Xóa khu vực {{ $area->id }}">
-                                            <x-internal.icon name="trash" size="15" />
-                                        </button>
-                                    </form>
-                                </div></article>
-            @endforeach
-        </div>
-        @if ($areas->hasPages())
-            <div style="padding:.75rem 1.25rem;border-top:1px solid var(--cafe-border);">{{ $areas->links() }}</div>
+        @include('admin.tables.components.status-freshness')
+        <section aria-label="Tổng quan theo bộ lọc">
+            <p class="area-scope">Thống kê trạng thái hiển thị theo bộ lọc, trên tất cả các trang. Chỉ tính khu vực và bàn chưa xóa; bàn trong khu vực ngừng hoạt động được tính là Chưa xác định.</p>
+            <dl class="area-summary">
+                @foreach (['areas_count' => 'Tổng khu vực', 'tables_count' => 'Tổng số bàn', 'available_count' => 'Trống', 'occupied_count' => 'Có khách', 'reserved_count' => 'Đã đặt', 'maintenance_count' => 'Bảo trì', 'conflict_count' => 'Cần kiểm tra', 'unknown_count' => 'Chưa xác định'] as $key => $label)
+                    <div class="sneat-card area-summary-item"><dt>{{ $label }}</dt><dd>{{ number_format($summary->$key) }}</dd></div>
+                @endforeach
+            </dl>
+        </section>
+        <div class="area-results-heading"><h2>Không gian của quán</h2><p>Mới nhất trước · {{ $areas->total() }} khu vực</p></div>
+        @if ($areas->isEmpty())
+            <div class="sneat-card category-empty">
+                <x-internal.icon name="layers" size="36" />
+                @if ($search !== '' || $status !== '' || $areas->total() > 0)
+                    <h2>Không tìm thấy khu vực</h2><p>Thử tên khác hoặc xóa bộ lọc. Nếu đang ở trang cũ, hãy về trang đầu.</p>
+                    <x-public.button href="{{ route('admin.areas.index') }}" variant="outline">Xem tất cả</x-public.button>
+                @else
+                    <h2>Chưa có khu vực</h2><p>Thêm khu vực để lưu thông tin không gian quán.</p>
+                @endif
+            </div>
+        @else
+            <div class="area-grid">
+                @foreach ($areas as $area)
+                    <article class="sneat-card area-card" aria-labelledby="area-{{ $area->id }}">
+                        <header class="area-card-heading">
+                            <span class="area-card-icon"><x-internal.icon name="layers" size="24" /></span>
+                            <span class="category-status category-status--{{ $area->status }}">{{ $area->status === 'active' ? 'Đang hoạt động' : 'Ngừng hoạt động' }}</span>
+                        </header>
+                        <h3 id="area-{{ $area->id }}">{{ $area->name }}</h3>
+                        <p class="area-description">{{ $area->description ?? '—' }}</p>
+                        <p class="area-table-total"><x-internal.icon name="table" size="20" /> <strong>{{ $area->tables_count }}</strong> bàn trong khu vực</p>
+                        <dl class="area-table-counts">
+                            @foreach ($displayLabels as $key => $label)
+                                <div><dt>{{ $label }}</dt><dd>{{ $area->{$key.'_count'} }}</dd></div>
+                            @endforeach
+                        </dl>
+                        @if ($area->tables_count === 0)<p>Chưa có bàn trong khu vực.</p>@endif
+                        <p class="area-created">Ngày tạo: {{ $area->created_at?->format('d/m/Y H:i') ?? '—' }}</p>
+                        <x-public.button :href="route('admin.tables.index', ['area_id' => $area->id, 'view' => 'floor'])" variant="outline" aria-label="Xem bàn khu vực {{ $area->name }}">Xem bàn <x-internal.icon name="arrow" size="17" /></x-public.button>
+                        <div class="area-card-actions">
+                            <x-public.button href="{{ route('admin.areas.edit', $area) }}" variant="outline" aria-label="Sửa khu vực {{ $area->id }}">Sửa</x-public.button>
+                            <form method="POST" action="{{ route('admin.areas.status', $area) }}" onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái khu vực này? Trạng thái bàn và giao dịch được giữ nguyên.');">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="status" value="{{ $area->status === 'active' ? 'inactive' : 'active' }}">
+                                <x-public.button type="submit" variant="outline" aria-label="Đổi trạng thái khu vực {{ $area->id }}">{{ $area->status === 'active' ? 'Vô hiệu hóa' : 'Kích hoạt' }}</x-public.button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.areas.destroy', $area) }}" onsubmit="return confirm('Bạn có chắc muốn xóa mềm khu vực này? Chỉ khu vực không có bàn liên kết mới được xóa.');">
+                                @csrf
+                                @method('DELETE')
+                                <x-public.button type="submit" variant="outline" class="category-delete" aria-label="Xóa khu vực {{ $area->id }}">Xóa</x-public.button>
+                            </form>
+                        </div>
+                        <small>Chỉ xóa được khu vực không có bàn liên kết, kể cả bàn đã xóa mềm.</small>
+                    </article>
+                @endforeach
+            </div>
+            @if ($areas->hasPages())<div class="category-pagination">{{ $areas->links() }}</div>@endif
         @endif
     @endif
-</div>
+</section>
 @endsection

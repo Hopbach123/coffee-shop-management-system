@@ -1,175 +1,57 @@
 @extends('layouts.internal')
-
 @section('title', 'Bán hàng / POS')
-
 @section('content')
-<div class="cafe-page-header">
-    <div>
-        <nav class="cafe-breadcrumbs" aria-label="Breadcrumb">
-            <span>Nhân viên</span>
-            <span class="cafe-breadcrumbs__separator" aria-hidden="true">/</span>
-            <span>Quầy bán hàng</span>
-        </nav>
-        <h1 class="cafe-page-title">Bán hàng / POS</h1>
-        <p class="cafe-page-subtitle">Chọn món từ thực đơn, lên đơn nhanh và chuyển lệnh pha chế cho Barista</p>
-    </div>
-    <span class="cafe-badge cafe-badge--info">Tạo đơn tại quầy</span>
-</div>
-
+<div class="sneat-page-title"><div><p>Nhân viên · Quầy bán hàng</p><h1>Bán hàng / POS</h1><span>Chọn món → kiểm tra tổng → nhận đủ tiền → chuẩn bị món</span></div><span class="sneat-pill is-success">● Đang hoạt động</span></div>
 <div class="pos-grid">
-    <!-- Catalog Section -->
-    <section class="pos-catalog">
-        <!-- Search Card -->
-        <div class="cafe-card" style="margin-bottom: 18px; padding: 12px 16px;">
-            <form action="{{ route('staff.home') }}" method="GET" class="pos-search">
-                <x-internal.icon name="search" size="18"/>
-                <label for="pos-menu-search" class="sr-only">Tìm món theo tên</label>
-                <input id="pos-menu-search" type="search" name="q" value="{{ $search }}" placeholder="Tìm món trong thực đơn theo tên..." maxlength="100">
-                @if($search)
-                    <a href="{{ route('staff.home') }}" style="color: var(--cafe-text-muted, #7c716a); font-size: 0.85rem; padding-right: 8px;">✕ Xóa tìm</a>
-                @endif
-                <button type="submit" class="cafe-btn cafe-btn-primary">Tìm kiếm</button>
-            </form>
-        </div>
-
-        <!-- Product Grid -->
-        <div class="pos-product-grid">
-            @forelse($products as $product)
-                <article class="pos-product">
-                    <div class="pos-product-art">
-                        @if($product->imageUrl())
-                            <img src="{{ $product->imageUrl() }}" alt="{{ $product->name }}" loading="lazy">
-                        @else
-                            <x-internal.icon name="coffee" size="38"/>
-                        @endif
-                    </div>
-
-                    <span class="pos-product-category">{{ $product->category?->name ?? 'Maison Coffee' }}</span>
-                    <h2>{{ $product->name }}</h2>
-
-                    @if($product->productVariants->isEmpty())
-                        <p style="margin-top: auto; font-size: 0.85rem; color: var(--cafe-text-muted, #7c716a);">Tạm hết hàng</p>
-                    @else
-                        <div style="margin-top: auto; display: grid; gap: 6px;">
-                            @foreach($product->productVariants as $variant)
-                                <form method="POST" action="{{ route('staff.pos.add') }}" class="pos-product-option">
-                                    @csrf
-                                    <input type="hidden" name="variant_id" value="{{ $variant->id }}">
-                                    <span>
-                                        <span>Size {{ $variant->name }}</span>
-                                        <strong style="font-variant-numeric: tabular-nums;">{{ number_format((float)$variant->price, 0, ',', '.') }}đ</strong>
-                                    </span>
-                                    <button type="submit" aria-label="Thêm {{ $product->name }} {{ $variant->name }}">
-                                        + Thêm vào đơn
-                                    </button>
-                                </form>
-                            @endforeach
-                        </div>
-                    @endif
-                </article>
-            @empty
-                <div class="cafe-card" style="grid-column: 1 / -1; padding: 48px; text-align: center; color: var(--cafe-text-muted, #7c716a);">
-                    <x-internal.icon name="coffee" size="44"/>
-                    <p style="margin: 12px 0 4px; font-size: 1.1rem; font-weight: 700; color: var(--cafe-espresso, #3b281f);">Không tìm thấy món phù hợp</p>
-                    <small>Thử tìm với từ khóa khác hoặc kiểm tra lại danh mục sản phẩm trong Admin.</small>
-                </div>
-            @endforelse
-        </div>
-    </section>
-
-    <!-- POS Cart Sidebar -->
-    <aside class="pos-cart">
-        <div class="cafe-card" style="padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h2 style="font-size: 1.15rem; margin: 0; font-weight: 700;">Đơn hiện tại</h2>
-                <span class="cafe-badge cafe-badge--info">Đang tạo</span>
-            </div>
-
-            @forelse($lines as $line)
-                <div class="pos-cart-line">
-                    <div>
-                        <strong>{{ $line['variant']->product->name }}</strong>
-                        <small>{{ $line['variant']->name }} · SL: {{ $line['qty'] }}</small>
-                        <span style="font-variant-numeric: tabular-nums;">{{ number_format($line['priceCents'] * $line['qty'] / 100, 0, ',', '.') }}đ</span>
-                    </div>
-                    <form method="POST" action="{{ route('staff.pos.remove') }}">
-                        @csrf
-                        <input type="hidden" name="variant_id" value="{{ $line['variant']->id }}">
-                        <button type="submit" aria-label="Bỏ {{ $line['variant']->product->name }} khỏi đơn" title="Bỏ món">×</button>
-                    </form>
-                </div>
-            @empty
-                <div class="pos-cart-empty">
-                    <x-internal.icon name="bag" size="38"/>
-                    <p style="margin: 8px 0 2px; font-weight: 700; color: var(--cafe-espresso, #3b281f);">Chưa có món nào</p>
-                    <small style="color: var(--cafe-text-muted, #7c716a);">Chọn món từ thực đơn bên trái để bắt đầu</small>
-                </div>
-            @endforelse
-
-            <div class="pos-total">
-                <span>Tạm tính</span>
-                <strong style="font-variant-numeric: tabular-nums;">{{ number_format($totalCents / 100, 0, ',', '.') }}đ</strong>
-            </div>
-
-            <form method="POST" action="{{ route('staff.pos.checkout') }}" class="pos-checkout">
-                @csrf
-                <input type="hidden" name="submission_key" value="{{ session('pos_intent') }}">
-
-                <div>
-                    <label for="pos-order-type" style="font-weight: 700; font-size: 0.85rem; color: var(--cafe-espresso, #3b281f); margin-bottom: 4px; display: block;">Hình thức phục vụ</label>
-                    <select id="pos-order-type" name="order_type" data-order-type class="cafe-select" style="width: 100%; padding: 8px 12px; border: 1px solid var(--cafe-border, #e9e0d6); border-radius: 6px;">
-                        <option value="takeaway">Mang đi (Takeaway)</option>
-                        <option value="dine_in">Tại bàn (Dine-in)</option>
-                    </select>
-                </div>
-
-                <div data-pos-table hidden>
-                    <label for="pos-table" style="font-weight: 700; font-size: 0.85rem; color: var(--cafe-espresso, #3b281f); margin-bottom: 4px; display: block;">Chọn bàn phục vụ</label>
-                    <select name="table_id" id="pos-table" class="cafe-select" style="width: 100%; padding: 8px 12px; border: 1px solid var(--cafe-border, #e9e0d6); border-radius: 6px;">
-                        <option value="">-- Chọn bàn trống --</option>
-                        @foreach($tables as $table)
-                            <option value="{{ $table->id }}">
-                                {{ $table->table_name ?: $table->table_code }} · {{ $table->capacity }} chỗ
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label for="pos-note" style="font-weight: 700; font-size: 0.85rem; color: var(--cafe-espresso, #3b281f); margin-bottom: 4px; display: block;">Ghi chú pha chế / phục vụ</label>
-                    <textarea id="pos-note" name="note" rows="2" maxlength="500" placeholder="Ghi chú đơn hàng (ví dụ: ít ngọt, không đá...)" style="width: 100%; padding: 8px 12px; border: 1px solid var(--cafe-border, #e9e0d6); border-radius: 6px;"></textarea>
-                </div>
-
-                <button class="cafe-btn cafe-btn-primary" type="submit" @if(!$lines) disabled @endif style="width: 100%; justify-content: center; min-height: 44px; margin-top: 10px;">
-                    Tạo đơn hàng <x-internal.icon name="arrow" size="18" />
-                </button>
-            </form>
-
-            <p style="margin-top: 14px; line-height: 1.4; font-size: 0.78rem; color: var(--cafe-text-muted, #7c716a);">
-                ✧ Đơn hàng được tạo ở trạng thái <code>pending</code>. Barista sẽ bắt đầu pha và hệ thống tự động kiểm tra trừ nguyên liệu kho khi bắt đầu pha.
-            </p>
-        </div>
-    </aside>
+    <section class="pos-catalog"><div class="sneat-card"><form action="{{ route('staff.home') }}" method="GET" class="pos-search"><x-internal.icon name="search" size="18"/><input type="search" name="q" value="{{ $search }}" placeholder="Tìm món trong thực đơn..." maxlength="100"><button type="submit">Tìm</button></form></div>
+    <div class="pos-product-grid">@forelse($products as $product)
+        <article class="pos-product"><div class="pos-product-art">@if($product->imageUrl())<img src="{{ $product->imageUrl() }}" alt="{{ $product->name }}">@else<x-internal.icon name="coffee" size="38"/>@endif</div><span class="pos-product-category">{{ $product->category?->name }}</span><h2>{{ $product->name }}</h2>
+        @if($product->productVariants->isEmpty())<p class="sneat-muted">Tạm hết hàng</p>@else
+        <form method="POST" action="{{ route('staff.pos.add') }}" class="pos-checkout">
+            @csrf
+            <label for="variant-{{ $product->id }}">Kích cỡ</label>
+            <select id="variant-{{ $product->id }}" name="variant_id">
+                @foreach($product->productVariants as $variant)<option value="{{ $variant->id }}">{{ $variant->name }} · {{ $priceLabels[$variant->id] }}</option>@endforeach
+            </select>
+            <label for="quantity-{{ $product->id }}">Số lượng món</label>
+            <input id="quantity-{{ $product->id }}" type="number" name="quantity" min="1" max="2147483647" value="1" required>
+            @if($toppings->isNotEmpty())
+                <details><summary>Chọn topping</summary>
+                    <p class="sneat-hint">Nhập tổng số phần topping cho dòng món này; 0 là không chọn.</p>
+                    @foreach($toppings as $topping)
+                        <label for="topping-{{ $product->id }}-{{ $topping->id }}">{{ $topping->name }} · {{ $toppingPriceLabels[$topping->id] }}</label>
+                        <input id="topping-{{ $product->id }}-{{ $topping->id }}" type="number" name="toppings[{{ $topping->id }}]" min="0" max="2147483647" value="0">
+                    @endforeach
+                </details>
+            @endif
+            <label for="item-note-{{ $product->id }}">Ghi chú món</label>
+            <input id="item-note-{{ $product->id }}" name="note" maxlength="500" placeholder="Ít đá, ít đường...">
+            <button type="submit" class="sneat-primary">Thêm {{ $product->name }}</button>
+        </form>
+        @endif</article>
+    @empty<div class="sneat-card sneat-empty">Không có món phù hợp. Hãy kiểm tra sản phẩm trong Admin.</div>@endforelse</div></section>
+    <aside class="pos-cart"><div class="sneat-card"><div class="sneat-card-heading"><h2>Đơn hiện tại</h2><span class="sneat-pill is-info">Đang tạo</span></div>
+    @forelse($quote['items'] as $line)
+        <div class="pos-cart-line"><div>
+            <strong>{{ $line['name'] }}</strong><small>{{ $line['variant_name'] }} · SL: {{ $line['quantity'] }}</small>
+            @foreach($line['toppings'] as $topping)<small>+ {{ $topping['name'] }} × {{ $topping['quantity'] }} · {{ $topping['amount_label'] }}</small>@endforeach
+            @if($line['note'])<small>{{ $line['note'] }}</small>@endif
+            @if($line['available'])<strong>{{ $line['subtotal_label'] }}</strong>@else<p role="alert">{{ $line['error'] }}</p>@endif
+        </div><form method="POST" action="{{ route('staff.pos.remove') }}">@csrf<input type="hidden" name="line_id" value="{{ $line['id'] }}"><button aria-label="Bỏ {{ $line['name'] }} khỏi đơn" title="Bỏ món">×</button></form></div>
+    @empty<div class="pos-cart-empty"><x-internal.icon name="bag" size="38"/><p>Chưa có món nào</p><small>Chọn món từ thực đơn để bắt đầu</small></div>@endforelse
+    <div class="pos-total"><span>Tổng cần nhận</span><strong>{{ $quote['subtotal_label'] ?? 'Cần kiểm tra lại món' }}</strong></div>
+    <form method="POST" action="{{ route('staff.pos.checkout') }}" class="pos-checkout">
+        @csrf<input type="hidden" name="checkout_key" value="{{ $attempt['key'] ?? '' }}">
+        <label for="pos-order-type">Hình thức</label>
+        <select id="pos-order-type" name="order_type" data-order-type><option value="takeaway" @selected(old('order_type') === 'takeaway')>Mang đi</option><option value="dine_in" @selected(old('order_type') === 'dine_in')>Tại bàn</option></select>
+        <div data-pos-table><label for="pos-table">Bàn trống (chỉ dùng cho tại bàn)</label><select name="table_id" id="pos-table"><option value="">-- Chọn bàn --</option>@foreach($tables as $table)<option value="{{ $table->id }}" @selected((string) old('table_id') === (string) $table->id)>{{ $table->table_name ?: $table->table_code }} · {{ $table->capacity }} chỗ</option>@endforeach</select></div>
+        <label for="pos-note">Ghi chú đơn</label><textarea id="pos-note" name="note" rows="2" maxlength="500">{{ old('note') }}</textarea>
+        <label for="pos-payment-method">Phương thức thực nhận</label><select id="pos-payment-method" name="payment_method"><option value="cash" @selected(old('payment_method') === 'cash')>Tiền mặt</option><option value="bank_transfer" @selected(old('payment_method') === 'bank_transfer')>Chuyển khoản</option></select>
+        <label for="pos-transaction-code">Mã giao dịch chuyển khoản (không bắt buộc)</label><input id="pos-transaction-code" name="transaction_code" maxlength="100" value="{{ old('transaction_code') }}">
+        <label for="pos-received-amount">Tiền khách đưa khi trả tiền mặt (VND)</label><input id="pos-received-amount" name="received_amount" inputmode="decimal" value="{{ old('received_amount') }}" placeholder="Để trống khi nhận đúng tổng tiền">
+        <label><input type="checkbox" name="received_confirmation" value="1" required> Tôi đã kiểm tra và nhận đủ {{ $quote['subtotal_label'] ?? 'tiền' }} thực tế.</label>
+        <button class="sneat-primary" type="submit" @disabled(!$quote['items'] || $quote['subtotal'] === null)>Ghi nhận thu tiền &amp; chuẩn bị món</button>
+    </form>
+    <p class="sneat-hint">Nếu lưu đơn gặp lỗi sau khi đã nhận tiền, kiểm tra giao dịch trước khi thử lại cùng phiên; không thu tiền lần hai.</p></div></aside>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const orderTypeSelect = document.querySelector('[data-order-type]');
-    const tableContainer = document.querySelector('[data-pos-table]');
-    if (!orderTypeSelect || !tableContainer) return;
-
-    function syncTableVisibility() {
-        const isDineIn = orderTypeSelect.value === 'dine_in';
-        tableContainer.hidden = !isDineIn;
-        const select = tableContainer.querySelector('select');
-        if (select) {
-            select.required = isDineIn;
-            if (!isDineIn) select.value = '';
-        }
-    }
-
-    orderTypeSelect.addEventListener('change', syncTableVisibility);
-    syncTableVisibility();
-});
-</script>
 @endsection

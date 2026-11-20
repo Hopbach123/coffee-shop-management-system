@@ -106,9 +106,10 @@ class CafeTableIntegrationTest extends TestCase
     public function test_route_matrix_and_rendered_action_targets_match_approved_status_policy(): void
     {
         $routes = collect(Route::getRoutes()->getRoutes())->filter(fn ($route) => str_starts_with($route->uri(), 'admin/tables'));
-        $this->assertCount(7, $routes);
-        $this->assertCount(7, $routes->map(fn ($route) => $route->getName())->unique());
-        $this->assertCount(7, $routes->map(fn ($route) => implode('|', $route->methods()).' '.$route->uri())->unique());
+        // Seven existing CRUD/status routes plus the read-only table detail route.
+        $this->assertCount(8, $routes);
+        $this->assertCount(8, $routes->map(fn ($route) => $route->getName())->unique());
+        $this->assertCount(8, $routes->map(fn ($route) => implode('|', $route->methods()).' '.$route->uri())->unique());
         foreach ($routes as $route) {
             $this->assertContains('auth:web', $route->gatherMiddleware());
             $this->assertContains('role:admin', $route->gatherMiddleware());

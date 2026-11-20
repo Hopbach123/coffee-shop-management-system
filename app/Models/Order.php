@@ -27,6 +27,7 @@ class Order extends BaseOrder
             'discount_amount' => 'decimal:2',
             'tax_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
+            'delivery_fee' => 'decimal:2',
             'ordered_at' => 'datetime',
             'completed_at' => 'datetime',
         ];
@@ -128,5 +129,10 @@ class Order extends BaseOrder
 
         return $this->orderItems->isNotEmpty()
             && $this->orderItems->every(fn (OrderItem $item) => $item->status === 'served');
+    }
+
+    public function customerRequest(): HasOne
+    {
+        return $this->hasOne(CustomerOrderRequest::class, 'order_id');
     }
 }

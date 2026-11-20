@@ -1,0 +1,51 @@
+.checkout-summary { display:grid; gap:var(--space-md); min-width:0; }
+.checkout-layout { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:var(--space-md); align-items:start; }
+.checkout-actions { display:flex; flex-wrap:wrap; gap:var(--space-sm); }
+.checkout-summary .coffee-button,.estimate-print .coffee-button { min-height:48px; white-space:normal; }
+.checkout-summary h2,.estimate-print h2 { font-size:1.2rem; }
+.checkout-payment-record { padding-block:var(--space-sm); border-top:1px solid var(--coffee-border); overflow-wrap:anywhere; }
+.estimate-table-wrap { width:100%; overflow-x:auto; }
+.estimate-items { width:100%; border-collapse:collapse; font-size:.875rem; }
+.estimate-items caption { text-align:left; margin-block:var(--space-sm); }
+.estimate-items th,.estimate-items td { padding:var(--space-sm); border-bottom:1px solid var(--coffee-border); text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+.estimate-items th span,.estimate-items th small { display:block; font-weight:400; }
+.estimate-amounts { display:grid; gap:var(--space-sm); margin-top:var(--space-md); }
+.estimate-amounts>div { display:flex; justify-content:space-between; gap:var(--space-md); flex-wrap:wrap; }
+.estimate-amounts dd { margin:0; overflow-wrap:anywhere; }
+.estimate-total { font-weight:700; font-size:1.15rem; border-top:1px solid var(--coffee-border); padding-top:var(--space-md); }
+.checkout-summary .estimate-total { padding:var(--space-md); border:2px solid var(--coffee-espresso); border-radius:var(--radius-sm); background:var(--coffee-surface-alt); }
+.checkout-summary .estimate-total dd { font-size:clamp(1.25rem,2vw,1.75rem); font-variant-numeric:tabular-nums; color:var(--coffee-text); }
+.checkout-summary .estimate-items { table-layout:fixed; }
+.checkout-summary .estimate-items th:first-child { width:36%; }
+.checkout-readiness { border-inline-start:4px solid var(--coffee-border); }
+.checkout-readiness dd { margin:0 0 var(--space-sm); font-weight:600; }
+.estimate-print { background:var(--coffee-surface); background-image:none; }
+.estimate-print h1 { font-size:1.8rem; }
+.estimate-paper { max-width:58rem; margin:auto; padding:var(--space-md); overflow-wrap:anywhere; }
+.estimate-controls { display:flex; gap:var(--space-sm); flex-wrap:wrap; align-items:center; }
+.estimate-disclaimer { font-weight:700; border:1px solid currentColor; padding:var(--space-sm); }
+.checkout-summary a:focus-visible,.estimate-print a:focus-visible,.estimate-print button:focus-visible { outline:3px solid var(--coffee-focus); outline-offset:3px; }
+@media(max-width:62rem) { .checkout-layout { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:36rem) { .estimate-items th,.estimate-items td { padding:.35rem; } .checkout-actions .coffee-button { flex:1 1 100%; } }
+@media screen and (max-width:48rem) {
+    .estimate-items,.estimate-items tbody,.estimate-items tr,.estimate-items th,.estimate-items td { display:block; }
+    .estimate-items caption { display:block; width:100%; }
+    .estimate-items thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+    .estimate-items tbody { display:grid; gap:var(--space-md); }
+    .estimate-items tr { border:1px solid var(--coffee-border); border-radius:var(--radius-sm); padding:var(--space-sm); }
+    .estimate-items th:first-child,.checkout-summary .estimate-items th:first-child { width:100%; }
+    .estimate-items td { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--space-sm); }
+    .estimate-items td::before { content:attr(data-label); font-weight:600; }
+    .estimate-items tr>:last-child { border-bottom:0; }
+    .estimate-amounts>div { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-xs); }
+}
+@media print {
+    body.estimate-print { min-width:0; background:white; color:black; font-size:10pt; }
+    .estimate-print .estimate-controls { display:none !important; }
+    .estimate-print .estimate-paper { max-width:none; margin:0; padding:0; }
+    .estimate-print .estimate-table-wrap { overflow:visible; }
+    .estimate-print .estimate-items { table-layout:fixed; font-size:9pt; }
+    .estimate-print .estimate-items th:first-child { width:40%; }
+    .estimate-print .estimate-items thead { display:table-header-group; }
+    .estimate-print .estimate-items tr,.estimate-print .estimate-amounts { break-inside:avoid; }
+}

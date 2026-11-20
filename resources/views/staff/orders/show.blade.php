@@ -3,6 +3,14 @@
 @section('title', 'Chi tiết đơn hàng #' . $order->order_code)
 
 @section('content')
+<div class="v5-actions">
+    @if($order->order_type === 'dine_in' && $order->table_id)
+        <a class="cafe-btn-secondary" href="{{ route('staff.table-checkout.show', [$order->table_id, $order->id]) }}">Xem tạm tính</a>
+        @if($canEdit)<a class="cafe-btn-secondary" href="{{ route('staff.table-order.index', [$order->table_id, $order->id]) }}">Gọi món tại bàn</a>@endif
+    @endif
+    <a class="cafe-btn-secondary" href="{{ route('staff.orders.payments.show', $order) }}">Thanh toán / Lịch sử</a>
+    @if($isWebDelivery)<a class="cafe-btn-secondary" href="{{ route('staff.customer-orders.show', $order->customerRequest) }}">Giao món / Thu COD</a>@endif
+</div>
 @if($order->onlineOrderRequest?->pickup_at)
     <div style="background: #fef5e7; border: 1px solid #f9e79f; border-left: 4px solid var(--cafe-caramel, #ad754b); border-radius: 9px; padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
         <span style="font-size: 0.95rem; color: #7d4e07; font-weight: 600;">
@@ -202,11 +210,23 @@
                             </span>
                             @if($order->status === 'pending' && auth('web')->user()?->canOperateSales())
                                 <div style="margin-top: 6px; display: flex; gap: 4px; justify-content: center; align-items: center; flex-wrap: wrap;">
-                                    @if($item->status === 'pending')
+                                    @if($canEdit && $item->status === 'pending')
+                                        <form method="POST" action="{{ route('staff.orders.items.update', [$order, $item]) }}">
+                                            @csrf @method('PATCH')
+                                            <label for="item-quantity-{{ $item->id }}">Số lượng</label>
+                                            <input id="item-quantity-{{ $item->id }}" name="quantity" type="number" min="1" max="2147483647" value="{{ $item->quantity }}" required>
+                                            <button type="submit" class="cafe-btn-secondary">Cập nhật</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('staff.orders.items.destroy', [$order, $item]) }}" onsubmit="return confirm('Xóa món chưa pha khỏi đơn?');">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="cafe-btn-danger">Xóa món</button>
+                                        </form>
+                                    @endif
+                                    @if($item->status === 'pending' && $canStartPreparing)
                                         <form method="POST" action="{{ route('staff.orders.items.status.update', [$order, $item]) }}">
                                             @csrf @method('PATCH')
                                             <input type="hidden" name="status" value="preparing">
-                                            <button type="submit" class="cafe-btn cafe-btn-primary" style="min-height: 28px; padding: 0 10px; font-size: 0.75rem;">Pha</button>
+                                            <button type="submit" class="cafe-btn cafe-btn-primary" style="min-height: 28px; padding: 0 10px; font-size: 0.75rem;">Bắt đầu pha chế</button>
                                         </form>
                                     @elseif($item->status === 'preparing')
                                         <form method="POST" action="{{ route('staff.orders.items.status.update', [$order, $item]) }}">
@@ -214,7 +234,7 @@
                                             <input type="hidden" name="status" value="ready">
                                             <button type="submit" class="cafe-btn cafe-btn-primary" style="min-height: 28px; padding: 0 10px; font-size: 0.75rem; background: var(--cafe-success, #2c7550); border-color: var(--cafe-success, #2c7550);">Xong</button>
                                         </form>
-                                    @elseif($item->status === 'ready')
+                                    @elseif($item->status === 'ready' && !$isWebDelivery)
                                         <form method="POST" action="{{ route('staff.orders.items.status.update', [$order, $item]) }}" style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
                                             @csrf @method('PATCH')
                                             <input type="hidden" name="status" value="served">
@@ -294,7 +314,7 @@
         </div>
     @endif
 
-    @if($order->status === 'pending' && ! $order->isPaidInFull() && auth('web')->user()?->canOperateSales())
+    @if(!$isWebDelivery && $order->status === 'pending' && ! $order->isPaidInFull() && auth('web')->user()?->canOperateSales())
         <div style="margin-top: 18px; padding: 18px; background: var(--cafe-surface-alt, #fcf8f2); border: 1px solid var(--cafe-border, #e9e0d6); border-radius: 9px;">
             <h3 style="margin-top: 0; font-size: 1.05rem; color: var(--cafe-espresso, #3b281f);">💵 Ghi nhận thu tiền tại quầy / Đối soát ngân hàng</h3>
             @if($paymentSchemaReady)
@@ -338,4 +358,29 @@
         <strong>Quy định vận hành:</strong> Dữ liệu thanh toán được đọc trung thực từ bảng <code>payments</code> trong cơ sở dữ liệu. Thu đủ tiền là điều kiện bắt buộc cùng với phục vụ đủ món để hoàn tất đơn hàng.
     </p>
 </section>
+
+        @if ($canEdit && $order->orderItems->isNotEmpty())
+            <section class="category-panel order-detail__toppings" aria-labelledby="toppings-title">
+                <div class="order-detail__section-heading"><div><p class="section-heading__eyebrow">Tùy chọn món</p><h2 id="toppings-title">Topping</h2></div><span>Thêm hoặc xóa theo từng món</span></div>
+                <div class="order-detail__topping-grid">@foreach ($order->orderItems as $item)@if ($item->status === 'pending')<article class="order-detail__topping-card">
+                    <header><h3>{{ $item->product_name }}</h3><p>{{ $item->variant_name ?: 'Phiên bản tiêu chuẩn' }}</p></header>
+                    <p>Tổng topping: <x-public.money :amount="$item->topping_amount" /></p>
+                    @if ($item->orderItemToppings->isEmpty())<p class="order-detail__empty-topping">Chưa có topping.</p>@else<ul class="order-detail__topping-list">@foreach ($item->orderItemToppings as $itemTopping)<li><span>{{ $itemTopping->topping_name }} <small><x-public.money :amount="$itemTopping->price" /> / phần</small></span><div><strong>{{ $itemTopping->quantity }} phần</strong><form method="POST" action="{{ route('staff.orders.items.toppings.update', [$order, $item, $itemTopping]) }}">@csrf @method('PATCH')<label class="sr-only" for="topping-line-quantity-{{ $itemTopping->id }}">Số lượng {{ $itemTopping->topping_name }}</label><input id="topping-line-quantity-{{ $itemTopping->id }}" name="quantity" type="number" min="1" max="2147483647" step="1" value="{{ $itemTopping->quantity }}" required><button type="submit">Lưu</button></form><form method="POST" action="{{ route('staff.orders.items.toppings.destroy', [$order, $item, $itemTopping]) }}">@csrf @method('DELETE')<button type="submit">Xóa</button></form></div></li>@endforeach</ul>@endif
+                    @if ($toppings->isNotEmpty())<form method="POST" action="{{ route('staff.orders.items.toppings.store', [$order, $item]) }}" class="order-detail__topping-form">@csrf<label class="sr-only" for="topping_id-{{ $item->id }}">Chọn topping cho {{ $item->product_name }}</label><select id="topping_id-{{ $item->id }}" name="topping_id" required><option value="">Chọn topping</option>@foreach ($toppings as $topping)<option value="{{ $topping->id }}">{{ $topping->name }} · <x-public.money :amount="$topping->price" /></option>@endforeach</select><label class="sr-only" for="topping-quantity-{{ $item->id }}">Số lượng topping</label><input id="topping-quantity-{{ $item->id }}" name="quantity" type="number" min="1" max="2147483647" step="1" value="1" required><x-public.button type="submit" variant="outline">Thêm</x-public.button></form>@else<p class="category-notice category-notice--error" role="alert">Chưa có topping đang bán.</p>@endif
+                </article>@endif @endforeach</div>
+            </section>
+        @endif
+
+        @if ($canEdit)
+            <section class="category-panel order-detail__add-item" aria-labelledby="add-item-title">
+                <div class="order-detail__section-heading"><div><p class="section-heading__eyebrow">Thao tác nhanh</p><h2 id="add-item-title">Thêm món vào đơn</h2></div></div>
+                @if ($variants->isEmpty())<p class="category-notice category-notice--error" role="alert">Chưa có biến thể sản phẩm đang bán.</p>@else<form method="POST" action="{{ route('staff.orders.items.store', $order) }}" class="order-detail__add-form">@csrf
+                    <div class="category-field"><label for="variant_id">Sản phẩm và biến thể</label><select id="variant_id" name="variant_id" required><option value="">Chọn món</option>@foreach ($variants as $variant)<option value="{{ $variant->id }}" @selected((string) old('variant_id') === (string) $variant->id)>{{ $variant->product?->name }} · {{ $variant->name }} · <x-public.money :amount="$variant->price" /></option>@endforeach</select></div>
+                    <div class="category-field"><label for="quantity">Số lượng</label><input id="quantity" name="quantity" type="number" min="1" max="2147483647" step="1" value="{{ old('quantity', 1) }}" required></div>
+                    <div class="category-field"><label for="item_note">Ghi chú món</label><input id="item_note" name="note" type="text" maxlength="500" value="{{ old('note') }}"></div>
+                    <div class="order-detail__add-action"><x-public.button type="submit">Thêm món</x-public.button></div>
+                </form>@endif
+            </section>
+        @endif
+
 @endsection

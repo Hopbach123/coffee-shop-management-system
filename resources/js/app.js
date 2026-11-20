@@ -1,5 +1,12 @@
 import { initializeMenuSearch } from './public/menu-search.js';
 import { initializeCatalogView } from './admin/catalog-view.js';
+import { initializeTableMenu } from './staff/table-menu.js';
+import { initializeEstimatePrint } from './staff/estimate-print.js';
+import { initializeStatusRefresh } from './admin/table-status.js';
+
+initializeTableMenu();
+initializeEstimatePrint();
+initializeStatusRefresh();
 
 const navToggle = document.querySelector('[data-nav-toggle]');
 const navMenu = document.querySelector('[data-nav-menu]');

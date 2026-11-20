@@ -1634,8 +1634,7 @@
     font-weight: 500;
 }
 
-/* ==========================================================================
-   MAISON DU CAFÉ — WARM EDITORIAL COFFEE DESIGN SYSTEM (MASTER SPEC)
+/* ===================================================================   MAISON DU CAFÉ — WARM EDITORIAL COFFEE DESIGN SYSTEM (MASTER SPEC)
    Matching Official High-Fidelity UI Mockups
    ========================================================================== */
 
@@ -2426,3 +2425,5 @@
     .sneat-topbar-right { flex-wrap: wrap; }
     .sneat-user-pill { max-width: 100%; }
 }
+@media(max-width:1024px){.sneat-chart-grid{grid-template-columns:1fr}}@media(max-width:480px){.sneat-chart-bars{height:190px;gap:4px}.sneat-chart-column>span{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.sneat-chart-bar{transition:none}}

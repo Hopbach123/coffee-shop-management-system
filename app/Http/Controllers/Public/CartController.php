@@ -23,10 +23,10 @@ class CartController extends Controller
     public function index(Request $request): View
     {
         try {
-            return view('public.cart.index', ['cart' => $this->cartDetails($request)]);
+            return view('public.cart.pickup-index', ['cart' => $this->cartDetails($request)]);
         } catch (ValidationException $exception) {
             // Keep invalid choices visible/removable instead of dropping them or redirect-looping.
-            return view('public.cart.index', [
+            return view('public.cart.pickup-index', [
                 'cart' => ['items' => [], 'total_cents' => 0],
                 'invalidLines' => $request->session()->get('customer_cart', []),
                 'cartIssue' => collect($exception->errors())->flatten()->first(),
@@ -81,7 +81,7 @@ class CartController extends Controller
         $request->session()->put('checkout_intent', ['key' => bin2hex(random_bytes(32)), 'token' => bin2hex(random_bytes(32))]);
         $request->session()->forget('quoted_cart_lines');
 
-        return redirect()->route('cart.index')->with('success', 'Đã thêm món vào giỏ hàng.');
+        return redirect()->route('pickup.cart.index')->with('success', 'Đã thêm món vào giỏ hàng.');
     }
 
     public function update(Request $request): RedirectResponse
@@ -122,7 +122,7 @@ class CartController extends Controller
         $request->session()->put('checkout_intent', ['key' => bin2hex(random_bytes(32)), 'token' => bin2hex(random_bytes(32))]);
         $request->session()->forget('quoted_cart_lines');
 
-        return redirect()->route('cart.index');
+        return redirect()->route('pickup.cart.index');
     }
 
     public function checkout(Request $request): View

@@ -34,8 +34,8 @@
             </div>
 
             <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
-                @if(\Illuminate\Support\Facades\Route::has('orders.track'))
-                    <a href="{{ route('orders.track', ['code' => $orderRequest->reference]) }}" class="coffee-button coffee-button--primary" style="background: #AD764C; color: #ffffff; border-radius: 9999px; padding: 11px 26px; text-decoration: none; font-weight: 600;">
+                @if($orderRequest instanceof \App\Models\OnlineOrderRequest && session('last_tracking_token'))
+                    <a href="{{ route('orders.track', ['token' => session('last_tracking_token')]) }}" class="coffee-button coffee-button--primary" style="background: #AD764C; color: #ffffff; border-radius: 9999px; padding: 11px 26px; text-decoration: none; font-weight: 600;">
                         Tra cứu đơn hàng ↗
                     </a>
                 @endif

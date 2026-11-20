@@ -33,7 +33,7 @@ class OrderController extends Controller
         $this->assertActiveStaff($request);
 
         $orders = Order::query()
-            ->with(['cafeTable:id,table_code,table_name', 'customer:id,name,phone', 'creator:id,name'])
+            ->with(['cafeTable:id,table_code,table_name', 'customer:id,name,phone', 'creator:id,name', 'customerRequest'])
             ->orderByDesc('ordered_at')
             ->orderByDesc('id')
             ->paginate(15);
@@ -77,9 +77,12 @@ class OrderController extends Controller
     {
         $this->assertActiveStaff($request);
         $order->load([
-            'cafeTable:id,table_code,table_name',
+            'cafeTable:id,area_id,table_code,table_name',
+            'cafeTable.area:id,name',
             'customer:id,name,phone',
             'creator:id,name',
+            'customerRequest',
+            'payments',
             'orderItems' => fn ($query) => $query->with('orderItemToppings')->orderBy('id'),
         ]);
 
@@ -107,11 +110,14 @@ class OrderController extends Controller
             $request->session()->put('payment_operation.'.$order->id, $paymentOperation);
         }
 
-        $canCancel = $order->status === 'pending'
-            && ! $order->payments->contains('status', 'paid')
+        $paid = $order->payments->contains('status', 'paid');
+        $isWebDelivery = $order->customerRequest !== null;
+        $canEdit = $order->status === 'pending' && ! $paid && ! $isWebDelivery;
+        $canStartPreparing = ! ($order->customerRequest?->payment_option === 'bank_transfer_prepaid' && ! $paid);
+        $canCancel = $order->status === 'pending' && ! $paid
             && $order->orderItems->every(fn (OrderItem $item): bool => $item->status === 'pending');
 
-        return view('staff.orders.show', compact('order', 'variants', 'toppings', 'canCancel', 'paymentsAvailable', 'paymentSchemaReady', 'paymentOperation'));
+        return view('staff.orders.show', compact('order', 'variants', 'toppings', 'canCancel', 'canEdit', 'canStartPreparing', 'isWebDelivery', 'paymentsAvailable', 'paymentSchemaReady', 'paymentOperation'));
     }
 
     public function cancel(Request $request, Order $order, OrderService $service): RedirectResponse

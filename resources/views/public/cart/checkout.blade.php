@@ -147,7 +147,7 @@
                 </button>
 
                 <div style="text-align: center; margin-top: 14px;">
-                    <a href="{{ route('cart.index') }}" class="commerce-secondary" style="color: var(--coffee-text-muted); font-size: 0.88rem;">
+                    <a href="{{ route('pickup.cart.index') }}" class="commerce-secondary" style="color: var(--coffee-text-muted); font-size: 0.88rem;">
                         ← Quay lại giỏ hàng
                     </a>
                 </div>

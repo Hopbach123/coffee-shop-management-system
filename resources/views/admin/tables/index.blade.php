@@ -1,6 +1,7 @@
 @extends('layouts.internal')
 @section('title', 'Quản lý bàn')
 @section('content')
+<a class="cafe-btn-secondary" href="{{ route('admin.tables.index', ['view' => 'floor']) }}">Sơ đồ bàn trực tiếp</a>
 <div class="cafe-page-header">
     <div>
         <nav class="cafe-breadcrumbs" aria-label="Điều hướng"><span>Quản trị</span><span>Bàn</span></nav>

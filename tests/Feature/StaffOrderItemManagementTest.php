@@ -44,13 +44,6 @@ class StaffOrderItemManagementTest extends TestCase
             $table->unique(['product_id', 'name']);
         });
 
-        Schema::create('payments', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('order_id');
-            $table->decimal('amount', 15, 2);
-            $table->string('status');
-        });
-
         Schema::create('orders', function (Blueprint $table): void {
             $table->id();
             $table->string('order_code', 50)->unique();
@@ -67,6 +60,17 @@ class StaffOrderItemManagementTest extends TestCase
             $table->text('note')->nullable();
             $table->dateTime('ordered_at');
             $table->dateTime('completed_at')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('payments', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('order_id')->constrained('orders');
+            $table->string('payment_code')->unique();
+            $table->string('payment_method');
+            $table->dateTime('paid_at')->nullable();
+            $table->decimal('amount', 15, 2);
+            $table->string('status');
+            $table->foreignId('created_by')->constrained('users');
             $table->timestamps();
         });
 
@@ -120,6 +124,7 @@ class StaffOrderItemManagementTest extends TestCase
             $table->timestamps();
         });
 
+        (require database_path('migrations/2026_10_27_000003_create_customer_order_requests_tables.php'))->up();
         $this->withoutVite();
     }
 
@@ -322,7 +327,7 @@ class StaffOrderItemManagementTest extends TestCase
         $line = $item->orderItemToppings()->firstOrFail();
         $this->patch(route('staff.orders.items.toppings.update', [$order, $item, $line]), ['quantity' => 2])->assertSessionHasNoErrors();
         $this->delete(route('staff.orders.items.toppings.destroy', [$order, $item, $line]))->assertSessionHasNoErrors();
-        DB::table('payments')->insert(['order_id' => $order->id, 'amount' => $order->fresh()->total_amount, 'status' => 'paid']);
+        DB::table('payments')->insert(['order_id' => $order->id, 'amount' => $order->fresh()->total_amount, 'status' => 'paid', 'payment_code' => uniqid('fixture-'), 'payment_method' => 'cash', 'created_by' => $order->user_id]);
         foreach (['preparing', 'ready', 'served'] as $status) {
             $this->patch(route('staff.orders.items.status.update', [$order, $item]), ['status' => $status])->assertSessionHasNoErrors();
             $this->assertSame($status, $item->fresh()->status);
@@ -729,6 +734,20 @@ class StaffOrderItemManagementTest extends TestCase
         $this->get(route('staff.brewing.index'))->assertOk()->assertSee('Pha xong')->assertDontSee('Bắt đầu pha</button>', false);
     }
 
+    public function test_active_admin_can_prepare_an_item_using_the_same_inventory_workflow(): void
+    {
+        $admin = $this->staff('active', 'admin');
+        $order = $this->order($admin);
+        $item = $this->item($order, $this->sellableVariant());
+        $ingredient = $this->ingredient('4.000');
+        $this->recipe($item, $ingredient, '1.000');
+        $this->actingAs($admin, 'web')->patch(route('staff.orders.items.status.update', [$order, $item]), ['status' => 'preparing'])
+            ->assertRedirect(route('staff.orders.show', $order));
+        $this->assertSame('preparing', $item->fresh()->status);
+        $this->assertSame('3.000', $ingredient->fresh()->current_stock);
+        $this->assertDatabaseCount('inventory_transactions', 1);
+    }
+
     public function test_insufficient_stock_rolls_back_pending_to_preparing_transition(): void
     {
         $staff = $this->staff();
@@ -759,9 +778,9 @@ class StaffOrderItemManagementTest extends TestCase
         $this->patch($route, ['status' => 'preparing'])->assertRedirect(route('staff.orders.show', $order));
         $this->patch($route, ['status' => 'ready'])->assertRedirect(route('staff.orders.show', $order));
         $order->forceFill(['subtotal' => $item->subtotal, 'total_amount' => $item->subtotal])->saveOrFail();
-        DB::table('payments')->insert(['order_id' => $order->id, 'amount' => $order->fresh()->total_amount, 'status' => 'paid']);
+        DB::table('payments')->insert(['order_id' => $order->id, 'amount' => $order->fresh()->total_amount, 'status' => 'paid', 'payment_code' => uniqid('fixture-'), 'payment_method' => 'cash', 'created_by' => $order->user_id]);
         $this->patch($route, ['status' => 'served'])->assertRedirect(route('staff.orders.show', $order));
-        $this->patchJson($route, ['status' => 'preparing'])->assertUnprocessable()->assertJsonValidationErrors('order_item');
+        $this->patchJson($route, ['status' => 'preparing'])->assertUnprocessable()->assertJsonValidationErrors('order');
 
         $this->assertSame('served', $item->fresh()->status);
         $this->assertSame('3.000', $ingredient->fresh()->current_stock);

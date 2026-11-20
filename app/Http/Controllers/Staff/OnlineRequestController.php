@@ -27,7 +27,7 @@ class OnlineRequestController extends Controller
         $requests = $available ? DB::table('online_order_requests')
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['purchase_type'] ?? null, fn ($query, $type) => $query->where('purchase_type', $type))
-            ->select(['id', 'request_code', 'purchase_type', 'contact_name', 'pickup_at', 'status', 'payment_preference', 'payment_timing', 'created_at'])
+            ->select(['id', 'request_code', 'purchase_type', 'contact_name', 'contact_phone', 'pickup_at', 'status', 'payment_preference', 'payment_timing', 'created_at'])
             ->orderByDesc('created_at')->orderByDesc('id')->paginate(15)->withQueryString() : null;
 
         return view('staff.online-requests.index', compact('requests', 'available', 'filters'));

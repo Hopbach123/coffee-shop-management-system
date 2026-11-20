@@ -38,7 +38,8 @@ class PromotionService
             $discount = $this->calculateDiscount($promotion, $lockedOrder->subtotal);
             $discountCents = $this->cents($discount);
             $totalCents = $this->cents($lockedOrder->subtotal) - $discountCents
-                + $this->cents($lockedOrder->tax_amount);
+                + $this->cents($lockedOrder->tax_amount)
+                + $this->cents($lockedOrder->getRawOriginal('delivery_fee') ?? '0.00');
 
             $snapshot = new OrderPromotion;
             $snapshot->order_id = $lockedOrder->getKey();
@@ -155,6 +156,12 @@ class PromotionService
     {
         if ($order->status !== 'pending') {
             throw new DomainException('Đơn không còn ở trạng thái có thể áp dụng khuyến mãi.');
+        }
+        if ($order->payments()->where('status', 'paid')->exists()) {
+            throw new DomainException('Đơn đã thanh toán, không thể thay đổi khuyến mãi.');
+        }
+        if ($order->customerRequest()->exists()) {
+            throw new DomainException('Đơn web đã chốt giá với khách, không thể thay đổi khuyến mãi.');
         }
         if ($order->orderPromotion()->exists()) {
             throw new DomainException('Đơn đã có khuyến mãi.');

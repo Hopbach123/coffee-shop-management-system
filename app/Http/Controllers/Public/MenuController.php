@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Topping;
+use App\Services\CustomerCartService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
@@ -55,7 +56,7 @@ class MenuController extends Controller
         return view('public.menu._search-results', compact('categories', 'query', 'products'));
     }
 
-    public function show(Product $product): View
+    public function show(Product $product, CustomerCartService $cart): View
     {
         $category = Category::query()->whereKey($product->category_id)->where('status', 'active')->firstOrFail();
         $product->setRelation('category', $category);
@@ -64,6 +65,13 @@ class MenuController extends Controller
             ? Topping::query()->where('status', 'available')->orderBy('name')->get()
             : collect();
 
-        return view('public.menu.show', compact('product', 'toppings'));
+        $cartVariants = $product->productVariants->where('status', 'available')->map(fn ($variant) => [
+            'id' => $variant->id, 'name' => $variant->name, 'price_label' => $cart->formatPrice($variant->price),
+        ]);
+        $cartToppings = Topping::query()->where('status', 'available')->orderBy('name')->orderBy('id')->get()
+            ->map(fn (Topping $topping) => ['id' => $topping->id, 'name' => $topping->name,
+                'price_label' => $cart->formatPrice($topping->price)]);
+
+        return view('public.menu.show', compact('product', 'toppings', 'cartVariants', 'cartToppings'));
     }
 }

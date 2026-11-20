@@ -27,8 +27,13 @@ return new class extends Migration
         Schema::table('payments', function (Blueprint $table): void {
             $table->string('operation_key', 64)->nullable()->unique();
             $table->char('payload_hash', 64)->nullable();
-            $table->decimal('received_amount', 15, 2)->nullable();
-            $table->decimal('change_amount', 15, 2)->nullable();
+            // Finance may already be deployed before this Sales branch is integrated.
+            if (! Schema::hasColumn('payments', 'received_amount')) {
+                $table->decimal('received_amount', 15, 2)->nullable();
+            }
+            if (! Schema::hasColumn('payments', 'change_amount')) {
+                $table->decimal('change_amount', 15, 2)->nullable();
+            }
             // Canonical bank reference is reserved permanently, including failed/refunded history.
             $table->char('bank_reference_key', 64)->nullable()->unique();
             $table->unsignedBigInteger('paid_order_key')->nullable()
@@ -48,7 +53,10 @@ return new class extends Migration
             $table->dropUnique(['operation_key']);
             $table->dropUnique(['bank_reference_key']);
             $table->dropUnique(['paid_order_key']);
-            $table->dropColumn(['operation_key', 'payload_hash', 'received_amount', 'change_amount', 'bank_reference_key', 'paid_order_key']);
+            $table->dropColumn(['operation_key', 'payload_hash', 'bank_reference_key', 'paid_order_key']);
+            if (! Schema::hasColumn('payments', 'operation_key_hash')) {
+                $table->dropColumn(['received_amount', 'change_amount']);
+            }
         });
     }
 };

@@ -113,6 +113,7 @@ class InternalWorkspaceFlowTest extends TestCase
             $table->timestamps();
         });
 
+        (require database_path('migrations/2026_10_27_000003_create_customer_order_requests_tables.php'))->up();
         $this->withoutVite();
     }
 

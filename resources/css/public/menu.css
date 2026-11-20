@@ -132,7 +132,7 @@
 
 @media (max-width: 48rem) {
     .public-menu-grid, .public-menu-detail__grid { grid-template-columns: 1fr; }
-    .public-menu-detail__media { max-width: 34rem; min-height: 18rem; aspect-ratio: 4 / 3; }
+    .public-menu-detail__media { width: 100%; min-width: 0; max-width: 34rem; min-height: 0; aspect-ratio: 4 / 3; }
 }
 
 @media (max-width: 36rem) {

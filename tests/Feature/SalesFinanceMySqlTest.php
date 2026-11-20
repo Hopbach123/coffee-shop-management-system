@@ -76,6 +76,28 @@ class SalesFinanceMySqlTest extends TestCase
         }
     }
 
+    public function test_finance_first_then_sales_migration_preserves_shared_receipt_values(): void
+    {
+        $sales = require database_path('migrations/2026_11_17_000001_add_payment_receipt_contract.php');
+        $finance = require database_path('migrations/2026_11_18_000001_add_finance_receipt_keys_to_payments_table.php');
+        $sales->down();
+        $this->assertTrue(Schema::hasColumn('payments', 'received_amount'));
+        $finance->down();
+        $finance->up();
+        $order = $this->order();
+        $receipt = Payment::forceCreate([
+            'order_id' => $order->id, 'payment_code' => 'UPGRADE-FINANCE-FIRST',
+            'payment_method' => 'cash', 'amount' => $order->total_amount,
+            'received_amount' => '100.00', 'change_amount' => '64.50',
+            'status' => 'paid', 'paid_at' => now(), 'created_by' => $this->staff->id,
+        ]);
+        $sales->up();
+        $this->assertSame('100.00', $receipt->fresh()->received_amount);
+        $this->assertSame('64.50', $receipt->fresh()->change_amount);
+        $this->assertTrue(Schema::hasColumn('payments', 'operation_key'));
+        $this->assertTrue(Schema::hasColumn('payments', 'operation_key_hash'));
+    }
+
     private function actor(string $label): User
     {
         return User::forceCreate(['name' => $label, 'email' => $label.'@example.test', 'password' => 'test-only', 'role' => 'staff', 'status' => 'active']);

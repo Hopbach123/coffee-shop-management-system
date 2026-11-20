@@ -9,10 +9,13 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\CreatesTableStatusSources;
 use Tests\TestCase;
 
 class AreaIntegrityTest extends TestCase
 {
+    use CreatesTableStatusSources;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -31,6 +34,7 @@ class AreaIntegrityTest extends TestCase
                 $table->timestamps();
             });
         }
+        $this->prepareStatusReadTables();
         $this->withoutVite();
     }
 
