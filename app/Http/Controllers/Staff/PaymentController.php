@@ -70,7 +70,7 @@ class PaymentController extends Controller
         } catch (QueryException $exception) {
             report($exception);
 
-            return back()->withErrors(['payment' => 'Chưa ghi nhận được thanh toán. Vui lòng kiểm tra và thử lại.'])->withInput();
+            return back()->withErrors(['payment' => 'Chưa hoàn tất ghi nhận thanh toán. Nếu đã nhận tiền, kiểm tra lịch sử đơn và giao dịch thực tế trước khi thử lại; không thu tiền lần hai.'])->withInput();
         }
 
         return redirect()->route('staff.orders.payments.show', $order)->with('success', 'Đã ghi nhận đủ tiền. Tiến độ chuẩn bị/giao món được theo dõi riêng trên đơn hàng.');

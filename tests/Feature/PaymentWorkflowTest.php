@@ -569,6 +569,9 @@ class PaymentWorkflowTest extends TestCase
             try {
                 $this->from(route('staff.orders.payments.show', $order))->pay($order)
                     ->assertRedirect(route('staff.orders.payments.show', $order))->assertSessionHasErrors('payment');
+                $paymentError = session('errors')->first('payment');
+                $this->assertStringContainsString('kiểm tra lịch sử đơn và giao dịch thực tế', $paymentError);
+                $this->assertStringContainsString('không thu tiền lần hai', $paymentError);
                 $this->assertDatabaseMissing('payments', ['order_id' => $order->id]);
                 $this->assertSame('pending', $order->fresh()->status);
                 $this->assertNull($order->fresh()->completed_at);
