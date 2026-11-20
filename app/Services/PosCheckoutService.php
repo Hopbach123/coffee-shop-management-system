@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\User;
+use App\Support\DecimalMoney;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -30,11 +31,16 @@ class PosCheckoutService
             throw ValidationException::withMessages(['cart' => 'Phiên kiểm tra đơn không hợp lệ. Vui lòng kiểm tra giỏ hàng.']);
         }
         $keyHash = hash('sha256', $key);
-        $payloadHash = hash('sha256', json_encode([
+        $payload = [
             $draft, $quoteHash, $attributes['order_type'], $attributes['table_id'] ?? null,
             $attributes['note'] ?? null, $attributes['payment_method'],
             trim($attributes['transaction_code'] ?? ''),
-        ], JSON_THROW_ON_ERROR));
+        ];
+        // Keep the fingerprint of receipts created before cash tender was optional.
+        if (isset($attributes['received_amount'])) {
+            $payload[] = DecimalMoney::format(DecimalMoney::cents($attributes['received_amount']));
+        }
+        $payloadHash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
 
         try {
             return DB::transaction(function () use ($attributes, $draft, $keyHash, $payloadHash, $quoteHash, $actor): Order {

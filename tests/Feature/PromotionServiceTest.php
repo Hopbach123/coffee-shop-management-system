@@ -53,6 +53,10 @@ class PromotionServiceTest extends TestCase
             $table->dateTime('paid_at')->nullable();
             $table->timestamps();
         });
+        Schema::create('customer_order_requests', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('order_id')->nullable()->unique();
+        });
         $this->travelTo('2026-06-01 12:00:00');
         $this->user = User::forceCreate([
             'name' => 'Service test user', 'email' => 'service@example.test',

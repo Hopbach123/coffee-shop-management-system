@@ -33,6 +33,25 @@
             <p><strong>Tổng thanh toán: {{ $order->total_amount }} VND</strong></p>
         </section>
 
+        <section class="category-panel" aria-labelledby="promotion-title">
+            <h2 id="promotion-title">Khuyến mãi</h2>
+            @if ($order->orderPromotion)
+                <p>{{ $order->orderPromotion->promotion_code }} · Giảm {{ $order->orderPromotion->discount_amount }} VND</p>
+            @elseif ($canApplyPromotion)
+                <form method="POST" action="{{ route('staff.orders.promotion.store', $order) }}" class="category-form">
+                    @csrf
+                    <div class="category-field">
+                        <label for="promotion-code">Mã khuyến mãi</label>
+                        <input id="promotion-code" name="code" maxlength="50" value="{{ old('code') }}" required>
+                        @error('code')<p role="alert">{{ $message }}</p>@enderror
+                    </div>
+                    <x-public.button type="submit" variant="outline">Áp dụng mã</x-public.button>
+                </form>
+            @else
+                <p>Giá trị đơn đã chốt.</p>
+            @endif
+        </section>
+
         <section class="category-panel" aria-labelledby="record-payment-title">
             <h2 id="record-payment-title">Ghi nhận tiền đã nhận</h2>
             @if ($canPay)
@@ -50,6 +69,13 @@
                         <label for="transaction_code">Mã giao dịch chuyển khoản (không bắt buộc)</label>
                         <input id="transaction_code" name="transaction_code" type="text" maxlength="100" value="{{ old('transaction_code') }}">
                     </div>
+                    @unless($isWebTransfer)
+                        <div class="category-field">
+                            <label for="received_amount">Tiền khách đưa khi trả tiền mặt (VND)</label>
+                            <input id="received_amount" name="received_amount" inputmode="decimal" value="{{ old('received_amount') }}" placeholder="Để trống khi nhận đúng tổng tiền">
+                            @error('received_amount')<p role="alert">{{ $message }}</p>@enderror
+                        </div>
+                    @endunless
                     <p><label for="received_confirmation"><input id="received_confirmation" name="received_confirmation" type="checkbox" value="1" required> Tôi xác nhận đã nhận đủ tiền cho đơn hàng này.</label></p>
                     <x-public.button type="submit">Xác nhận thanh toán</x-public.button>
                 </form>
@@ -61,6 +87,11 @@
 
         <section class="category-panel" aria-labelledby="payment-history-title">
             <h2 id="payment-history-title">Lịch sử thanh toán</h2>
+            @foreach ($order->payments->where('status', 'paid') as $receipt)
+                @if ($receipt->payment_method === 'cash')
+                    <p>{{ $receipt->payment_code }} · Khách đưa {{ $receipt->received_amount ?? $receipt->amount }} VND · Tiền thừa {{ $receipt->change_amount ?? '0.00' }} VND</p>
+                @endif
+            @endforeach
             <div class="category-table-wrap"><table class="category-table">
                 <caption class="sr-only">Lịch sử các lần thanh toán của đơn</caption>
                 <thead><tr><th scope="col">Mã thanh toán</th><th scope="col">Phương thức</th><th scope="col">Số tiền (VND)</th><th scope="col">Trạng thái</th><th scope="col">Thời gian nhận tiền</th><th scope="col">Người ghi nhận</th></tr></thead>

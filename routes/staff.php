@@ -30,6 +30,7 @@ Route::middleware('role:admin,staff')->group(function (): void {
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('orders/{order}/payments', [PaymentController::class, 'show'])->name('orders.payments.show');
     Route::post('orders/{order}/payments', [PaymentController::class, 'store'])->name('orders.payments.store');
+    Route::post('orders/{order}/promotion', [PaymentController::class, 'applyPromotion'])->name('orders.promotion.store');
     Route::post('orders/{order}/items', [OrderController::class, 'storeItem'])->name('orders.items.store');
     Route::patch('orders/{order}/items/{orderItem}', [OrderController::class, 'updateItem'])->name('orders.items.update');
     Route::patch('orders/{order}/items/{orderItem}/status', [OrderController::class, 'updateItemStatus'])->name('orders.items.status.update');

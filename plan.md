@@ -452,3 +452,15 @@ User approvals on 27/10/2026 resolve POS key persistence, paid mutation guard, c
 | REGRESSION | Integration | Full tests/build/routes/diff, browser 1440/768/375, manual guide | Pending final verification |
 
 Do not mark a stage accepted from code alone. Reports record actual checks, MySQL limitations and outstanding decisions separately; no commit/push/merge is authorized.
+
+### 12.3 CAFE-FINANCE-COMPLETE-001 — 18/11/2026
+
+User yêu cầu thực hiện toàn bộ use case Finance hiện hành của Đạt, đồng thời duyệt chỉ số D06 và schema receipt/idempotency. Các task nối tiếp thuộc cùng yêu cầu này, dùng prompt `prompts/CAFE-FINANCE-COMPLETE-001.md`.
+
+| Task | Scope | Acceptance | Ước lượng |
+| --- | --- | --- | --- |
+| CAFE-FINANCE-PROMO-001 | HTTP/UI áp mã, paid/web configuration guards | Server discount, auth, immutability, quota regression | 30–60 phút |
+| CAFE-FINANCE-SETTLEMENT-001 | Finance API/DTO, migration keys/reference/receipt, cash change | Replay/conflict, amount, bank reference, rollback, compatibility | Tách schema 30 phút, writer 60–90 phút, UI/tests 60 phút |
+| CAFE-FINANCE-REPORT-001 | Admin paid report by Vietnam day, method, receipts | Exact totals, timezone, duplicate guard, auth, browser/build | 60–90 phút |
+
+Trạng thái nghiệm thu thực tế ghi trong reports/task-reports. Concurrency MySQL cần database QA riêng. Refund/gateway và các metric tài chính ngoài bộ chỉ số vừa duyệt tiếp tục theo roadmap.

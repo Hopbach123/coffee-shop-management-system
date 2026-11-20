@@ -126,6 +126,7 @@ class CustomerOrderWorkflowTest extends TestCase
         });
         (require database_path('migrations/2026_10_27_000002_add_delivery_fee_to_orders_table.php'))->up();
         (require database_path('migrations/2026_10_27_000003_create_customer_order_requests_tables.php'))->up();
+        (require database_path('migrations/2026_11_18_000001_add_finance_receipt_keys_to_payments_table.php'))->up();
         $this->withoutVite();
     }
 

@@ -22,6 +22,7 @@ class CheckoutPosRequest extends FormRequest
             'payment_method' => ['required', 'in:cash,bank_transfer'],
             'received_confirmation' => ['required', 'accepted'],
             'transaction_code' => ['nullable', 'string', 'max:100'],
+            'received_amount' => ['nullable', 'string', 'regex:/\A\d{1,13}(?:\.\d{1,2})?\z/'],
             'checkout_key' => ['required', 'string', 'size:64'],
         ];
     }

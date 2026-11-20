@@ -27,6 +27,7 @@ Route::delete('menus/{admin_menu}', [\App\Http\Controllers\Admin\AdminMenuContro
 
 Route::get('/', [DashboardController::class, 'home'])->name('home');
 Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+Route::get('finance', [\App\Http\Controllers\Admin\FinancialReportController::class, 'index'])->name('finance.index');
 
 Route::prefix('product-variants/{product_variant}/recipes')->name('product-recipes.')->scopeBindings()->group(function () {
     Route::get('/', [ProductRecipeController::class, 'index'])->name('index');

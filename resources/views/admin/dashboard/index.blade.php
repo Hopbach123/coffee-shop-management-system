@@ -7,6 +7,7 @@
         <h1 id="page-title">Dashboard · Tổng quan</h1>
         <p>Đơn hàng và thanh toán trên toàn bộ dữ liệu, không giới hạn ngày. Trạng thái bàn tại thời điểm tải trang.</p>
     </div></div>
+    <p><x-public.button href="{{ route('admin.finance.index') }}" variant="outline">Báo cáo thu tiền theo ngày</x-public.button></p>
     <div class="dashboard-orders dashboard-orders--kpis">
         <section class="category-panel dashboard-orders__kpi" aria-labelledby="total-orders-label" aria-describedby="total-orders-definition">
             <svg class="dashboard-orders__icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4h10v17l-3-2-2 2-2-2-3 2V4Z"/><path d="M9 4V2h6v2M10 9h4M10 13h4"/></svg>

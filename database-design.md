@@ -755,3 +755,17 @@ The historical Frozen declaration above describes the 18-table baseline. User ex
 - MySQL is the schema/constraint/concurrency target. SQLite tests exercise application behavior and migration shape, not MySQL locking or CHECK enforcement.
 
 Migrations: `2026_10_27_000001_add_pos_checkout_keys_to_orders_table`, `000002_add_delivery_fee_to_orders_table`, `000003_create_customer_order_requests_tables`. Request-table rollback drops extension history and must not run on real requests without a data preservation plan.
+
+## 25. Approved Finance extension — 18/11/2026
+
+User approved durable Finance operation keys, unique bank references for new receipts, and cash received/change metadata. Migration `2026_11_18_000001_add_finance_receipt_keys_to_payments_table` adds nullable fields to payments.
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| operation_key_hash | CHAR(64), nullable, unique | SHA-256 operation key |
+| operation_payload_hash | CHAR(64), nullable | Order/actor/method/received amount/reference fingerprint |
+| bank_reference_hash | CHAR(64), nullable, unique | SHA-256 uppercase trimmed bank reference |
+| received_amount | DECIMAL(15,2), nullable | Cash tendered or confirmed transfer amount |
+| change_amount | DECIMAL(15,2), nullable | Cash tendered minus Order amount |
+
+Existing rows retain null metadata. Reference history is checked by the writer, with the unique hash protecting concurrent new writes. Payment amount continues to represent the amount applied to the Order. Service validation enforces nonnegative received/change, sufficient cash and exact verified transfer amount. Downgrade drops these metadata fields and requires a preservation review after new receipt activity. Original migrations and payment history remain versioned as before.
