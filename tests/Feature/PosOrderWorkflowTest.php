@@ -163,7 +163,7 @@ class PosOrderWorkflowTest extends TestCase
         $variant = $this->variant();
         $table = $this->table();
 
-        $this->actingAs($staff, 'web')->withSession(['pos_cart' => [$variant->id => 2]])
+        $this->actingAs($staff, 'web')->withSession(['pos_cart' => [$variant->id => 2], 'pos_intent' => 'fixture-dine-in'])
             ->post(route('staff.pos.checkout'), ['order_type' => 'dine_in', 'table_id' => $table->id])
             ->assertRedirect(route('staff.orders.show', 1));
 
@@ -178,7 +178,7 @@ class PosOrderWorkflowTest extends TestCase
         $staff = $this->staff();
         $variant = $this->variant();
         $occupiedTable = $this->table('occupied');
-        $this->actingAs($staff, 'web')->withSession(['pos_cart' => [$variant->id => 1]])
+        $this->actingAs($staff, 'web')->withSession(['pos_cart' => [$variant->id => 1], 'pos_intent' => 'fixture-invalid'])
             ->postJson(route('staff.pos.checkout'), ['order_type' => 'dine_in', 'table_id' => $occupiedTable->id])
             ->assertUnprocessable()->assertJsonValidationErrors('table_id')->assertSessionHas('pos_cart');
         $this->assertDatabaseCount('orders', 0);

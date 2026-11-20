@@ -52,7 +52,7 @@ class DashboardTableStatisticsTest extends TestCase
     {
         $expected = ['total' => 0, 'by_status' => ['available' => 0, 'occupied' => 0, 'maintenance' => 0], 'unclassified' => 0];
         $this->assertSame($expected, app(TableStatisticsService::class)->summarize());
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertOk()->assertViewHas('tableStatistics', $expected)
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertOk()->assertViewHas('tableStatistics', $expected)
             ->assertSee('Tổng đơn hàng')->assertSee('Tổng thanh toán thành công')->assertSee('Tổng số bàn')
             ->assertSee('Chưa có bàn được ghi nhận.')->assertSee('Bàn trống')->assertSee('Đang có khách')->assertSee('Bảo trì')
             ->assertDontSee('Đã đặt')->assertDontSee('NaN')->assertDontSee('Infinity');
@@ -75,9 +75,9 @@ class DashboardTableStatisticsTest extends TestCase
         $deletedArea->delete();
         CafeTable::create(['area_id' => $first->id, 'table_code' => 'DELETED', 'capacity' => 4])->delete();
         $this->assertSame(['total' => 4, 'by_status' => ['available' => 2, 'occupied' => 1, 'maintenance' => 1], 'unclassified' => 0], app(TableStatisticsService::class)->summarize());
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertOk()->assertViewHas('tableStatistics', fn ($stats) => $stats['total'] === 4);
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertOk()->assertViewHas('tableStatistics', fn ($stats) => $stats['total'] === 4);
         DB::table('cafe_tables')->where('table_code', 'A')->update(['status' => 'occupied']);
-        $this->get('/admin/dashboard')->assertOk()->assertViewHas('tableStatistics', fn ($stats) => $stats['by_status']['occupied'] === 2 && array_sum($stats['by_status']) === $stats['total']);
+        $this->get('/admin')->assertOk()->assertViewHas('tableStatistics', fn ($stats) => $stats['by_status']['occupied'] === 2 && array_sum($stats['by_status']) === $stats['total']);
     }
 
     public function test_table_order_and_paid_kpis_integrate_without_multiplying_table_count(): void
@@ -90,11 +90,11 @@ class DashboardTableStatisticsTest extends TestCase
                 'status' => $status, 'ordered_at' => '2026-10-19 12:00:00']);
         }
         DB::table('payments')->insert(['order_id' => $ids[1], 'amount' => '25000.50', 'status' => 'paid']);
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertOk()->assertSee('25.000,50 VNĐ')
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertOk()->assertSee('25.000,50 VNĐ')
             ->assertViewHas('orderStatistics', fn ($stats) => $stats['total'] === 3)
             ->assertViewHas('tableStatistics', fn ($stats) => $stats['total'] === 1);
         DB::table('payments')->insert(['order_id' => $ids[1], 'amount' => '25000.50', 'status' => 'paid']);
-        $this->get('/admin/dashboard')->assertOk()->assertSee('Chưa xác định — cần kiểm tra dữ liệu thanh toán.')
+        $this->get('/admin')->assertOk()->assertSee('Chưa xác định — cần kiểm tra dữ liệu thanh toán.')
             ->assertSee('Tổng số bàn')->assertViewHas('tableStatistics', fn ($stats) => $stats['total'] === 1);
     }
 
@@ -107,11 +107,12 @@ class DashboardTableStatisticsTest extends TestCase
         CafeTable::retrieved(fn () => $this->fail('Table aggregate must not hydrate CafeTable models.'));
         try {
             DB::enableQueryLog();
-            $this->get('/admin/dashboard')->assertOk();
+            $this->get('/admin')->assertOk();
             $queries = DB::getQueryLog();
             DB::disableQueryLog();
             DB::flushQueryLog();
-            $this->assertCount(3, $queries);
+            // Three aggregates plus SQLite column metadata for the optional daily chart.
+            $this->assertCount(5, $queries);
             $tableQueries = [];
             foreach ($queries as $query) {
                 $this->assertDoesNotMatchRegularExpression('/^\s*(insert|update|delete|replace|alter|drop)\b/i', $query['query']);
@@ -144,16 +145,16 @@ class DashboardTableStatisticsTest extends TestCase
         $this->assertSame(1, $stats['total']);
         $this->assertSame(1, $stats['unclassified']);
         $this->assertSame($stats['total'], array_sum($stats['by_status']) + $stats['unclassified']);
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertOk()->assertSee('Chưa phân loại — cần kiểm tra dữ liệu')->assertDontSee('<script>bad</script>', false);
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertOk()->assertSee('Chưa phân loại — cần kiểm tra dữ liệu')->assertDontSee('<script>bad</script>', false);
         $this->assertDatabaseHas('cafe_tables', ['table_code' => 'BAD', 'status' => '<script>bad</script>']);
     }
 
     public function test_dashboard_table_data_remains_admin_only(): void
     {
-        $this->get('/admin/dashboard')->assertRedirect(route('login'));
+        $this->get('/admin')->assertRedirect(route('login'));
         $this->admin->forceFill(['role' => 'staff'])->save();
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertForbidden();
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertForbidden();
         $this->admin->forceFill(['role' => 'admin'])->save();
-        $this->actingAs($this->admin, 'web')->get('/admin/dashboard')->assertOk()->assertSee('Tổng số bàn');
+        $this->actingAs($this->admin, 'web')->get('/admin')->assertOk()->assertSee('Tổng số bàn');
     }
 }

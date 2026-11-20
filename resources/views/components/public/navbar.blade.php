@@ -24,7 +24,7 @@
       <a href="{{ (\Illuminate\Support\Facades\Route::has('reservation.create') ? route('reservation.create') : route('home').'#reservation') }}" @if(request()->routeIs('reservation.*')) aria-current="page" @endif>Đặt bàn</a>
       @if (\Illuminate\Support\Facades\Route::has('cart.index'))
       <a href="{{ route('cart.index') }}" class="nav-cart" @if(request()->routeIs('cart.*')) aria-current="page" @endif>
-        Giỏ hàng <span class="nav-cart-count">{{ array_sum(session('customer_cart', [])) }}</span>
+        Giỏ hàng <span class="nav-cart-count">{{ collect(session('customer_cart', []))->sum(fn($i) => is_array($i) ? ($i['quantity'] ?? 0) : (int)$i) }}</span>
       </a>
       @endif
       @guest('web')

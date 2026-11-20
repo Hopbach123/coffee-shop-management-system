@@ -134,7 +134,7 @@ class OnlinePickupSchemaMySqlTest extends TestCase
         $this->get('/admin/ingredients/1/history')->assertForbidden();
         $order = Order::where('order_code', 'DEMO-V2-ONLINE-ORDER')->firstOrFail();
         $paidOrder = Order::where('order_code', 'DEMO-V2-SCHEDULED-ORDER')->firstOrFail();
-        $this->get('/staff/orders/'.$paidOrder->id)->assertOk()->assertSee('DEMO-V2-PREPAID')->assertSee('Đã thu tiền');
+        $this->get('/staff/orders/'.$paidOrder->id)->assertOk()->assertSee('DEMO-V2-PREPAID')->assertSee('Đã thanh toán');
         $this->get('/staff/brewing')->assertOk()->assertSee('DEMO-V2-ONLINE-ORDER')->assertSee('Bắt đầu pha')->assertDontSee('DEMO-V1-CANCELLED')->assertDontSee('DEMO-V1-PAID-CASH');
         $item = $order->orderItems()->firstOrFail();
         $ingredientId = DB::table('product_recipes')->where('variant_id', $item->variant_id)->orderBy('ingredient_id')->value('ingredient_id');
@@ -146,7 +146,8 @@ class OnlinePickupSchemaMySqlTest extends TestCase
         $this->get('/staff/brewing')->assertOk()->assertSee('Bắt đầu pha');
         $this->get('/admin/ingredients/'.$ingredientId.'/history')->assertOk()->assertSee('Tiêu hao pha chế');
         $this->get('/admin/product-variants/'.$item->variant_id.'/recipe')->assertOk()->assertSee('Định lượng')->assertSee('Lịch sử kho');
-        $this->get('/admin/product-variants')->assertOk()->assertSee('Xem công thức');
+        $this->get('/admin/product-variants')->assertOk()
+            ->assertSee(route('admin.product-recipes.index', $item->variant_id), false);
         $this->get('/staff/online-requests')->assertOk();
         $this->assertSame(6, DB::table('online_order_requests')->count());
     }
@@ -175,7 +176,9 @@ class OnlinePickupSchemaMySqlTest extends TestCase
         $this->assertNull($upgraded['online_request_id']);
         unset($upgraded['purchase_type'], $upgraded['online_request_id']);
         $this->assertSame($legacyRow, $upgraded);
-        $this->assertEquals($legacyPayment, DB::table('payments')->first());
+        foreach ((array) $legacyPayment as $column => $value) {
+            $this->assertSame($value, DB::table('payments')->first()->$column, 'Legacy receipt changed: '.$column);
+        }
 
         $request = ['request_code' => 'WEB-1', 'purchase_type' => 'online', 'contact_name' => 'Guest', 'contact_phone' => '0900000000', 'payment_preference' => 'cash', 'submission_key' => 'submit-1', 'tracking_token_hash' => hash('sha256', 'fixture-token')];
         $requestId = DB::table('online_order_requests')->insertGetId($request);
@@ -221,6 +224,8 @@ class OnlinePickupSchemaMySqlTest extends TestCase
         $this->assertTrue(Schema::hasColumn('orders', 'online_request_id'));
         $this->assertSame(2, DB::table('online_order_requests')->count());
         $this->assertSame(2, DB::table('orders')->count());
-        $this->assertEquals($legacyPayment, DB::table('payments')->first());
+        foreach ((array) $legacyPayment as $column => $value) {
+            $this->assertSame($value, DB::table('payments')->first()->$column, 'Legacy receipt changed: '.$column);
+        }
     }
 }

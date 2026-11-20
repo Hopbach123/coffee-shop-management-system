@@ -1,14 +1,19 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Public\MenuController;
+use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Public\CartController;
+use App\Http\Controllers\Public\MenuController;
+use App\Http\Controllers\Public\OrderTrackingController;
 use App\Http\Controllers\Public\ReservationController;
+use App\Models\Product;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 
 Route::get('/', function () {
-    $featured = \Illuminate\Support\Facades\Schema::hasTable('products') && \Illuminate\Support\Facades\Schema::hasTable('product_variants')
-        ? \App\Models\Product::with('productVariants')->where('status', 'available')->where('is_featured', true)->limit(4)->get() : collect();
+    $featured = Schema::hasTable('products') && Schema::hasTable('product_variants')
+        ? Product::with('productVariants')->where('status', 'available')->where('is_featured', true)->limit(4)->get() : collect();
+
     return view('public.home.index', compact('featured'));
 })->name('home');
 
@@ -23,6 +28,7 @@ if (! app()->runningUnitTests()) {
     Route::get('/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
     Route::post('/checkout', [CartController::class, 'place'])->name('cart.place');
     Route::get('/checkout/confirmation', [CartController::class, 'confirmation'])->name('cart.confirmation');
+    Route::get('/orders/track/{token}', [OrderTrackingController::class, 'show'])->name('orders.track');
     Route::get('/reservation', [ReservationController::class, 'create'])->name('reservation.create');
     Route::post('/reservation', [ReservationController::class, 'store'])->name('reservation.store');
     Route::get('/reservation/confirmation', [ReservationController::class, 'confirmation'])->name('reservation.confirmation');
@@ -35,8 +41,8 @@ Route::prefix('staff')->name('staff.')->middleware(['auth:web', 'role:admin,staf
 Route::middleware('guest:web')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
-    Route::get('/register', [\App\Http\Controllers\Auth\RegisteredUserController::class, 'create'])->name('register');
-    Route::post('/register', [\App\Http\Controllers\Auth\RegisteredUserController::class, 'store'])->name('register.store');
+    Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
+    Route::post('/register', [RegisteredUserController::class, 'store'])->name('register.store');
 });
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])

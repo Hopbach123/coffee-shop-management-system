@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Order\StoreOrderRequest;
 use App\Http\Requests\Order\StoreOrderItemRequest;
 use App\Http\Requests\Order\StoreOrderItemToppingRequest;
+use App\Http\Requests\Order\StoreOrderRequest;
 use App\Http\Requests\Order\UpdateOrderItemQuantityRequest;
 use App\Http\Requests\Order\UpdateOrderItemStatusRequest;
 use App\Http\Requests\Order\UpdateOrderItemToppingQuantityRequest;
+use App\Http\Requests\Payment\RecordPaymentRequest;
 use App\Models\CafeTable;
 use App\Models\Customer;
 use App\Models\Order;
@@ -99,10 +100,18 @@ class OrderController extends Controller
             ->orderBy('id')
             ->get(['id', 'name', 'price']);
 
+        $paymentSchemaReady = Schema::hasColumn('payments', 'operation_key');
+        $paymentOperation = $request->session()->get('payment_operation.'.$order->id);
+        if (! $paymentOperation) {
+            $paymentOperation = bin2hex(random_bytes(32));
+            $request->session()->put('payment_operation.'.$order->id, $paymentOperation);
+        }
+
         $canCancel = $order->status === 'pending'
+            && ! $order->payments->contains('status', 'paid')
             && $order->orderItems->every(fn (OrderItem $item): bool => $item->status === 'pending');
 
-        return view('staff.orders.show', compact('order', 'variants', 'toppings', 'canCancel', 'paymentsAvailable'));
+        return view('staff.orders.show', compact('order', 'variants', 'toppings', 'canCancel', 'paymentsAvailable', 'paymentSchemaReady', 'paymentOperation'));
     }
 
     public function cancel(Request $request, Order $order, OrderService $service): RedirectResponse
@@ -122,6 +131,45 @@ class OrderController extends Controller
         }
 
         return redirect()->route('staff.orders.show', $order)->with('success', 'Đã hủy đơn hàng.');
+    }
+
+    public function complete(Request $request, Order $order, OrderService $service): RedirectResponse
+    {
+        $this->assertActiveStaff($request);
+
+        try {
+            $service->complete($order, $request->user('web'));
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['order' => $exception->getMessage()]);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors(['order' => 'Không thể hoàn tất đơn hàng. Vui lòng thử lại.']);
+        }
+
+        return redirect()->route('staff.orders.show', $order)->with('success', 'Đơn hàng '.$order->order_code.' đã hoàn tất thành công.');
+    }
+
+    public function storePayment(RecordPaymentRequest $request, Order $order, OrderService $service): RedirectResponse
+    {
+        $this->assertActiveStaff($request);
+        $data = $request->validated();
+
+        try {
+            $service->recordPayment($order, $data, $request->user('web'));
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['payment' => $exception->getMessage()]);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors(['payment' => 'Không thể ghi nhận thanh toán. Vui lòng thử lại.']);
+        }
+
+        return redirect()->route('staff.orders.show', $order)->with('success', 'Đã ghi nhận thanh toán thành công.');
     }
 
     public function storeItem(StoreOrderItemRequest $request, Order $order, OrderService $service): RedirectResponse
@@ -161,7 +209,7 @@ class OrderController extends Controller
     public function updateItemStatus(UpdateOrderItemStatusRequest $request, Order $order, OrderItem $orderItem, OrderService $service): RedirectResponse
     {
         try {
-            $service->transitionItemStatus($order, $orderItem, $request->safe()->string('status')->toString(), $request->user('web'));
+            $service->transitionItemStatus($order, $orderItem, $request->safe()->string('status')->toString(), $request->user('web'), $request->input('pickup_code'));
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (DomainException $exception) {

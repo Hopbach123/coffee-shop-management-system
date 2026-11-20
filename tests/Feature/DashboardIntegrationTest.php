@@ -60,7 +60,7 @@ class DashboardIntegrationTest extends TestCase
             $mock = Mockery::mock($service);
             $mock->shouldReceive('summarize')->once()->andThrow(new QueryException('sqlite', 'PRIVATE_SQL_MARKER', ['PRIVATE_BINDING'], new \RuntimeException('PRIVATE_DRIVER_MARKER')));
             $this->app->instance($service, $mock);
-            $this->get('/admin/dashboard')->assertStatus(503)->assertSee('Chưa thể tải số liệu Dashboard.')
+            $this->get('/admin')->assertStatus(503)->assertSee('Chưa thể tải số liệu Dashboard.')
                 ->assertDontSee('PRIVATE_SQL_MARKER')->assertDontSee('PRIVATE_BINDING')->assertDontSee('PRIVATE_DRIVER_MARKER')
                 ->assertDontSee('0,00 VNĐ');
             $this->app->forgetInstance($service);
@@ -109,7 +109,7 @@ class DashboardIntegrationTest extends TestCase
         $expectedPaid = $whole.'.'.str_pad($fraction, 2, '0');
         $this->actingAs($this->admin, 'web');
         DB::enableQueryLog();
-        $response = $this->get('/admin/dashboard')->assertOk();
+        $response = $this->get('/admin')->assertOk();
         $queries = DB::getQueryLog();
         DB::disableQueryLog();
         DB::flushQueryLog();
@@ -117,7 +117,8 @@ class DashboardIntegrationTest extends TestCase
             ->assertViewHas('tableStatistics', fn ($data) => $data['total'] === $expectedTables && array_sum($data['by_status']) + $data['unclassified'] === $expectedTables)
             ->assertViewHas('revenueStatistics', fn ($data) => $data['available'] && $data['amount'] === $expectedPaid)
             ->assertSee('325,50 VNĐ');
-        $this->assertCount(3, $queries);
+        // Three aggregates plus SQLite column metadata for the optional daily chart.
+        $this->assertCount(5, $queries);
         foreach ($queries as $query) {
             $this->assertDoesNotMatchRegularExpression('/^\s*(insert|update|delete|replace|alter|drop)\b/i', $query['query']);
             $this->assertDoesNotMatchRegularExpression('/\b(join|reservations|order_items|areas)\b/i', $query['query']);

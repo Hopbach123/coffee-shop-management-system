@@ -3,6 +3,6 @@
         @csrf
         @method('PATCH')
         <input type="hidden" name="expected_status" value="{{ $reservation->status }}">
-        <x-public.button type="submit" variant="outline" class="category-delete" aria-label="Hủy đặt bàn {{ $reservation->id }}">Hủy đặt bàn</x-public.button>
+        <button type="submit" class="cafe-btn-secondary" aria-label="Hủy đặt bàn {{ $reservation->id }}">Hủy đặt bàn</button>
     </form>
 @endif

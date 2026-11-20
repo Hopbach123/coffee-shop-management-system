@@ -106,15 +106,17 @@ class RoleAuthorizationTest extends TestCase
     public function test_admin_can_use_both_interfaces(): void
     {
         $this->actingAs($this->user('admin'), 'web');
-        $this->get('/admin')->assertOk()->assertSee(route('staff.home'));
-        $this->get('/staff')->assertOk()->assertSee(route('admin.home'));
+        $this->get('/admin/dashboard')->assertRedirect(route('admin.home'));
+        $this->get('/staff')->assertOk()->assertSee(route('admin.home'))->assertSee('Về Quản trị')
+            ->assertSee('Khu vực Staff · Bán hàng / POS')->assertSee('<span class="sneat-role-badge">Admin</span>', false);
         $this->get('/login')->assertRedirect(route('admin.home'));
     }
 
     public function test_staff_interface_hides_admin_navigation_and_enforces_access(): void
     {
         $this->actingAs($this->user('staff'), 'web');
-        $this->get('/staff')->assertOk()->assertSee(route('logout'))->assertDontSee(route('admin.home'));
+        $this->get('/staff')->assertOk()->assertSee(route('logout'))->assertDontSee(route('admin.home'))
+            ->assertDontSee('Về Quản trị')->assertSee('<span class="sneat-role-badge">Staff</span>', false);
         $this->get('/admin')->assertForbidden();
         $this->post('/logout')->assertRedirect('/login');
         $this->get('/staff')->assertRedirect('/login');

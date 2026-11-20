@@ -1,3 +1,5 @@
+@import '../admin/v5.css';
+
 /* ==========================================================================
    Maison du Café — Internal Admin & Staff Design System
    Standardized to the Warm Editorial Coffee Theme (Customer-First Alignment)
@@ -5,7 +7,7 @@
 
 .sneat-app {
     /* --- Unified Warm Coffee Design Tokens --- */
-    --coffee-bg: #f7f3ec;
+    --coffee-bg: #F7F4EF;
     --coffee-surface: #ffffff;
     --coffee-surface-alt: #f4eddf;
     --coffee-surface-deep: #e7d8bf;
@@ -38,7 +40,8 @@
     --coffee-on-dark-muted: #d8c7ae;
 
     --radius-sm: 0.375rem;
-    --radius-md: 0.625rem;
+    --radius-md: 1rem;
+    --cafe-card-shadow: 0 2px 8px rgba(47, 31, 22, .04), 0 8px 24px rgba(47, 31, 22, .035);
     --radius-lg: 0.875rem;
 
     --text-h2: 1.85rem;
@@ -46,13 +49,12 @@
     --container-reading: 64rem;
 
     /* Typography: Serif for display / headings, Sans for crisp data density */
-    --font-display: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+    --font-display: var(--font-body);
     --font-body: 'Instrument Sans', 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
 
     min-width: 320px;
     background-color: var(--coffee-bg);
-    background-image: radial-gradient(circle at 10% 10%, rgba(173, 117, 71, 0.04) 0.05rem, transparent 0.08rem);
-    background-size: 1.5rem 1.5rem;
+    background-image: none;
     color: var(--coffee-text);
     font-family: var(--font-body);
     font-size: 0.9375rem;
@@ -108,7 +110,7 @@
     flex-direction: column;
     background: #2c1b14;
     border-right: 1px solid #3d291e;
-    box-shadow: 0 0 25px rgba(44, 27, 20, 0.15);
+    box-shadow: none;
     z-index: 80;
     color: var(--coffee-on-dark);
 }
@@ -165,6 +167,13 @@
     overflow-y: auto;
     flex: 1;
 }
+
+/* Fixed Admin navigation: stable groups independent of the legacy menu registry. */
+.fixed-nav-group { padding-block: var(--space-sm); }
+.fixed-nav-group + .fixed-nav-group { border-top: 1px solid var(--coffee-on-dark-muted); border-top-color: color-mix(in srgb, var(--coffee-on-dark-muted) 18%, transparent); }
+.sneat-app .fixed-nav-group > h2.sneat-nav-section { margin: .25rem .75rem .5rem; color: var(--coffee-on-dark-muted); font-family: var(--font-body); font-size: .65rem; line-height: 1.5; letter-spacing: .08em; font-weight: 650; }
+.fixed-admin-sidebar .sneat-nav-link { font-size: .875rem; }
+.fixed-nav-hint { margin: .5rem .75rem 0; color: var(--coffee-on-dark-muted); font-size: .7rem; line-height: 1.5; }
 
 .sneat-nav-section {
     margin: 20px 10px 8px;
@@ -329,7 +338,11 @@
 }
 
 .sneat-menu-toggle {
-    display: none;
+    display: inline-grid;
+    place-items: center;
+    min-width: 48px;
+    min-height: 48px;
+    flex-shrink: 0;
 }
 
 .sneat-menu-toggle:hover {
@@ -1068,11 +1081,11 @@
 }
 
 .pos-product {
-    background: #ffffff;
-    border: 1px solid #e8dfd3;
-    border-radius: 10px;
-    padding: 14px;
-    box-shadow: 0 2px 8px rgba(44, 27, 20, 0.04);
+    background: var(--cafe-surface);
+    border: 1px solid var(--cafe-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    box-shadow: var(--cafe-card-shadow);
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -1113,19 +1126,22 @@
 
 .pos-product-option {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
     border-top: 1px solid #f4eddf;
     padding-top: 8px;
     margin-top: 8px;
 }
 
-.pos-product-option span {
+.pos-product-option > span {
     display: flex;
+    flex: 1;
+    flex-wrap: wrap;
     justify-content: space-between;
     gap: 6px;
     color: #746458;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
 }
 
 .pos-product-option strong {
@@ -1141,7 +1157,8 @@
     font-size: 0.8125rem;
     font-weight: 700;
     padding: 8px 12px;
-    min-height: 38px;
+    min-height: 48px;
+    flex-shrink: 0;
     cursor: pointer;
     transition: all 0.15s ease;
 }
@@ -1153,8 +1170,8 @@
 }
 
 .pos-cart {
-    position: sticky;
-    top: 22px;
+    position: static;
+    align-self: start;
 }
 
 .pos-cart .sneat-card {
@@ -1615,4 +1632,797 @@
     font-size: 0.6875rem;
     color: #746458;
     font-weight: 500;
+}
+
+/* ==========================================================================
+   MAISON DU CAFÉ — WARM EDITORIAL COFFEE DESIGN SYSTEM (MASTER SPEC)
+   Matching Official High-Fidelity UI Mockups
+   ========================================================================== */
+
+:root {
+    --cafe-espresso: #2F1E18;
+    --cafe-dark-roast: #412A20;
+    --cafe-brown: #704B35;
+    --cafe-caramel: #AD764C;
+    --cafe-caramel-hover: #94613B;
+    --cafe-cream: #F7F3ED;
+    --cafe-ivory: #FFFDF9;
+    --cafe-sand: #EEE6DC;
+    --cafe-border: #E6DDD2;
+    --cafe-text-primary: #30241E;
+    --cafe-text-secondary: #786B61;
+    --cafe-success: #317153;
+    --cafe-success-bg: #E8F3ED;
+    --cafe-success-border: #C4E1D2;
+    --cafe-warning: #AD711D;
+    --cafe-warning-bg: #FDF4E7;
+    --cafe-warning-border: #F3DFBD;
+    --cafe-danger: #B3443F;
+    --cafe-danger-bg: #FDEEEE;
+    --cafe-danger-border: #F5CBC8;
+    --cafe-info: #4F7090;
+    --cafe-info-bg: #EBF2F7;
+    --cafe-info-border: #CAD9E5;
+
+    --cafe-shadow-sm: 0 2px 8px rgba(47, 30, 24, 0.045);
+    --cafe-shadow-md: 0 6px 22px rgba(47, 30, 24, 0.075);
+    --cafe-shadow-lg: 0 12px 32px rgba(47, 30, 24, 0.11);
+    --cafe-transition: 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* --- Topbar Search & User Badge --- */
+.sneat-topbar-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--cafe-cream);
+    border: 1px solid var(--cafe-border);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    min-width: 220px;
+    transition: border-color var(--cafe-transition), box-shadow var(--cafe-transition);
+}
+
+.sneat-topbar-search:focus-within {
+    border-color: var(--cafe-caramel);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(173, 118, 76, 0.15);
+}
+
+.sneat-topbar-search input {
+    border: none;
+    background: transparent;
+    font-size: 0.84rem;
+    color: var(--cafe-text-primary);
+    outline: none;
+    width: 100%;
+    font-family: inherit;
+}
+
+.sneat-topbar-search svg {
+    color: var(--cafe-text-secondary);
+    flex-shrink: 0;
+}
+
+.sneat-topbar-icon {
+    background: none;
+    border: 1px solid var(--cafe-border);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    color: var(--cafe-text-secondary);
+    cursor: pointer;
+    transition: all var(--cafe-transition);
+}
+
+.sneat-topbar-icon:hover {
+    background: var(--cafe-cream);
+    color: var(--cafe-espresso);
+    border-color: var(--cafe-caramel);
+}
+
+.sneat-user-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 12px 4px 4px;
+    background: var(--cafe-ivory);
+    border: 1px solid var(--cafe-border);
+    border-radius: 9999px;
+    box-shadow: var(--cafe-shadow-sm);
+}
+
+.sneat-user-pill .sneat-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--cafe-caramel);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: grid;
+    place-items: center;
+}
+
+.sneat-user-meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.sneat-user-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--cafe-text-primary);
+}
+
+.sneat-role-badge {
+    font-size: 0.65rem;
+    color: var(--cafe-caramel);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* --- Sidebar Active Enhancement --- */
+.sneat-sidebar .sneat-nav-link.is-active {
+    background: var(--coffee-bean);
+    color: #ffffff !important;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    box-shadow: inset 3px 0 var(--coffee-surface-deep);
+}
+
+.sneat-sidebar .sneat-nav-link.is-active svg {
+    color: #ffffff !important;
+}
+
+.sneat-sidebar .sneat-nav-link.is-active::before {
+    display: none;
+}
+
+.sneat-sidebar .sneat-nav-link:hover:not(.is-active) {
+    background: var(--cafe-dark-roast);
+    color: #ffffff;
+    border-radius: 10px;
+}
+
+/* --- Warm Editorial Cards & Page Headers --- */
+.cafe-card {
+    background: var(--cafe-ivory);
+    border: 1px solid var(--cafe-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--cafe-card-shadow);
+    padding: var(--space-md);
+    margin-bottom: 24px;
+    transition: transform var(--cafe-transition), box-shadow var(--cafe-transition);
+}
+
+.cafe-interactive-card {
+    transition: transform var(--cafe-transition), box-shadow var(--cafe-transition), border-color var(--cafe-transition);
+}
+
+@media (hover: hover) {
+    .cafe-interactive-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--cafe-shadow-lg);
+        border-color: var(--cafe-caramel);
+    }
+}
+
+.cafe-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.cafe-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8125rem;
+    color: var(--cafe-text-secondary);
+    margin-bottom: 4px;
+}
+
+.cafe-breadcrumbs a {
+    color: var(--cafe-text-secondary);
+    text-decoration: none;
+}
+
+.cafe-breadcrumbs a:hover {
+    color: var(--cafe-caramel);
+}
+
+.cafe-breadcrumbs span {
+    color: var(--cafe-border);
+}
+
+.cafe-page-title {
+    font-family: var(--font-display), 'Playfair Display', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--cafe-espresso);
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+}
+
+.cafe-page-description {
+    font-size: 0.875rem;
+    color: var(--cafe-text-secondary);
+    margin: 0;
+}
+
+/* --- Buttons --- */
+.cafe-btn,
+.cafe-btn-primary,
+.cafe-btn-secondary,
+.cafe-btn-danger,
+.cafe-btn-soft {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 18px;
+    min-height: 48px;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+    border: 1px solid transparent;
+}
+
+.cafe-btn-primary {
+    background: var(--coffee-bean);
+    color: #ffffff !important;
+    border-color: var(--coffee-bean);
+    box-shadow: none;
+}
+
+.cafe-btn-primary:hover {
+    background: var(--coffee-cocoa);
+    border-color: var(--coffee-cocoa);
+    box-shadow: none;
+}
+
+.cafe-btn-secondary {
+    background: var(--cafe-ivory);
+    color: var(--cafe-brown) !important;
+    border-color: var(--cafe-border);
+}
+
+.cafe-btn-soft {
+    background: var(--cafe-cream);
+    color: var(--cafe-text-primary);
+    border-color: var(--cafe-border);
+}
+
+.sneat-app :is(.cafe-btn, .cafe-btn-primary, .cafe-btn-secondary, .cafe-btn-danger, .cafe-btn-soft):disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.cafe-btn-secondary:hover {
+    background: var(--cafe-cream);
+    border-color: var(--cafe-brown);
+    color: var(--cafe-espresso) !important;
+}
+
+.cafe-btn-danger {
+    background: var(--cafe-danger-bg);
+    color: var(--cafe-danger) !important;
+    border-color: var(--cafe-danger-border);
+}
+
+.cafe-btn-danger:hover {
+    background: var(--cafe-danger);
+    color: #ffffff !important;
+    border-color: var(--cafe-danger);
+}
+
+.cafe-btn-icon {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 8px;
+    display: inline-grid;
+    place-items: center;
+    background: var(--cafe-cream);
+    color: var(--cafe-brown);
+    border: 1px solid var(--cafe-border);
+    cursor: pointer;
+    transition: all var(--cafe-transition);
+}
+
+.cafe-btn-icon:hover {
+    background: var(--cafe-sand);
+    color: var(--cafe-espresso);
+    border-color: var(--cafe-brown);
+}
+
+.cafe-btn-icon--danger {
+    color: var(--cafe-danger);
+    background: var(--cafe-danger-bg);
+    border-color: var(--cafe-danger-border);
+}
+
+.cafe-btn-icon--danger:hover {
+    background: var(--cafe-danger);
+    color: #ffffff;
+    border-color: var(--cafe-danger);
+}
+
+/* --- 2-Column Form Layout with Upload Preview Box --- */
+.cafe-form-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 32px;
+    align-items: start;
+}
+
+@media (max-width: 860px) {
+    .cafe-form-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.cafe-upload-box {
+    background: #F5EFE6;
+    border: 1.5px dashed #D5C7B7;
+    border-radius: 14px;
+    padding: 24px 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.cafe-upload-preview {
+    width: 100px;
+    height: 100px;
+    border-radius: 12px;
+    background: var(--cafe-ivory);
+    display: grid;
+    place-items: center;
+    color: var(--cafe-caramel);
+    border: 1px solid var(--cafe-border);
+    overflow: hidden;
+    box-shadow: var(--cafe-shadow-sm);
+}
+
+.cafe-upload-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cafe-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 9999px;
+    background: var(--cafe-ivory);
+    color: var(--cafe-text-primary);
+    border: 1px solid var(--cafe-border);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--cafe-shadow-sm);
+    transition: all var(--cafe-transition);
+}
+
+.cafe-upload-btn:hover {
+    border-color: var(--cafe-caramel);
+    color: var(--cafe-caramel);
+    background: #ffffff;
+}
+
+.cafe-upload-help {
+    font-size: 0.75rem;
+    color: var(--cafe-text-secondary);
+    margin: 0;
+}
+
+.cafe-form-fields {
+    display: grid;
+    gap: 18px;
+}
+
+.cafe-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cafe-form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--cafe-text-primary);
+}
+
+.cafe-form-group label span.required {
+    color: var(--cafe-danger);
+}
+
+.cafe-input,
+.cafe-select,
+.cafe-textarea {
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 14px;
+    background: #ffffff;
+    border: 1px solid var(--cafe-border);
+    border-radius: 10px;
+    font-size: 0.875rem;
+    color: var(--cafe-text-primary);
+    font-family: inherit;
+    transition: border-color var(--cafe-transition), box-shadow var(--cafe-transition);
+}
+
+.cafe-textarea {
+    min-height: 96px;
+    resize: vertical;
+}
+
+.cafe-input:focus,
+.cafe-select:focus,
+.cafe-textarea:focus {
+    border-color: var(--cafe-caramel);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(173, 118, 76, 0.15);
+}
+
+.cafe-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid var(--cafe-border);
+}
+
+/* --- Modern Table with Sand Header --- */
+.cafe-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--cafe-border);
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: var(--cafe-shadow-sm);
+}
+
+.cafe-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.875rem;
+}
+
+.cafe-table thead th {
+    background: var(--cafe-sand);
+    color: var(--cafe-text-primary);
+    font-weight: 600;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--cafe-border);
+    white-space: nowrap;
+}
+
+.cafe-table tbody td {
+    padding: 14px 18px;
+    border-bottom: 1px solid #EFE8DE;
+    color: var(--cafe-text-primary);
+    vertical-align: middle;
+}
+
+.cafe-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.cafe-table tbody tr:hover td {
+    background: #FBF7F2;
+}
+
+.cafe-thumbnail {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: var(--cafe-cream);
+    border: 1px solid var(--cafe-border);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.cafe-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* --- Status Badges --- */
+.cafe-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    border: 1px solid transparent;
+}
+
+.cafe-badge--success {
+    background: var(--cafe-success-bg);
+    color: var(--cafe-success);
+    border-color: var(--cafe-success-border);
+}
+
+.cafe-badge--warning {
+    background: var(--cafe-warning-bg);
+    color: var(--cafe-warning);
+    border-color: var(--cafe-warning-border);
+}
+
+.cafe-badge--danger {
+    background: var(--cafe-danger-bg);
+    color: var(--cafe-danger);
+    border-color: var(--cafe-danger-border);
+}
+
+.cafe-badge--info {
+    background: var(--cafe-info-bg);
+    color: var(--cafe-info);
+    border-color: var(--cafe-info-border);
+}
+
+/* --- Product Grid --- */
+.cafe-product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.cafe-product-card {
+    background: var(--cafe-ivory);
+    border: 1px solid var(--cafe-border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--cafe-shadow-sm);
+    display: flex;
+    flex-direction: column;
+    transition: transform var(--cafe-transition), box-shadow var(--cafe-transition);
+}
+
+.cafe-product-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--cafe-shadow-md);
+    border-color: var(--cafe-caramel);
+}
+
+.cafe-product-media {
+    aspect-ratio: 4/3;
+    background: var(--cafe-cream);
+    overflow: hidden;
+    position: relative;
+}
+
+.cafe-product-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.cafe-product-card:hover .cafe-product-media img {
+    transform: scale(1.04);
+}
+
+.cafe-product-body {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+
+.cafe-product-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--cafe-text-primary);
+    margin: 0;
+}
+
+.cafe-product-price {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--cafe-espresso);
+}
+
+.cafe-product-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+
+/* ==========================================================================
+   CAFE DESIGN SYSTEM — EXTENDED TOKENS & UTILITY CLASSES
+   Added to support all migrated views
+   ========================================================================== */
+
+/* -- Additional CSS variables -- */
+:root {
+    /* Alias shortcuts */
+    --cafe-primary:      var(--cafe-espresso);
+    --cafe-accent:       var(--cafe-caramel);
+
+    /* Surface tokens */
+    --cafe-surface:      var(--cafe-ivory);
+    --cafe-surface-alt:  var(--cafe-sand);
+
+    /* Danger alias */
+    --cafe-danger-border: #F5CBC8;
+    --cafe-danger-bg:     #FDEEEE;
+}
+
+/* -- cafe-notice (info variant) -- */
+.cafe-notice {
+    padding: .75rem 1rem;
+    border-radius: 8px;
+    font-size: .875rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+}
+.cafe-notice--info {
+    background: var(--cafe-info-bg);
+    color: var(--cafe-info);
+    border-color: var(--cafe-info-border);
+}
+.cafe-notice--success {
+    background: var(--cafe-success-bg);
+    color: var(--cafe-success);
+    border-color: var(--cafe-success-border);
+}
+.cafe-notice--error {
+    background: var(--cafe-danger-bg);
+    color: var(--cafe-danger);
+    border-color: var(--cafe-danger-border);
+}
+.cafe-notice--warning {
+    background: var(--cafe-warning-bg);
+    color: var(--cafe-warning);
+    border-color: var(--cafe-warning-border);
+}
+
+/* -- cafe-field-error -- */
+.cafe-field-error {
+    font-size: .8rem;
+    color: var(--cafe-danger);
+    margin-top: .25rem;
+}
+
+/* -- cafe-badge info variant (ensure it exists) -- */
+.cafe-badge--info {
+    background: var(--cafe-info-bg);
+    color: var(--cafe-info);
+    border: 1px solid var(--cafe-info-border);
+}
+
+/* Internal shell: workspace identity, desktop collapse and mobile drawer. */
+.cafe-orders-table { min-width: 62rem; }
+.cafe-orders-table :is(td:first-child, td:nth-child(2), td:nth-child(7)) {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.cafe-table-area { margin-block: var(--space-lg); }
+.cafe-table-area-heading {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+.cafe-table-area-heading h2 { margin: 0; font-size: 1.125rem; }
+.cafe-table-area-heading span { color: var(--coffee-text-muted); font-size: .875rem; }
+.cafe-table-area-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+    gap: var(--space-sm);
+}
+.cafe-table-area-grid .cafe-card { margin-bottom: 0; }
+.cafe-table-card { display: flex; flex-direction: column; gap: var(--space-sm); border-top: 3px solid var(--coffee-border); }
+.cafe-table-card--available { border-top-color: var(--coffee-success); }
+.cafe-table-card--occupied { border-top-color: var(--coffee-warning); }
+.cafe-table-card--maintenance { border-top-color: var(--coffee-danger); }
+.cafe-table-card-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); }
+.cafe-table-card-header > svg { color: var(--coffee-bean); flex-shrink: 0; }
+.cafe-table-card-area { margin: 0; color: var(--coffee-text-muted); font-size: .875rem; }
+.cafe-table-card-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-xs); margin-top: auto; border-top: 1px solid var(--coffee-border-subtle); padding-top: var(--space-sm); font-size: .875rem; }
+.sneat-app .cafe-table-name { margin: 0; font-size: 1rem; font-weight: 600; }
+.sneat-workspace-heading {
+    display: grid;
+    gap: .125rem;
+    min-width: 0;
+}
+.sneat-workspace-label {
+    font-size: .75rem;
+    color: var(--coffee-text-muted);
+}
+.sneat-workspace-heading .sneat-breadcrumb {
+    color: var(--coffee-text);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+.sneat-topbar-left { min-width: 0; }
+.sneat-topbar-right { flex-shrink: 0; }
+.sneat-workspace-switch { white-space: nowrap; }
+.sneat-user-name { max-width: 12rem; overflow-wrap: anywhere; }
+.sneat-app .sneat-logout { min-width: 48px; min-height: 48px; }
+.sneat-sidebar-close { display: none; }
+.sneat-nav-section {
+    border-top: 1px solid var(--coffee-bean);
+    padding-top: var(--space-md);
+    color: var(--coffee-on-dark-muted);
+    letter-spacing: .06em;
+}
+.sneat-sidebar .sneat-nav-link {
+    min-height: 48px;
+    color: var(--coffee-on-dark);
+    font-size: .875rem;
+    line-height: 1.4;
+}
+.sneat-app :is(a, button, input, select, textarea):focus-visible {
+    outline: 2px solid var(--coffee-bean);
+    outline-offset: 3px;
+}
+.sneat-sidebar :is(a, button):focus-visible {
+    outline-color: var(--coffee-on-dark);
+}
+@media (min-width: 768px) {
+    .sneat-layout.is-collapsed .sneat-sidebar { display: none; }
+}
+@media (max-width: 767px) {
+    .sneat-app.sneat-drawer-open { overflow: hidden; }
+    .sneat-sidebar { width: min(20rem, 90vw); min-width: 0; }
+    .sneat-sidebar-close {
+        display: grid;
+        place-items: center;
+        align-self: flex-end;
+        min-width: 48px;
+        min-height: 48px;
+        margin: var(--space-xs);
+        background: transparent;
+        border: 1px solid var(--coffee-bean);
+        border-radius: var(--radius-sm);
+        color: var(--coffee-on-dark);
+    }
+    .sneat-sidebar .sneat-logo { padding-top: 0; min-height: 64px; }
+    .sneat-topbar { flex-wrap: wrap; gap: var(--space-sm); }
+    .sneat-topbar-left { flex: 1 1 100%; }
+    .sneat-topbar-right { width: 100%; justify-content: flex-end; gap: var(--space-sm); }
+    .sneat-topbar-right .sneat-user-pill { margin-left: auto; min-width: 0; }
+    .sneat-user-meta { max-width: 7rem; }
+    .sneat-user-name { font-size: .75rem; }
+    .sneat-workspace-switch { padding-inline: var(--space-sm); }
+    .cafe-card { padding: var(--space-sm); }
+    .cafe-page-header { align-items: flex-start; }
+    .cafe-page-title { font-size: 1.5rem; }
+}
+@media (max-width: 360px) {
+    .sneat-topbar-right { flex-wrap: wrap; }
+    .sneat-user-pill { max-width: 100%; }
 }

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Topping;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -58,7 +60,10 @@ class MenuController extends Controller
         $category = Category::query()->whereKey($product->category_id)->where('status', 'active')->firstOrFail();
         $product->setRelation('category', $category);
         $product->load(['productVariants' => fn ($query) => $query->orderBy('id')]);
+        $toppings = Schema::hasTable('toppings')
+            ? Topping::query()->where('status', 'available')->orderBy('name')->get()
+            : collect();
 
-        return view('public.menu.show', compact('product'));
+        return view('public.menu.show', compact('product', 'toppings'));
     }
 }

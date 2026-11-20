@@ -115,18 +115,19 @@ class ReservationConcurrencyTest extends TestCase
             try {
                 foreach ([$payload, $second] as $input) {
                     $pipes = [];
-                    $process = proc_open([PHP_BINARY, base_path('tests/Support/reservation-concurrency-worker.php')], [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes, base_path());
+                    // Windows anonymous pipes do not reliably support nonblocking reads.
+                    $outputFile = tempnam(sys_get_temp_dir(), 'reservation-qa-out-');
+                    $errorFile = tempnam(sys_get_temp_dir(), 'reservation-qa-err-');
+                    $process = proc_open([PHP_BINARY, base_path('tests/Support/reservation-concurrency-worker.php')], [['pipe', 'r'], ['file', $outputFile, 'w'], ['file', $errorFile, 'w']], $pipes, base_path());
                     $this->assertIsResource($process);
                     fwrite($pipes[0], json_encode(['connection' => config('database.connections.reservation_concurrency'), 'actor' => $actor->id, 'payload' => $input], JSON_THROW_ON_ERROR));
                     fclose($pipes[0]);
-                    stream_set_blocking($pipes[1], false);
-                    stream_set_blocking($pipes[2], false);
-                    $workers[] = ['process' => $process, 'pipes' => $pipes, 'output' => ''];
+                    $workers[] = ['process' => $process, 'outputFile' => $outputFile, 'errorFile' => $errorFile, 'output' => ''];
                 }
                 $deadline = microtime(true) + 15;
                 do {
                     foreach ($workers as &$worker) {
-                        $worker['output'] .= stream_get_contents($worker['pipes'][1]);
+                        $worker['output'] = file_get_contents($worker['outputFile']);
                     }
                     unset($worker);
                     $ready = count(array_filter($workers, fn ($worker) => str_contains($worker['output'], 'locking')));
@@ -141,7 +142,7 @@ class ReservationConcurrencyTest extends TestCase
                 foreach ($workers as &$worker) {
                     $deadline = microtime(true) + 15;
                     do {
-                        $worker['output'] .= stream_get_contents($worker['pipes'][1]);
+                        $worker['output'] = file_get_contents($worker['outputFile']);
                         if (preg_match('/\b(created|approved|cancelled|conflict|invalid|error)\b/', $worker['output'], $match)) {
                             $results[] = $match[1];
                             break;
@@ -161,7 +162,7 @@ class ReservationConcurrencyTest extends TestCase
                     $expected = $results;
                     $expectedCount = in_array('created', $results, true) ? 2 : 1;
                 }
-                $this->assertSame($expected, $results, $case);
+                $this->assertSame($expected, $results, $case.'; '.implode(' ', array_map(fn ($worker) => file_get_contents($worker['errorFile']), $workers)));
                 $this->assertSame($expectedCount, DB::table('reservations')->whereDate('reservation_start_at', $nextDay)->count());
                 $this->assertSame(count(array_filter($expected, fn ($result) => $result === 'approved')), DB::table('reservations')->whereDate('reservation_start_at', $nextDay)->where('status', 'confirmed')->count());
                 $this->assertSame(count(array_filter($expected, fn ($result) => $result === 'cancelled')), DB::table('reservations')->whereDate('reservation_start_at', $nextDay)->where('status', 'cancelled')->count());
@@ -173,9 +174,9 @@ class ReservationConcurrencyTest extends TestCase
                     if (proc_get_status($worker['process'])['running']) {
                         proc_terminate($worker['process']);
                     }
-                    fclose($worker['pipes'][1]);
-                    fclose($worker['pipes'][2]);
                     proc_close($worker['process']);
+                    unlink($worker['outputFile']);
+                    unlink($worker['errorFile']);
                 }
             }
             $day = CarbonImmutable::parse($day)->addDay()->format('Y-m-d');

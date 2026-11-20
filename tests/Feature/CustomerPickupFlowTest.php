@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Public\CartController;
 use App\Models\Category;
 use App\Models\PickupRequest;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -30,14 +32,15 @@ class CustomerPickupFlowTest extends TestCase
             $table->timestamps();
         });
         (require database_path('migrations/2026_10_13_000001_create_pickup_requests_table.php'))->up();
-                        \Illuminate\Support\Facades\Route::middleware('web')->group(function () {
-            \Illuminate\Support\Facades\Route::get('/cart', [\App\Http\Controllers\Public\CartController::class, 'index'])->name('cart.index');
-            \Illuminate\Support\Facades\Route::post('/cart', [\App\Http\Controllers\Public\CartController::class, 'add'])->name('cart.add');
-            \Illuminate\Support\Facades\Route::patch('/cart', [\App\Http\Controllers\Public\CartController::class, 'update'])->name('cart.update');
-            \Illuminate\Support\Facades\Route::get('/checkout', [\App\Http\Controllers\Public\CartController::class, 'checkout'])->name('cart.checkout');
-            \Illuminate\Support\Facades\Route::post('/checkout', [\App\Http\Controllers\Public\CartController::class, 'place'])->name('cart.place');
-            \Illuminate\Support\Facades\Route::get('/checkout/confirmation', [\App\Http\Controllers\Public\CartController::class, 'confirmation'])->name('cart.confirmation');
-        });        \Illuminate\Support\Facades\Route::getRoutes()->refreshNameLookups();
+        Route::middleware('web')->group(function () {
+            Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+            Route::post('/cart', [CartController::class, 'add'])->name('cart.add');
+            Route::patch('/cart', [CartController::class, 'update'])->name('cart.update');
+            Route::get('/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
+            Route::post('/checkout', [CartController::class, 'place'])->name('cart.place');
+            Route::get('/checkout/confirmation', [CartController::class, 'confirmation'])->name('cart.confirmation');
+        });
+        Route::getRoutes()->refreshNameLookups();
         $this->withoutVite();
     }
 
@@ -45,11 +48,13 @@ class CustomerPickupFlowTest extends TestCase
     {
         $category = Category::forceCreate(['name' => 'Cà phê', 'status' => 'active', 'display_order' => 1]);
         $product = Product::forceCreate(['category_id' => $category->id, 'name' => 'Cà phê sữa đá', 'slug' => 'ca-phe-sua-da', 'status' => 'available']);
+
         return ProductVariant::forceCreate(array_replace(['product_id' => $product->id, 'name' => 'M', 'price' => '35000.00', 'status' => 'available'], $changes));
     }
 
     public function test_guest_can_add_to_cart_and_prices_are_recalculated_on_server(): void
     {
+        config(['shop.opening_time' => '00:00', 'shop.closing_time' => '23:59']);
         $variant = $this->variant();
         $this->post(route('cart.add'), ['variant_id' => $variant->id, 'quantity' => 2, 'unit_price' => '0.01'])
             ->assertRedirect(route('cart.index'));
@@ -57,7 +62,7 @@ class CustomerPickupFlowTest extends TestCase
         $this->get(route('cart.checkout'))->assertOk()->assertSee('70.000đ');
         $this->post(route('cart.place'), [
             'customer_name' => 'Nguyễn Văn A', 'customer_phone' => '0901234567',
-            'pickup_at' => now()->addHour()->format('Y-m-d H:i:s'),
+            'pickup_at' => now('Asia/Ho_Chi_Minh')->addDay()->setTime(12, 0)->format('Y-m-d\TH:i'),
             'subtotal' => '1.00',
         ])->assertRedirect(route('cart.confirmation'));
         $request = PickupRequest::firstOrFail();

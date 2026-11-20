@@ -59,10 +59,13 @@ class DynamicAdminSidebarTest extends TestCase
 
     public function test_empty_or_missing_table_keeps_admin_recovery_and_never_seeds(): void
     {
-        $this->get('/admin/menus')->assertOk()->assertSee('Chưa có menu hiển thị.')->assertSee('Quản lý menu');
+        // Legacy component is retained for compatibility; the actual layout now uses fixed navigation.
+        $this->get('/admin/menus')->assertOk()->assertSee('data-fixed-admin-sidebar', false)->assertSee('Quản lý menu');
+        $this->assertStringContainsString('Chưa có menu hiển thị.', Blade::render('<x-internal.admin-sidebar />'));
         $this->assertSame(0, AdminMenu::count());
         Schema::drop('admin_menus');
-        $this->get('/admin/menus')->assertStatus(503)->assertSee('Quản lý menu')->assertSee('Điều hướng tạm thời chưa sẵn sàng.')->assertDontSee('SQLSTATE');
+        $this->get('/admin/menus')->assertStatus(503)->assertSee('Quản lý menu')->assertSee('data-fixed-admin-sidebar', false)->assertDontSee('SQLSTATE');
+        $this->assertStringContainsString('Điều hướng tạm thời chưa sẵn sàng.', Blade::render('<x-internal.admin-sidebar />'));
     }
 
     public function test_visible_sorted_tree_hides_inactive_branches_empty_groups_and_unknown_permissions(): void
@@ -133,8 +136,9 @@ class DynamicAdminSidebarTest extends TestCase
         $this->assertTrue($tree[0]['children'][0]['active']);
         $this->assertSame([true, false], array_column($tree[0]['children'][0]['children'], 'active'));
         $response = $this->get('/admin/users/create')->assertOk();
-        $response->assertSee('data-default-open="1"', false);
+        $response->assertSee('data-fixed-admin-sidebar', false);
         $html = Blade::render('<x-internal.admin-sidebar />');
+        $this->assertStringContainsString('data-default-open="1"', $html);
         $this->assertStringContainsString('aria-controls="sidebar-group-'.$root->id.'"', $html);
         $this->assertStringContainsString('aria-current="page"', $html);
     }

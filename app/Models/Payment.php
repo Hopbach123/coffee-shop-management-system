@@ -16,6 +16,8 @@ class Payment extends BasePayment
     {
         return [
             'amount' => 'decimal:2',
+            'received_amount' => 'decimal:2',
+            'change_amount' => 'decimal:2',
             'paid_at' => 'datetime',
         ];
     }

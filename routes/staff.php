@@ -1,11 +1,10 @@
 <?php
 
-use App\Http\Controllers\Staff\OrderController;
 use App\Http\Controllers\Staff\OnlineRequestController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Staff\OrderController;
 use App\Http\Controllers\Staff\PosController;
 use App\Http\Controllers\Staff\WorkspaceController;
-
+use Illuminate\Support\Facades\Route;
 
 Route::middleware('role:admin,staff')->group(function (): void {
     Route::get('/', [PosController::class, 'index'])->name('home');
@@ -16,9 +15,13 @@ Route::middleware('role:admin,staff')->group(function (): void {
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('online-requests', [OnlineRequestController::class, 'index'])->name('online-requests.index');
     Route::get('online-requests/{onlineRequest}', [OnlineRequestController::class, 'show'])->whereNumber('onlineRequest')->name('online-requests.show');
+    Route::post('online-requests/{onlineRequest}/accept', [OnlineRequestController::class, 'accept'])->whereNumber('onlineRequest')->name('online-requests.accept');
+    Route::post('online-requests/{onlineRequest}/reject', [OnlineRequestController::class, 'reject'])->whereNumber('onlineRequest')->name('online-requests.reject');
     Route::get('orders/create', [OrderController::class, 'create'])->name('orders.create');
     Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
     Route::patch('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+    Route::patch('orders/{order}/complete', [OrderController::class, 'complete'])->name('orders.complete');
+    Route::post('orders/{order}/payments', [OrderController::class, 'storePayment'])->name('orders.payments.store');
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('orders/{order}/items', [OrderController::class, 'storeItem'])->name('orders.items.store');
     Route::patch('orders/{order}/items/{orderItem}', [OrderController::class, 'updateItem'])->name('orders.items.update');

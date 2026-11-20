@@ -17,6 +17,7 @@ class UpdateOrderItemStatusRequest extends FormRequest
     {
         return [
             'status' => ['required', 'string', 'in:preparing,ready,served'],
+            'pickup_code' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

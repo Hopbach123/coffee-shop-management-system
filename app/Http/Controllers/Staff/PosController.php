@@ -17,24 +17,30 @@ class PosController extends Controller
 {
     public function index(Request $request): View
     {
+        if (! $request->session()->has('pos_intent')) {
+            $request->session()->put('pos_intent', bin2hex(random_bytes(32)));
+        }
         $search = trim((string) $request->query('q', ''));
         $products = Schema::hasTable('products') && Schema::hasTable('product_variants')
             ? Product::with(['category', 'productVariants' => fn ($query) => $query->where('status', 'available')])->where('status', 'available')
-            ->when($search !== '', fn ($q) => $q->where('name', 'like', '%'.addcslashes($search, '%_\\').'%'))
-            ->orderBy('name')->get() : collect();
+                ->when($search !== '', fn ($q) => $q->where('name', 'like', '%'.addcslashes($search, '%_\\').'%'))
+                ->orderBy('name')->get() : collect();
         $draft = $request->session()->get('pos_cart', []);
         $variants = Schema::hasTable('product_variants') ? ProductVariant::with('product')->whereIn('id', array_keys($draft))->get()->keyBy('id') : collect();
         $lines = [];
         $total = 0;
         foreach ($draft as $id => $quantity) {
             $variant = $variants->get($id);
-            if (!$variant || $variant->status !== 'available' || !$variant->product || $variant->product->status !== 'available') continue;
+            if (! $variant || $variant->status !== 'available' || ! $variant->product || $variant->product->status !== 'available') {
+                continue;
+            }
             $qty = max(1, min(20, (int) $quantity));
             $parts = explode('.', (string) $variant->price);
             $priceCents = ((int) $parts[0] * 100) + (int) str_pad(substr($parts[1] ?? '', 0, 2), 2, '0');
             $total += $qty * $priceCents;
             $lines[] = compact('variant', 'qty', 'priceCents');
         }
+
         return view('staff.home', [
             'products' => $products,
             'lines' => $lines,
@@ -55,6 +61,9 @@ class PosController extends Controller
         $id = (string) $variant->id;
         $cart[$id] = min(20, ($cart[$id] ?? 0) + 1);
         $request->session()->put('pos_cart', $cart);
+        $request->session()->put('pos_intent', bin2hex(random_bytes(32)));
+        $request->session()->forget('pos_submitted_items');
+
         return redirect()->route('staff.home');
     }
 
@@ -64,6 +73,9 @@ class PosController extends Controller
         $cart = $request->session()->get('pos_cart', []);
         unset($cart[(string) $data['variant_id']]);
         $request->session()->put('pos_cart', $cart);
+        $request->session()->put('pos_intent', bin2hex(random_bytes(32)));
+        $request->session()->forget('pos_submitted_items');
+
         return redirect()->route('staff.home');
     }
 
@@ -73,9 +85,10 @@ class PosController extends Controller
             'order_type' => ['required', 'in:dine_in,takeaway'],
             'table_id' => ['nullable', 'integer', 'exists:cafe_tables,id', 'required_if:order_type,dine_in'],
             'note' => ['nullable', 'string', 'max:500'],
+            'submission_key' => ['nullable', 'string', 'size:64'],
         ]);
         $draft = $request->session()->get('pos_cart', []);
-        if (!$draft) {
+        if (! $draft && ! $request->session()->has('pos_submitted_items')) {
             throw ValidationException::withMessages(['cart' => 'Chưa có món trong đơn.']);
         }
 
@@ -87,7 +100,17 @@ class PosController extends Controller
             ];
         }
 
-        $order = $orderService->createWithItems($data, $items, $request->user());
+        $key = $request->session()->get('pos_intent');
+        if (! $key) {
+            throw ValidationException::withMessages(['cart' => 'Vui lòng mở POS để bắt đầu giao dịch.']);
+        }
+        if ($request->filled('submission_key') && ! hash_equals($key, (string) $request->input('submission_key'))) {
+            throw ValidationException::withMessages(['cart' => 'Giỏ POS đã thay đổi. Vui lòng mở lại POS.']);
+        }
+        $items = $items ?: $request->session()->get('pos_submitted_items');
+        $data['purchase_type'] = 'counter';
+        $order = $orderService->createPosOnce($data, $items, $request->user(), $key);
+        $request->session()->put('pos_submitted_items', $items);
         $request->session()->forget('pos_cart');
 
         return redirect()->route('staff.orders.show', $order)->with('success', 'Đã tạo đơn '.$order->order_code.'. Món đang chờ pha chế.');

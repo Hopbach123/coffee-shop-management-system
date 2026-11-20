@@ -14,6 +14,7 @@ use App\Models\Topping;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -41,6 +42,13 @@ class StaffOrderItemManagementTest extends TestCase
             $table->softDeletes();
             $table->timestamps();
             $table->unique(['product_id', 'name']);
+        });
+
+        Schema::create('payments', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('order_id');
+            $table->decimal('amount', 15, 2);
+            $table->string('status');
         });
 
         Schema::create('orders', function (Blueprint $table): void {
@@ -314,6 +322,7 @@ class StaffOrderItemManagementTest extends TestCase
         $line = $item->orderItemToppings()->firstOrFail();
         $this->patch(route('staff.orders.items.toppings.update', [$order, $item, $line]), ['quantity' => 2])->assertSessionHasNoErrors();
         $this->delete(route('staff.orders.items.toppings.destroy', [$order, $item, $line]))->assertSessionHasNoErrors();
+        DB::table('payments')->insert(['order_id' => $order->id, 'amount' => $order->fresh()->total_amount, 'status' => 'paid']);
         foreach (['preparing', 'ready', 'served'] as $status) {
             $this->patch(route('staff.orders.items.status.update', [$order, $item]), ['status' => $status])->assertSessionHasNoErrors();
             $this->assertSame($status, $item->fresh()->status);
@@ -717,7 +726,7 @@ class StaffOrderItemManagementTest extends TestCase
         $this->patch($route, ['status' => 'preparing'])->assertRedirect(route('staff.orders.show', $order));
         $this->assertSame('1.000', $ingredient->fresh()->current_stock);
         $this->assertDatabaseCount('inventory_transactions', 1);
-        $this->get(route('staff.brewing.index'))->assertOk()->assertDontSee('action="'.$route.'"', false);
+        $this->get(route('staff.brewing.index'))->assertOk()->assertSee('Pha xong')->assertDontSee('Bắt đầu pha</button>', false);
     }
 
     public function test_insufficient_stock_rolls_back_pending_to_preparing_transition(): void
@@ -749,6 +758,8 @@ class StaffOrderItemManagementTest extends TestCase
         $this->patchJson($route, ['status' => 'ready'])->assertUnprocessable()->assertJsonValidationErrors('status');
         $this->patch($route, ['status' => 'preparing'])->assertRedirect(route('staff.orders.show', $order));
         $this->patch($route, ['status' => 'ready'])->assertRedirect(route('staff.orders.show', $order));
+        $order->forceFill(['subtotal' => $item->subtotal, 'total_amount' => $item->subtotal])->saveOrFail();
+        DB::table('payments')->insert(['order_id' => $order->id, 'amount' => $order->fresh()->total_amount, 'status' => 'paid']);
         $this->patch($route, ['status' => 'served'])->assertRedirect(route('staff.orders.show', $order));
         $this->patchJson($route, ['status' => 'preparing'])->assertUnprocessable()->assertJsonValidationErrors('order_item');
 
