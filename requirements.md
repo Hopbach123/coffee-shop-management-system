@@ -278,3 +278,12 @@ Theo task `CAFE-CUSTOMER-POS-COMPLETE-001` và các câu trả lời trực ti�
 - Lỗi ghi nhận sau khi nhận tiền: rollback dữ liệu, giữ cart/key, thông báo kiểm tra trước khi retry; không tự hoàn tiền hoặc thu lần hai.
 
 Retention/xóa thông tin liên hệ, rate limit nghiệp vụ, hủy/sửa public và xử lý giao thất bại còn chờ quyết định; không tự triển khai refund, logistics hoặc xóa lịch sử.
+
+## 15. Finance completion approvals — 18/11/2026
+
+User duyệt hoàn thiện use case D01–D04 và D06 theo phân công mục 7.4. D04 hiện hành gồm xác nhận chuyển khoản web và thu COD. Các luồng tiền mặt, chuyển khoản thủ công, COD và completion tuân thủ §14.
+
+- Finance cung cấp confirmCash, confirmBankTransfer và settlementForOrder cho Sales. Khóa thao tác/hash payload lưu bền vững trên Payment. Retry cùng actor/key/payload trả receipt trước đó, khác nội dung bị từ chối. Tham chiếu ngân hàng mới có ràng buộc duy nhất và được đối chiếu với lịch sử.
+- User duyệt migration mới thêm metadata khóa/hash và số tiền nhận/tiền thừa. Chứng từ cũ được giữ nguyên. Cash nhập tiền khách đưa tối thiểu bằng tổng đơn, tiền thừa bằng tiền nhận trừ tiền áp vào đơn. Form cũ bỏ trống tiền khách đưa nghĩa nhận đúng tổng. Chuyển khoản xác minh đúng tổng server. API tích hợp confirmBankTransfer yêu cầu mã tham chiếu, form checkout hiện hữu giữ mã tùy chọn theo §5.6.
+- Các operation Finance độc lập ghi nhận paid và trả settlement. Sales điều phối chuẩn bị/completion. Luồng POS/web/COD hiện hữu giữ preconditions đã duyệt.
+- D06 dành cho Admin active, lọc từ ngày đến ngày theo Asia/Ho_Chi_Minh, cộng Payment status paid theo paid_at. Hiển thị tổng, tách cash/bank_transfer, số đơn đã thu và chứng từ phân trang. Pending/failed/refunded không vào tổng này. Phát hiện nhiều paid cùng Order phải cảnh báo và ngừng xác nhận tổng. Khoản paid thiếu paid_at được báo riêng. Mặc định ngày Việt Nam hiện tại.

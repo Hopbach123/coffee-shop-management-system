@@ -48,6 +48,7 @@
         <label for="pos-note">Ghi chú đơn</label><textarea id="pos-note" name="note" rows="2" maxlength="500">{{ old('note') }}</textarea>
         <label for="pos-payment-method">Phương thức thực nhận</label><select id="pos-payment-method" name="payment_method"><option value="cash" @selected(old('payment_method') === 'cash')>Tiền mặt</option><option value="bank_transfer" @selected(old('payment_method') === 'bank_transfer')>Chuyển khoản</option></select>
         <label for="pos-transaction-code">Mã giao dịch chuyển khoản (không bắt buộc)</label><input id="pos-transaction-code" name="transaction_code" maxlength="100" value="{{ old('transaction_code') }}">
+        <label for="pos-received-amount">Tiền khách đưa khi trả tiền mặt (VND)</label><input id="pos-received-amount" name="received_amount" inputmode="decimal" value="{{ old('received_amount') }}" placeholder="Để trống khi nhận đúng tổng tiền">
         <label><input type="checkbox" name="received_confirmation" value="1" required> Tôi đã kiểm tra và nhận đủ {{ $quote['subtotal_label'] ?? 'tiền' }} thực tế.</label>
         <button class="sneat-primary" type="submit" @disabled(!$quote['items'] || $quote['subtotal'] === null)>Ghi nhận thu tiền &amp; chuẩn bị món</button>
     </form>

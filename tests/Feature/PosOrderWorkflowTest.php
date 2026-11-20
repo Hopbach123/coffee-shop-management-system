@@ -138,6 +138,7 @@ class PosOrderWorkflowTest extends TestCase
 
         (require database_path('migrations/2026_10_27_000002_add_delivery_fee_to_orders_table.php'))->up();
         (require database_path('migrations/2026_10_27_000003_create_customer_order_requests_tables.php'))->up();
+        (require database_path('migrations/2026_11_18_000001_add_finance_receipt_keys_to_payments_table.php'))->up();
         $this->withoutVite();
     }
 
@@ -353,6 +354,39 @@ class PosOrderWorkflowTest extends TestCase
         $this->assertSame('1.000', $ingredient->fresh()->current_stock);
     }
 
+    public function test_cash_tender_is_recorded_and_replay_cannot_change_it(): void
+    {
+        $actor = $this->staff();
+        $variant = $this->variant();
+        $this->recipe($variant);
+        $this->actingAs($actor)->post(route('staff.pos.add'), ['variant_id' => $variant->id]);
+        $this->get(route('staff.home'))->assertOk();
+        $payload = $this->checkoutPayload(['received_amount' => '50.00']);
+        $this->post(route('staff.pos.checkout'), $payload)->assertSessionHasNoErrors();
+        $this->assertSame('14.50', Payment::sole()->change_amount);
+        $this->post(route('staff.pos.checkout'), $payload)->assertSessionHasNoErrors();
+        $this->postJson(route('staff.pos.checkout'), array_replace($payload, ['received_amount' => '60.00']))
+            ->assertUnprocessable()->assertJsonValidationErrors('cart');
+        $this->assertDatabaseCount('payments', 1);
+        $this->assertDatabaseCount('inventory_transactions', 1);
+    }
+
+    public function test_checkout_without_cash_tender_keeps_the_previous_release_payload_hash(): void
+    {
+        $actor = $this->staff();
+        $variant = $this->variant();
+        $this->recipe($variant);
+        $this->actingAs($actor)->post(route('staff.pos.add'), ['variant_id' => $variant->id]);
+        $this->get(route('staff.home'))->assertOk();
+        $attempt = session('pos_checkout_attempt');
+        $payload = $this->checkoutPayload();
+        $legacyHash = hash('sha256', json_encode([$attempt['draft'], $attempt['quote_hash'], 'takeaway', null, null, 'cash', ''], JSON_THROW_ON_ERROR));
+        $this->post(route('staff.pos.checkout'), $payload)->assertSessionHasNoErrors();
+        $this->assertSame($legacyHash, Order::sole()->pos_checkout_payload_hash);
+        $this->post(route('staff.pos.checkout'), $payload)->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('orders', 1);
+    }
+
     public function test_variant_without_recipe_cannot_create_a_paid_pos_order(): void
     {
         $actor = $this->staff();
@@ -364,5 +398,97 @@ class PosOrderWorkflowTest extends TestCase
         $this->assertDatabaseCount('orders', 0);
         $this->assertDatabaseCount('payments', 0);
         $this->assertDatabaseCount('inventory_transactions', 0);
+    }
+
+    public function test_pos_acceptance_exact_cash_and_insufficient_cash_are_atomic(): void
+    {
+        $actor = $this->staff();
+        $variant = $this->variant();
+        $this->recipe($variant);
+        $this->actingAs($actor)->post(route('staff.pos.add'), ['variant_id' => $variant->id]);
+        $this->get(route('staff.home'))->assertOk();
+        $this->postJson(route('staff.pos.checkout'), $this->checkoutPayload(['received_amount' => '10.00']))
+            ->assertUnprocessable()->assertSessionHas('pos_cart');
+        foreach (['orders', 'order_items', 'payments', 'inventory_transactions'] as $table) {
+            $this->assertDatabaseCount($table, 0);
+        }
+        $this->post(route('staff.pos.checkout'), $this->checkoutPayload(['received_amount' => '35.50']))
+            ->assertSessionHasNoErrors()->assertSessionMissing('pos_cart');
+        $this->assertSame('35.50', Payment::sole()->received_amount);
+        $this->assertSame('0.00', Payment::sole()->change_amount);
+        $this->assertSame($actor->id, Payment::sole()->created_by);
+    }
+
+    public function test_pos_acceptance_bank_reference_cannot_pay_a_second_cart(): void
+    {
+        $actor = $this->staff();
+        $variant = $this->variant();
+        $this->recipe($variant);
+        $this->actingAs($actor)->post(route('staff.pos.add'), ['variant_id' => $variant->id]);
+        $this->get(route('staff.home'))->assertOk();
+        $this->post(route('staff.pos.checkout'), $this->checkoutPayload([
+            'payment_method' => 'bank_transfer', 'transaction_code' => 'QA-POS-REFERENCE',
+        ]))->assertSessionHasNoErrors();
+        $stock = Ingredient::sole()->current_stock;
+        $this->post(route('staff.pos.add'), ['variant_id' => $variant->id]);
+        $this->get(route('staff.home'))->assertOk();
+        $this->postJson(route('staff.pos.checkout'), $this->checkoutPayload([
+            'payment_method' => 'bank_transfer', 'transaction_code' => 'QA-POS-REFERENCE',
+        ]))->assertUnprocessable()->assertSessionHas('pos_cart');
+        foreach (['orders', 'order_items', 'payments', 'inventory_transactions'] as $table) {
+            $this->assertDatabaseCount($table, 1);
+        }
+        $this->assertSame($stock, Ingredient::sole()->current_stock);
+    }
+
+    public function test_pos_acceptance_table_becomes_unavailable_after_review(): void
+    {
+        $actor = $this->staff();
+        $variant = $this->variant();
+        $this->recipe($variant);
+        $table = $this->table();
+        $this->actingAs($actor)->post(route('staff.pos.add'), ['variant_id' => $variant->id]);
+        $this->get(route('staff.home'))->assertOk();
+        foreach (['occupied', 'maintenance'] as $status) {
+            $table->forceFill(['status' => $status])->saveOrFail();
+            $this->postJson(route('staff.pos.checkout'), $this->checkoutPayload([
+                'order_type' => 'dine_in', 'table_id' => $table->id,
+            ]))->assertUnprocessable()->assertSessionHas('pos_cart');
+            $this->assertSame($status, $table->fresh()->status);
+            foreach (['orders', 'order_items', 'payments', 'inventory_transactions'] as $name) {
+                $this->assertDatabaseCount($name, 0);
+            }
+        }
+    }
+
+    public function test_pos_acceptance_refresh_and_paid_mutation_endpoints_keep_receipt_immutable(): void
+    {
+        $actor = $this->staff();
+        $variant = $this->variant();
+        $this->recipe($variant);
+        $topping = Topping::forceCreate(['name' => 'QA Cream', 'price' => '5.10', 'status' => 'available']);
+        $this->actingAs($actor)->post(route('staff.pos.add'), [
+            'variant_id' => $variant->id, 'quantity' => 2, 'toppings' => [$topping->id => 1], 'note' => 'QA note',
+        ]);
+        $this->get(route('staff.home'))->assertOk();
+        $this->post(route('staff.pos.checkout'), $this->checkoutPayload())->assertSessionHasNoErrors();
+        $order = Order::sole();
+        $item = $order->orderItems()->sole();
+        $row = $item->orderItemToppings()->sole();
+        $this->get(route('staff.orders.show', $order))->assertOk();
+        $this->get(route('staff.orders.show', $order))->assertOk();
+        $this->postJson(route('staff.orders.items.store', $order), ['variant_id' => $variant->id, 'quantity' => 1])->assertUnprocessable();
+        $this->patchJson(route('staff.orders.items.update', [$order, $item]), ['quantity' => 5])->assertUnprocessable();
+        $this->deleteJson(route('staff.orders.items.destroy', [$order, $item]))->assertUnprocessable();
+        $this->postJson(route('staff.orders.items.toppings.store', [$order, $item]), ['topping_id' => $topping->id, 'quantity' => 1])->assertUnprocessable();
+        $this->patchJson(route('staff.orders.items.toppings.update', [$order, $item, $row]), ['quantity' => 3])->assertUnprocessable();
+        $this->deleteJson(route('staff.orders.items.toppings.destroy', [$order, $item, $row]))->assertUnprocessable();
+        $this->patchJson(route('staff.orders.cancel', $order))->assertUnprocessable();
+        $this->assertSame('76.10', $order->fresh()->total_amount);
+        $this->assertSame(2, $item->fresh()->quantity);
+        $this->assertSame(1, $row->fresh()->quantity);
+        foreach (['orders', 'order_items', 'order_item_toppings', 'payments', 'inventory_transactions'] as $table) {
+            $this->assertDatabaseCount($table, 1);
+        }
     }
 }

@@ -1,5 +1,17 @@
 # Payment checkout contract
 
+## Finance completion — user approval 18/11/2026
+
+Các xác nhận trong chat ngày 18/11 bổ sung Finance API có operation key/payload hash bền vững, tham chiếu chuyển khoản duy nhất cho receipt mới, nhập tiền khách đưa và tính tiền thừa. D06 được duyệt theo Payment paid/paid_at, kỳ ngày Việt Nam, cash/bank, số đơn và danh sách chứng từ. requirements §15 ghi phạm vi hiện hành.
+
+- `PaymentService::confirmCash(orderId, operationKey, receivedAmount, actor)` nhận cash tối thiểu bằng tổng Order, trả SettlementResult cùng tiền thừa. `confirmBankTransfer(orderId, operationKey, bankReference, verifiedAmount, actor)` yêu cầu mã tham chiếu và đúng tổng tiền. Các API chỉ dùng sau khi nhân viên thực nhận và caller Sales đã kiểm điều kiện nguồn đơn. `settlementForOrder(orderId)` đọc Payment thật, paidInFull chỉ true khi có đúng một paid đủ tổng và paid_at hợp lệ.
+- Khóa actor → Order → items → Payment, xác minh actor active và giữ transaction khi tái tính tổng qua primitive OrderService. Replay cùng nội dung trả receipt cũ trước khi xét Order status hiện tại. Khác actor/order/method/amount/reference bị chặn. Operation key và payload lưu SHA-256, giới hạn key 200 ký tự. Bank reference trim và kiểm trùng không phân biệt chữ hoa/thường. Mã tham chiếu trên form checkout cũ vẫn tùy chọn, khi có thì phải duy nhất.
+- API Finance mới giữ trách nhiệm ghi receipt/consume promotion usage. Sales điều phối preparing/completion. Ba operation POS/web/COD hiện hữu vẫn giữ preconditions và orchestration đã kiểm thử.
+- Payment.amount là phần tiền áp vào Order. received_amount là cash khách đưa, change_amount là chênh lệch. Legacy form bỏ trống cash receipt nghĩa nhận đúng tổng. Report cộng amount. Metadata mới nullable cho lịch sử.
+- Migration `2026_11_18_000001_add_finance_receipt_keys_to_payments_table` thêm hai operation hashes, bank_reference_hash unique nullable và received_amount/change_amount DECIMAL(15,2). Không backfill reference cũ vì lịch sử có thể trùng; writer kiểm tham chiếu lịch sử trước thu mới. Rollback làm mất metadata mới, cần bảo toàn dữ liệu trước khi chạy trên môi trường đã phát sinh receipt.
+
+Các đoạn baseline lịch sử dưới đây giữ mốc thời gian của chúng. Trạng thái source/test mới nằm trong báo cáo CAFE-FINANCE-COMPLETE-001.
+
 ## Approval delta — CAFE-CUSTOMER-POS-COMPLETE-001, 27/10/2026
 
 User đã duyệt: POS key hash unique + payload hash trên Order; final server quote recheck; receipt failure giữ cart/key và kiểm tra trước retry, không thu hai lần; chặn item/topping mutation và cancel sau paid; completed chỉ khi paid + ít nhất một served + mọi món chưa hủy served; trả occupied khi completion và không còn pending dine-in khác, không ghi đè maintenance.

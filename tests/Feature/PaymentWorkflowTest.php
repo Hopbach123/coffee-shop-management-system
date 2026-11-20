@@ -117,6 +117,7 @@ class PaymentWorkflowTest extends TestCase
         });
         (require database_path('migrations/2026_10_27_000002_add_delivery_fee_to_orders_table.php'))->up();
         (require database_path('migrations/2026_10_27_000003_create_customer_order_requests_tables.php'))->up();
+        (require database_path('migrations/2026_11_18_000001_add_finance_receipt_keys_to_payments_table.php'))->up();
         $this->withoutVite();
     }
 
@@ -568,6 +569,9 @@ class PaymentWorkflowTest extends TestCase
             try {
                 $this->from(route('staff.orders.payments.show', $order))->pay($order)
                     ->assertRedirect(route('staff.orders.payments.show', $order))->assertSessionHasErrors('payment');
+                $paymentError = session('errors')->first('payment');
+                $this->assertStringContainsString('kiểm tra lịch sử đơn và giao dịch thực tế', $paymentError);
+                $this->assertStringContainsString('không thu tiền lần hai', $paymentError);
                 $this->assertDatabaseMissing('payments', ['order_id' => $order->id]);
                 $this->assertSame('pending', $order->fresh()->status);
                 $this->assertNull($order->fresh()->completed_at);
@@ -618,6 +622,209 @@ class PaymentWorkflowTest extends TestCase
         $this->actingAs($actor)->pay($order)->assertSessionHasNoErrors();
         $this->assertSame('24.00', Payment::sole()->amount);
         $this->assertSame(1, $promotion->fresh()->used_count);
+    }
+
+    public function test_finance_cash_replay_preserves_receipt_change_and_does_not_complete_order(): void
+    {
+        $actor = $this->actor();
+        $order = $this->order($actor, null, 'pending');
+        $promotion = $this->attachPromotion($order);
+        $service = app(PaymentService::class);
+        $result = $service->confirmCash($order->id, 'cash-operation', '30.00', $actor);
+        $this->assertSame('24.00', $result->confirmedAmount);
+        $this->assertSame('6.00', $result->changeAmount);
+        $this->assertSame('30.00', $result->receivedAmount);
+        $this->assertFalse($result->replay);
+        $this->assertSame('pending', $order->fresh()->status);
+        $this->assertSame('pending', $order->orderItems()->sole()->status);
+        $this->assertDatabaseCount('inventory_transactions', 0);
+        $this->assertTrue($service->settlementForOrder($order->id)->paidInFull);
+        $order->forceFill(['status' => 'completed'])->save();
+        $replay = $service->confirmCash($order->id, 'cash-operation', '30', $actor);
+        $this->assertTrue($replay->replay);
+        $this->assertSame($result->paymentId, $replay->paymentId);
+        $this->assertSame(1, $promotion->fresh()->used_count);
+        $this->assertDatabaseCount('payments', 1);
+    }
+
+    public function test_finance_key_cannot_be_reused_with_changed_amount_order_or_actor(): void
+    {
+        $actor = $this->actor();
+        $order = $this->order($actor);
+        $other = $this->order($actor);
+        $otherActor = $this->actor('admin');
+        $service = app(PaymentService::class);
+        $service->confirmCash($order->id, 'same-key', '30.00', $actor);
+        foreach ([[$order, '31.00', $actor], [$other, '30.00', $actor], [$order, '30.00', $otherActor]] as [$target, $amount, $currentActor]) {
+            try {
+                $service->confirmCash($target->id, 'same-key', $amount, $currentActor);
+                $this->fail('Conflicting operation was accepted.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('operation_key', $exception->errors());
+            }
+        }
+        $this->assertDatabaseCount('payments', 1);
+    }
+
+    public function test_finance_bank_reference_is_unique_and_exact_amount_is_required(): void
+    {
+        $actor = $this->actor();
+        $order = $this->order($actor);
+        $other = $this->order($actor);
+        $service = app(PaymentService::class);
+        foreach (['25.09', '25.11', '2e1', '-25.10'] as $amount) {
+            try {
+                $service->confirmBankTransfer($order->id, 'invalid-'.$amount, 'BANK-001', $amount, $actor);
+                $this->fail('Invalid amount was accepted.');
+            } catch (ValidationException) {
+                $this->assertDatabaseCount('payments', 0);
+            }
+        }
+        $first = $service->confirmBankTransfer($order->id, 'bank-key', ' BANK-001 ', '25.10', $actor);
+        $this->assertSame('bank_transfer', $first->method);
+        $this->assertTrue($service->confirmBankTransfer($order->id, 'bank-key', 'BANK-001', '25.10', $actor)->replay);
+        try {
+            $service->confirmBankTransfer($other->id, 'another-key', 'bank-001', '25.10', $actor);
+            $this->fail('Duplicate reference was accepted.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('transaction_code', $exception->errors());
+        }
+        $this->assertDatabaseCount('payments', 1);
+    }
+
+    public function test_finance_rejects_inactive_actor_second_payment_and_invalid_order(): void
+    {
+        $actor = $this->actor();
+        $inactive = $this->actor('staff', 'inactive');
+        $order = $this->order($actor);
+        $service = app(PaymentService::class);
+        try {
+            $service->confirmCash($order->id, 'inactive', '30.00', $inactive);
+            $this->fail('Inactive actor was accepted.');
+        } catch (\DomainException) {
+            $this->assertDatabaseCount('payments', 0);
+        }
+        $order->forceFill(['status' => 'cancelled'])->save();
+        try {
+            $service->confirmCash($order->id, 'cancelled', '30.00', $actor);
+            $this->fail('Cancelled order was accepted.');
+        } catch (ValidationException) {
+            $this->assertDatabaseCount('payments', 0);
+        }
+        $order->forceFill(['status' => 'pending'])->save();
+        $service->confirmCash($order->id, 'first', '30.00', $actor);
+        $this->expectException(ValidationException::class);
+        $service->confirmCash($order->id, 'second', '30.00', $actor);
+    }
+
+    public function test_finance_failure_rolls_back_key_payment_and_promotion(): void
+    {
+        $actor = $this->actor();
+        $order = $this->order($actor);
+        $promotion = $this->attachPromotion($order);
+        DB::statement("CREATE TRIGGER reject_usage BEFORE UPDATE ON promotions BEGIN SELECT RAISE(FAIL, 'forced failure'); END");
+        try {
+            app(PaymentService::class)->confirmCash($order->id, 'retry-after-failure', '30.00', $actor);
+            $this->fail('Expected rollback.');
+        } catch (QueryException) {
+            $this->assertDatabaseCount('payments', 0);
+            $this->assertSame(0, $promotion->fresh()->used_count);
+            $this->assertSame('pending', $order->fresh()->status);
+        }
+        DB::statement('DROP TRIGGER reject_usage');
+        $this->assertFalse(app(PaymentService::class)->confirmCash($order->id, 'retry-after-failure', '30.00', $actor)->replay);
+    }
+
+    public function test_finance_snapshot_rejects_unpaid_refunded_and_ambiguous_paid_history(): void
+    {
+        $actor = $this->actor();
+        $order = $this->order($actor);
+        $service = app(PaymentService::class);
+        $this->assertFalse($service->settlementForOrder($order->id)->paidInFull);
+        $result = $service->confirmCash($order->id, 'snapshot', '30.00', $actor);
+        $payment = Payment::findOrFail($result->paymentId);
+        $payment->forceFill(['status' => 'refunded'])->save();
+        $this->assertFalse($service->settlementForOrder($order->id)->paidInFull);
+        $payment->forceFill(['status' => 'paid'])->save();
+        Payment::forceCreate(['order_id' => $order->id, 'payment_code' => 'SECOND-PAID', 'payment_method' => 'cash',
+            'amount' => '1.00', 'status' => 'paid', 'paid_at' => now(), 'created_by' => $actor->id]);
+        $snapshot = $service->settlementForOrder($order->id);
+        $this->assertFalse($snapshot->paidInFull);
+        $this->assertSame('26.10', $snapshot->confirmedAmount);
+        $this->assertCount(2, $snapshot->paymentReferences);
+    }
+
+    public function test_finance_blocks_reusing_a_historical_bank_reference_without_hash(): void
+    {
+        $actor = $this->actor();
+        $old = $this->order($actor);
+        Payment::forceCreate(['order_id' => $old->id, 'payment_code' => 'LEGACY-BANK', 'payment_method' => 'bank_transfer',
+            'amount' => '25.10', 'transaction_code' => 'OLD-REF', 'status' => 'paid', 'paid_at' => now(), 'created_by' => $actor->id]);
+        $other = $this->order($actor);
+        try {
+            app(PaymentService::class)->confirmBankTransfer($other->id, 'new-bank', 'old-ref', '25.10', $actor);
+            $this->fail('A historical bank reference was reused.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('transaction_code', $exception->errors());
+        }
+        $this->assertDatabaseCount('payments', 1);
+    }
+
+    public function test_promotion_service_rejects_changing_web_quote_even_when_unpaid(): void
+    {
+        $actor = $this->actor();
+        $order = $this->order($actor);
+        DB::table('customer_order_requests')->insert([
+            'reference' => 'WEB-LOCK', 'submission_key_hash' => hash('sha256', 'web-key'),
+            'payload_hash' => hash('sha256', 'web-payload'), 'access_token_hash' => hash('sha256', 'web-token'),
+            'customer_name' => 'Guest', 'customer_phone' => '0900000000', 'customer_address' => 'Test address',
+            'payment_option' => 'cod', 'status' => 'accepted', 'quoted_subtotal' => '25.10', 'delivery_fee' => '0.00',
+            'quoted_total' => '25.10', 'order_id' => $order->id, 'access_expires_at' => now()->addDays(7),
+        ]);
+        $promotion = Promotion::forceCreate(['code' => 'WEBGUARD', 'name' => 'Save', 'discount_type' => 'fixed',
+            'discount_value' => '1.10', 'minimum_order' => '0.00', 'start_at' => now()->subDay(),
+            'end_at' => now()->addDay(), 'status' => 'active', 'used_count' => 0]);
+        $this->actingAs($actor)->post(route('staff.orders.promotion.store', $order), ['code' => $promotion->code])
+            ->assertSessionHasErrors('code');
+        $this->assertDatabaseCount('order_promotions', 0);
+        $this->assertSame('25.10', $order->fresh()->total_amount);
+    }
+
+    public function test_cash_http_receipt_records_change_and_rejects_insufficient_cash(): void
+    {
+        $actor = $this->actor();
+        $order = $this->order($actor);
+        $this->actingAs($actor)->pay($order, ['received_amount' => '25.09'])->assertSessionHasErrors('received_amount');
+        $this->assertDatabaseCount('payments', 0);
+        $this->pay($order, ['received_amount' => '30.00'])->assertSessionHasNoErrors();
+        $this->assertSame('4.90', Payment::sole()->change_amount);
+        $this->assertSame('25.10', Payment::sole()->amount);
+    }
+
+    public function test_promotion_http_uses_server_discount_and_blocks_paid_mutation(): void
+    {
+        $actor = $this->actor();
+        $order = $this->order($actor);
+        $promotion = Promotion::forceCreate(['code' => 'SAVE', 'name' => 'Save', 'discount_type' => 'fixed',
+            'discount_value' => '1.10', 'minimum_order' => '0.00', 'start_at' => now()->subDay(),
+            'end_at' => now()->addDay(), 'status' => 'active', 'used_count' => 0]);
+        $this->actingAs($actor)->post(route('staff.orders.promotion.store', $order), ['code' => 'save', 'discount_amount' => '9999.00'])
+            ->assertRedirect(route('staff.orders.payments.show', $order));
+        $this->assertSame('24.00', $order->fresh()->total_amount);
+        $this->assertSame(0, $promotion->fresh()->used_count);
+        $paidOrder = $this->order($actor, null, 'pending');
+        app(PaymentService::class)->confirmCash($paidOrder->id, 'paid-promotion-guard', '30.00', $actor);
+        $this->post(route('staff.orders.promotion.store', $paidOrder), ['code' => 'SAVE'])->assertSessionHasErrors('code');
+        $this->assertSame('25.10', $paidOrder->fresh()->total_amount);
+    }
+
+    public function test_promotion_http_rejects_guest_and_inactive_staff(): void
+    {
+        $order = $this->order($this->actor());
+        $url = route('staff.orders.promotion.store', $order);
+        $this->post($url, ['code' => 'SAVE'])->assertRedirect(route('login'));
+        $this->actingAs($this->actor('staff', 'inactive'))->post($url, ['code' => 'SAVE'])->assertForbidden();
+        $this->assertDatabaseCount('order_promotions', 0);
     }
 
     public function test_payment_code_collision_retries_without_duplicate_side_effects(): void
