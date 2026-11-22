@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Promotion;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class PromotionManagementTest extends TestCase
@@ -16,6 +18,7 @@ class PromotionManagementTest extends TestCase
         $this->assertSame(':memory:', DB::connection()->getDatabaseName());
         (require database_path('migrations/0001_01_01_000000_create_users_table.php'))->up();
         (require database_path('migrations/2026_08_14_000008_create_promotions_table.php'))->up();
+        (require database_path('migrations/2026_11_21_000001_add_image_to_promotions_table.php'))->up();
     }
 
     private function user(string $role = 'admin'): User
@@ -116,6 +119,35 @@ class PromotionManagementTest extends TestCase
             $this->post('/admin/promotions', $this->payload([$field => $value]))->assertSessionHasErrors($error);
         }
         $this->assertDatabaseCount('promotions', 0);
+    }
+
+    public function test_promotion_image_is_validated_and_replaced_without_deleting_static_seed_assets(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->user(), 'web');
+
+        $this->post('/admin/promotions', $this->payload([
+            'image' => UploadedFile::fake()->create('not-an-image.txt', 5, 'text/plain'),
+        ]))->assertSessionHasErrors('image');
+
+        $this->post('/admin/promotions', $this->payload([
+            'image' => UploadedFile::fake()->image('promotion.png', 1200, 600),
+        ]))->assertRedirect(route('admin.promotions.index'))->assertSessionHasNoErrors();
+
+        $promotion = Promotion::firstOrFail();
+        $firstPath = $promotion->image;
+        $this->assertTrue(Promotion::isManagedImagePath($firstPath));
+        Storage::disk('public')->assertExists($firstPath);
+
+        $this->put('/admin/promotions/'.$promotion->id, $this->payload([
+            'code' => 'CAFE20',
+            'image' => UploadedFile::fake()->image('replacement.png', 1200, 600),
+        ]))->assertRedirect(route('admin.promotions.index'))->assertSessionHasNoErrors();
+
+        $replacementPath = $promotion->fresh()->image;
+        Storage::disk('public')->assertMissing($firstPath);
+        Storage::disk('public')->assertExists($replacementPath);
+        $this->assertFalse(Promotion::isManagedImagePath('images/promotions/demo-coffee-morning.png'));
     }
 
     public function test_toggle_and_soft_delete(): void

@@ -32,7 +32,7 @@ class DashboardRevenueMySqlTest extends TestCase
         config(['database.default' => 'dashboard_test_mysql', 'database.connections.dashboard_test_mysql' => $connection]);
         DB::purge('dashboard_test_mysql');
         $this->assertSame('mysql', DB::connection()->getDriverName());
-        $this->assertSame([], Schema::getTableListing(), 'Refusing to touch a non-empty schema.');
+        $this->assertSame([], Schema::getTableListing($database), 'Refusing to touch a non-empty schema.');
         foreach ([
             ['0001_01_01_000000_create_users_table.php', ['users', 'password_reset_tokens', 'sessions']],
             ['2026_08_14_000001_create_customers_table.php', ['customers']],

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Base\Promotion as BasePromotion;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Promotion extends BasePromotion
 {
@@ -11,6 +12,7 @@ class Promotion extends BasePromotion
         'code',
         'name',
         'description',
+        'image',
         'discount_type',
         'discount_value',
         'max_discount',
@@ -36,5 +38,24 @@ class Promotion extends BasePromotion
     public function orderPromotions(): HasMany
     {
         return $this->hasMany(OrderPromotion::class, 'promotion_id');
+    }
+
+    public static function isManagedImagePath(?string $path): bool
+    {
+        return is_string($path) && preg_match('#^promotions/[A-Za-z0-9_-]+\.(?:jpe?g|png|webp)$#i', $path) === 1;
+    }
+
+    public function imageUrl(): ?string
+    {
+        if (static::isManagedImagePath($this->image)) {
+            return Storage::disk('public')->exists($this->image) ? Storage::disk('public')->url($this->image) : null;
+        }
+
+        if (is_string($this->image) && str_starts_with($this->image, 'images/promotions/') &&
+            ! str_contains($this->image, '..') && is_file(public_path($this->image))) {
+            return asset($this->image);
+        }
+
+        return null;
     }
 }

@@ -12,18 +12,17 @@ use Illuminate\Support\Facades\DB;
 class TableStatusReadService
 {
     public const LABELS = [
-        'available' => 'Trống', 'occupied' => 'Có khách', 'reserved' => 'Đã đặt',
+        'available' => 'Trống', 'occupied' => 'Có khách',
         'maintenance' => 'Bảo trì', 'conflict' => 'Cần kiểm tra', 'unknown' => 'Chưa xác định',
     ];
 
     public const ICONS = [
-        'available' => 'table', 'occupied' => 'users', 'reserved' => 'calendar',
+        'available' => 'table', 'occupied' => 'users',
         'maintenance' => 'clock', 'conflict' => 'bell', 'unknown' => 'table',
     ];
 
     public function query(CarbonImmutable $observedAt): Builder
     {
-        $states = ['pending', 'confirmed', 'arrived'];
         $base = CafeTable::query()->select('cafe_tables.*')->addSelect([
             'active_area_count' => Area::query()->selectRaw('COUNT(*)')->whereColumn('areas.id', 'cafe_tables.area_id')->where('status', 'active'),
             'pending_payment_count' => Payment::query()->selectRaw('COUNT(*)')->where('status', 'pending')
@@ -32,9 +31,6 @@ class TableStatusReadService
                 ->whereHas('order', fn ($query) => $query->whereColumn('orders.table_id', 'cafe_tables.id')->where('order_type', 'dine_in')->where('status', 'pending')),
         ])->withCount([
             'orders as pending_order_count' => fn ($query) => $query->where('order_type', 'dine_in')->where('status', 'pending'),
-            'reservations as current_reservation_count' => fn ($query) => $query->whereIn('status', $states)
-                ->where('reservation_start_at', '<=', $observedAt)->where('reservation_end_at', '>', $observedAt),
-            'reservations as future_reservation_count' => fn ($query) => $query->whereIn('status', $states)->where('reservation_start_at', '>', $observedAt),
         ]);
         // One SQL classification is shared by cards, detail, filters and all counts.
         $classified = DB::query()->fromSub($base->toBase(), 'signals')->select('signals.*')->selectRaw("CASE
@@ -42,9 +38,7 @@ class TableStatusReadService
             WHEN pending_order_count > 1
                 OR (status = 'available' AND pending_order_count > 0)
                 OR (status = 'occupied' AND pending_order_count = 0)
-                OR (status = 'maintenance' AND (pending_order_count > 0 OR current_reservation_count > 0))
-                OR (pending_order_count > 0 AND current_reservation_count > 0) THEN 'conflict'
-            WHEN status = 'available' AND current_reservation_count > 0 THEN 'reserved'
+                OR (status = 'maintenance' AND pending_order_count > 0) THEN 'conflict'
             ELSE status END AS display_status");
 
         return CafeTable::query()->fromSub($classified, 'cafe_tables')->select('cafe_tables.*');

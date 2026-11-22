@@ -7,7 +7,6 @@ use App\Models\CafeTable;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PickupRequest;
-use App\Models\Reservation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -26,7 +25,6 @@ class WorkspaceController extends Controller
             'creator',
             'cafeTable.area',
             'customer',
-            'reservation',
             'orderItems.product',
             'orderItems.productVariant',
             'orderItems.orderItemToppings.topping',
@@ -56,11 +54,6 @@ class WorkspaceController extends Controller
             : collect();
 
         return view('staff.brewing.index', compact('items'));
-    }
-
-    public function reservations(): View
-    {
-        return view('staff.reservations.index', ['reservations' => Reservation::latest('reservation_start_at')->paginate(15)]);
     }
 
     public function pickups(): View

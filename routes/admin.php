@@ -11,7 +11,6 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductRecipeController;
 use App\Http\Controllers\Admin\ProductVariantController;
 use App\Http\Controllers\Admin\PromotionController;
-use App\Http\Controllers\Admin\ReservationController;
 use App\Http\Controllers\Admin\TableDetailController;
 use App\Http\Controllers\Admin\ToppingController;
 use App\Http\Controllers\Admin\UserController;
@@ -36,13 +35,6 @@ Route::prefix('product-variants/{product_variant}/recipes')->name('product-recip
     Route::put('{product_recipe}', [ProductRecipeController::class, 'update'])->name('update');
     Route::delete('{product_recipe}', [ProductRecipeController::class, 'destroy'])->name('destroy');
 });
-
-Route::get('reservations', [ReservationController::class, 'index'])->name('reservations.index');
-Route::get('reservations/create', [ReservationController::class, 'create'])->name('reservations.create');
-Route::post('reservations', [ReservationController::class, 'store'])->name('reservations.store');
-Route::patch('reservations/{reservation}/approve', [ReservationController::class, 'approve'])->name('reservations.approve');
-Route::patch('reservations/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('reservations.cancel');
-Route::get('reservations/{reservation}', [ReservationController::class, 'show'])->name('reservations.show');
 
 Route::get('tables', [CafeTableController::class, 'index'])->name('tables.index');
 Route::get('tables/create', [CafeTableController::class, 'create'])->name('tables.create');

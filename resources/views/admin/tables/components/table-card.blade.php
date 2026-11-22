@@ -11,7 +11,6 @@
         <div><dt>Sức chứa</dt><dd>{{ $table->capacity ?? 'Chưa xác định' }}{{ $table->capacity !== null ? ' khách' : '' }}</dd></div>
     </dl>
     <p>Giá trị lưu: {{ $table->status ?? 'Chưa xác định' }} · Đơn đang phục vụ: {{ $table->pending_order_count }}</p>
-    <p>Lịch hiện tại: {{ $table->current_reservation_count }} · Lịch tương lai: {{ $table->future_reservation_count }}</p>
     @if ($statusClass === 'conflict')<p role="status">Dữ liệu cần kiểm tra; không tự nhận khách hoặc giải phóng bàn.</p>@endif
     @if ($table->pending_payment_count || $table->paid_payment_count)<p>Bản ghi Payment trên đơn pending: pending {{ $table->pending_payment_count }}, paid {{ $table->paid_payment_count }}. Chưa xác minh kết quả thanh toán.</p>@endif
     @if ($table->area?->status !== 'active')<p class="floor-table-context">Khu vực ngừng hoạt động</p>@endif

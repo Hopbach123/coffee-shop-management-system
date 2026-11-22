@@ -19,15 +19,23 @@ class CustomerOrderService
         private readonly CustomerCartService $cart,
         private readonly OrderService $orders,
         private readonly PaymentService $payments,
+        private readonly PromotionService $promotions,
     ) {}
 
-    public function review(array $draft, bool $lockCatalog = false): array
+    public function review(array $draft, bool $lockCatalog = false, ?string $promotionCode = null): array
     {
         $quote = $lockCatalog ? $this->cart->lockAndQuote($draft) : $this->cart->quote($draft);
         $subtotal = $quote['subtotal'];
-        $total = $subtotal === null ? null : $this->addFee($subtotal);
+        $promotion = $subtotal === null || $promotionCode === null || trim($promotionCode) === ''
+            ? null
+            : $this->promotions->previewForCustomerSubtotal($promotionCode, $subtotal);
+        $discount = $promotion['discount'] ?? '0.00';
+        $total = $subtotal === null ? null : $this->addFee($subtotal, $discount);
         $quote['delivery_fee'] = self::DELIVERY_FEE;
         $quote['delivery_fee_label'] = '20.000,00 ₫';
+        $quote['promotion_code'] = $promotion['code'] ?? null;
+        $quote['promotion_discount'] = $discount;
+        $quote['promotion_discount_label'] = $this->moneyLabel($discount);
         $quote['total'] = $total;
         $quote['total_label'] = $total === null ? null : $this->moneyLabel($total);
         $quote['fingerprint'] = hash('sha256', json_encode([$draft, $quote], JSON_THROW_ON_ERROR));
@@ -35,7 +43,7 @@ class CustomerOrderService
         return $quote;
     }
 
-    public function submit(array $attributes, array $draft, string $key, string $token, string $quoteHash): CustomerOrderRequest
+    public function submit(array $attributes, array $draft, string $key, string $token, string $quoteHash, ?string $promotionCode = null): CustomerOrderRequest
     {
         if ($draft === [] || strlen($key) !== 64 || ! ctype_xdigit($key) || strlen($token) !== 64 || ! ctype_xdigit($token)) {
             throw ValidationException::withMessages(['cart' => 'Phiên đặt món không hợp lệ. Vui lòng kiểm tra giỏ hàng.']);
@@ -43,21 +51,22 @@ class CustomerOrderService
         $contact = array_intersect_key($attributes, array_flip(['customer_name', 'customer_phone', 'customer_address', 'note', 'payment_option']));
         $keyHash = hash('sha256', $key);
         $tokenHash = hash('sha256', $token);
-        $payloadHash = hash('sha256', json_encode([$draft, $quoteHash, $contact], JSON_THROW_ON_ERROR));
+        $payloadHash = hash('sha256', json_encode([$draft, $quoteHash, $contact, $promotionCode], JSON_THROW_ON_ERROR));
 
         try {
-            return DB::transaction(function () use ($draft, $contact, $keyHash, $tokenHash, $payloadHash, $quoteHash): CustomerOrderRequest {
+            return DB::transaction(function () use ($draft, $contact, $keyHash, $tokenHash, $payloadHash, $quoteHash, $promotionCode): CustomerOrderRequest {
                 $existing = CustomerOrderRequest::where('submission_key_hash', $keyHash)->lockForUpdate()->first();
                 if ($existing !== null) {
                     return $this->existingRequest($existing, $tokenHash, $payloadHash);
                 }
-                $quote = $this->review($draft, true);
+                $quote = $this->review($draft, true, $promotionCode);
                 if ($quote['total'] === null || ! hash_equals($quoteHash, $quote['fingerprint'])) {
                     throw ValidationException::withMessages(['cart' => 'Giá hoặc món đã thay đổi. Vui lòng kiểm tra lại giỏ hàng và tổng tiền trước khi gửi.']);
                 }
                 $request = CustomerOrderRequest::forceCreate(array_merge($contact, [
                     'reference' => (string) Str::ulid(), 'status' => 'pending',
-                    'quoted_subtotal' => $quote['subtotal'], 'delivery_fee' => self::DELIVERY_FEE,
+                    'quoted_subtotal' => $quote['subtotal'], 'promotion_code' => $quote['promotion_code'],
+                    'promotion_discount' => $quote['promotion_discount'], 'delivery_fee' => self::DELIVERY_FEE,
                     'quoted_total' => $quote['total'], 'submission_key_hash' => $keyHash,
                     'payload_hash' => $payloadHash, 'access_token_hash' => $tokenHash,
                     'access_expires_at' => now()->addDays(7),
@@ -103,8 +112,11 @@ class CustomerOrderService
                 $draft[$item->id] = ['variant_id' => $item->variant_id, 'quantity' => $item->quantity,
                     'toppings' => $item->toppings->pluck('quantity', 'topping_id')->all(), 'note' => $item->note];
             }
-            $quote = $this->review($draft, true);
-            if ($items->isEmpty() || $quote['total'] !== $locked->quoted_total || $locked->delivery_fee !== self::DELIVERY_FEE) {
+            $quote = $this->review($draft, true, $locked->promotion_code);
+            if ($items->isEmpty() || $quote['total'] !== $locked->quoted_total
+                || $quote['promotion_discount'] !== $locked->promotion_discount
+                || $quote['promotion_code'] !== $locked->promotion_code
+                || $locked->delivery_fee !== self::DELIVERY_FEE) {
                 throw ValidationException::withMessages(['request' => 'Món, giá hoặc phí đã đổi. Liên hệ khách kiểm tra và gửi yêu cầu mới.']);
             }
             foreach ($items as $item) {
@@ -127,6 +139,9 @@ class CustomerOrderService
                 foreach ($line['toppings'] as $id => $quantity) {
                     $this->orders->addItemTopping($order, $item, ['topping_id' => $id, 'quantity' => $quantity], $actor);
                 }
+            }
+            if ($locked->promotion_code !== null) {
+                $this->promotions->applyToOrder($order, $locked->promotion_code);
             }
             if ($order->fresh()->total_amount !== $locked->quoted_total) {
                 throw new DomainException('Tổng Order không khớp yêu cầu đã chốt.');
@@ -235,14 +250,19 @@ class CustomerOrderService
         }
     }
 
-    private function addFee(string $subtotal): string
+    private function addFee(string $subtotal, string $discount = '0.00'): string
     {
         [$whole, $fraction] = explode('.', $subtotal);
         $cents = ((int) $whole * 100) + (int) $fraction;
+        [$discountWhole, $discountFraction] = explode('.', $discount);
+        $discountCents = ((int) $discountWhole * 100) + (int) $discountFraction;
+        if ($discountCents > $cents) {
+            throw new DomainException('Giảm giá không thể lớn hơn tiền món.');
+        }
         if ($cents > 999999999999999 - 2000000) {
             throw ValidationException::withMessages(['cart' => 'Tổng cộng phí giao vượt giới hạn dữ liệu.']);
         }
-        $cents += 2000000;
+        $cents = $cents - $discountCents + 2000000;
 
         return intdiv($cents, 100).'.'.str_pad((string) ($cents % 100), 2, '0', STR_PAD_LEFT);
     }

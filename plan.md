@@ -1,5 +1,15 @@
 # Coffee Shop Management System – Implementation Plan
 
+## Approved scope change — CAFE-RES-REMOVAL-001 (22/11/2026)
+
+Reservation is retired from the active product scope. Remove its Public/Admin/Staff routes, navigation, Blade screens, controllers, requests, services, and demo fixtures. Keep the existing schema and historical order relationship intact; this is a non-destructive retirement, not a database drop. Dine-in table/POS remains supported independently. Reservation-only tests are retired with the workflow. Verify no active reservation route or navigation link remains, run the focused route/static checks and build, and do not migrate or delete historical production-like data.
+
+## Current approved implementation — CAFE-PROMO-CHECKOUT-001 (22/11/2026)
+
+Implement the approved minimal public-promotion and delivery-checkout path: active promotion listing/copy/session-save; one server-validated code at checkout; request and Order promotion snapshots; Staff revalidation during acceptance; and existing payment/fulfillment rules for transfer prepayment and COD. Reuse `PromotionService`, `CustomerOrderService`, `PaymentService`, and the existing Customer Order request screens. Add only the request snapshot schema needed for price integrity. Out of scope: marketing/voucher engine, account-backed saved codes, gateway, split/partial payment, automatic refund, unrelated Admin UI, seed images, and removal of legacy routes/tables. Verification: targeted promotion/customer-order/payment tests, migration status on the disposable test DB, build, route/static checks, and browser flow where available. Do not commit, push, reset, or migrate the project database.
+
+| `CAFE-PUBLIC-ADVISOR-001` | Public chat advisor using current catalogue and active promotions | Existing menu/promotion routes | Read-only endpoint, rate limiting, safe response rendering, optional provider with server-side ID validation; no cart/order/payment mutation | Targeted feature test, route check, frontend build; browser verification if available | 30–90 phút / P2 |
+
 ## UI audit follow-up — CAFE-UI-WORKFLOW-001 (26/10/2026)
 
 User requests UI gap report and implementation in existing template. Audit source/routes then deliver read-only request inbox/detail, recipe/ledger access from parent pages, real payment history in Order, and preparation actions via existing endpoints. No duplicate online/payment write workflow or recipe CRUD from another branch. Browser verification at 375/768/1440 required before full UI DONE. Services for public submit/tracking, accept/reject, payment/movement writes remain separately scoped dependencies; missing writes must be reported, never simulated success. AC/test: middleware/PII, filters and missing-schema state, correct parent links, queue excludes finished Orders, actual existing preparation command, build, regressions and browser limitation report. Split into audit/design and screen/tests substeps; no automatic subsequent module implementation.

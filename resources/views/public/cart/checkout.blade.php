@@ -94,18 +94,30 @@
 
                     <div style="display: grid; gap: 10px; margin-bottom: 12px;">
                         <label style="border: 1px solid var(--coffee-border); border-radius: var(--radius-sm); padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; background: var(--coffee-bg);">
-                            <input type="radio" name="payment_preference" value="cash" checked style="accent-color: var(--coffee-caramel); width: 16px; height: 16px;">
-                            <span style="font-size: 0.95rem; font-weight: 500;">💵 Tiền mặt khi nhận đồ tại quầy</span>
+                            <input type="radio" name="payment_option" value="on_receipt" {{ old('payment_option', 'on_receipt') === 'on_receipt' ? 'checked' : '' }} onchange="togglePaymentOption()" style="accent-color: var(--coffee-caramel); width: 16px; height: 16px;">
+                            <span style="font-size: 0.95rem; font-weight: 500;">💵 Thanh toán tại quầy khi nhận đồ</span>
                         </label>
 
                         <label style="border: 1px solid var(--coffee-border); border-radius: var(--radius-sm); padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; background: var(--coffee-bg);">
-                            <input type="radio" name="payment_preference" value="bank_transfer" style="accent-color: var(--coffee-caramel); width: 16px; height: 16px;">
-                            <span style="font-size: 0.95rem; font-weight: 500;">🏦 Chuyển khoản ngân hàng (quét mã QR tại quầy)</span>
+                            <input type="radio" name="payment_option" value="bank_transfer_prepaid" {{ old('payment_option') === 'bank_transfer_prepaid' ? 'checked' : '' }} onchange="togglePaymentOption()" style="accent-color: var(--coffee-caramel); width: 16px; height: 16px;">
+                            <span style="font-size: 0.95rem; font-weight: 500;">🏦 Chuyển khoản trước</span>
                         </label>
                     </div>
 
+                    <div id="prepaid-transfer-notice" style="display: none; margin-bottom: 12px; padding: 12px 14px; border: 1px solid #eed9be; border-radius: var(--radius-sm); background: #fdf6ec; color: var(--coffee-text); font-size: 0.88rem; line-height: 1.5;">
+                        <strong style="display: block; color: var(--coffee-espresso); margin-bottom: 4px;">Xác minh thanh toán bởi nhân viên</strong>
+                        Sau khi bạn chuyển khoản theo hướng dẫn của quán, nhân viên sẽ đối chiếu giao dịch thực nhận. Việc gửi yêu cầu hoặc tích xác nhận này <strong>không</strong> tự chuyển đơn sang đã thanh toán.
+                        <label style="display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; cursor: pointer;">
+                            <input type="checkbox" name="prepaid_transfer_declaration" value="1" {{ old('prepaid_transfer_declaration') ? 'checked' : '' }} style="margin-top: 3px; accent-color: var(--coffee-caramel);">
+                            <span>Tôi hiểu quán chỉ ghi nhận thanh toán sau khi nhân viên xác minh giao dịch.</span>
+                        </label>
+                        @error('prepaid_transfer_declaration')
+                            <small style="display: block; color: var(--coffee-danger); margin-top: 7px;">{{ $message }}</small>
+                        @enderror
+                    </div>
+
                     <p style="color: var(--coffee-text-muted); font-size: 0.85rem; margin: 0; line-height: 1.4;">
-                        ℹ️ Sau khi gửi, bạn sẽ nhận được mã tra cứu trực tiếp tiến độ đơn hàng trên website.
+                        ℹ️ Sau khi gửi, bạn sẽ nhận được mã tra cứu tiến độ đơn hàng trên website. Nhân viên chỉ xác nhận đã thanh toán khi đã đối chiếu tiền thực nhận.
                     </p>
                 </div>
             </form>
@@ -177,6 +189,18 @@ function togglePurchaseType() {
         labelScheduled.classList.remove('is-selected');
     }
 }
-document.addEventListener('DOMContentLoaded', togglePurchaseType);
+function togglePaymentOption() {
+    const isPrepaid = document.querySelector('input[name="payment_option"]:checked')?.value === 'bank_transfer_prepaid';
+    const notice = document.getElementById('prepaid-transfer-notice');
+    const declaration = document.querySelector('input[name="prepaid_transfer_declaration"]');
+
+    notice.style.display = isPrepaid ? 'block' : 'none';
+    declaration.required = isPrepaid;
+    if (!isPrepaid) declaration.checked = false;
+}
+document.addEventListener('DOMContentLoaded', () => {
+    togglePurchaseType();
+    togglePaymentOption();
+});
 </script>
 @endsection

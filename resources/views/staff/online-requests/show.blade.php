@@ -71,6 +71,13 @@
                 </div>
             </div>
 
+            @if($requestRecord->payment_timing === 'prepaid')
+                <div style="margin-top: 16px; padding: 12px 14px; border-left: 3px solid var(--cafe-caramel, #ad754b); background: var(--cafe-surface-alt, #fcf8f2); border-radius: 0 6px 6px 0;">
+                    <strong style="display: block; color: var(--cafe-espresso, #3b281f); margin-bottom: 3px;">Cần xác minh từ hai phía</strong>
+                    <small style="color: var(--cafe-text-muted, #7c716a); line-height: 1.45;">Khách chỉ mới chọn chuyển khoản trước. Sau khi nhận đơn, hãy đối chiếu số tiền và nội dung giao dịch thực nhận, rồi mới ghi Payment tại màn hình thanh toán. Không xác nhận paid chỉ từ lựa chọn của khách.</small>
+                </div>
+            @endif
+
             @if($requestRecord->note)
                 <div style="margin-top: 16px; padding: 10px 14px; background: var(--cafe-surface-alt, #fcf8f2); border-left: 3px solid var(--cafe-caramel, #ad754b); border-radius: 0 6px 6px 0;">
                     <small style="color: var(--cafe-text-muted, #7c716a); font-weight: 700; display: block; margin-bottom: 2px;">Ghi chú từ khách:</small>

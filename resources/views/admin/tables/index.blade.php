@@ -85,7 +85,7 @@
                 @foreach($areaTables as $table)
                     <article class="v5-entity-card v5-table-card v5-table-card--{{ $table->status }}"><div class="v5-card-heading"><span class="v5-card-icon"><x-internal.icon name="table" /></span><span class="cafe-badge {{ $table->status === 'available' ? 'cafe-badge--success' : ($table->status === 'occupied' ? 'cafe-badge--warning' : 'cafe-badge--danger') }}">{{ $statuses[$table->status] ?? $table->status }}</span></div><h2>{{ $table->table_code }}</h2><p>{{ $table->table_name ?? 'Chưa có tên bàn' }}</p><div class="v5-card-meta"><span>{{ $table->capacity }} chỗ</span><span>#{{ $table->id }} · {{ $table->created_at?->format('d/m/Y H:i') ?? '—' }}</span></div><div class="v5-card-footer"><details class="v5-row-actions"><summary>Thao tác với bàn</summary><div class="v5-row-actions__content">
                                     @foreach ($transitions[$table->status] ?? [] as $target)
-                                        <form method="POST" action="{{ route('admin.tables.status', $table) }}" onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái bàn này? Hệ thống sẽ kiểm tra đơn hàng và đặt bàn trước khi lưu.');">
+                                        <form method="POST" action="{{ route('admin.tables.status', $table) }}" onsubmit="return confirm('Bạn có chắc muốn đổi trạng thái bàn này? Hệ thống sẽ kiểm tra đơn hàng trước khi lưu.');">
                                             @csrf @method('PATCH')
                                             <input type="hidden" name="expected_status" value="{{ $table->status }}">
                                             <input type="hidden" name="status" value="{{ $target }}">
@@ -97,7 +97,7 @@
                                     <a href="{{ route('admin.tables.edit', $table) }}" class="cafe-btn-icon" aria-label="Sửa bàn {{ $table->table_code }}">
                                         <x-internal.icon name="edit" size="15" />
                                     </a>
-                                    <form method="POST" action="{{ route('admin.tables.destroy', $table) }}" onsubmit="return confirm('Bạn có chắc muốn xóa mềm bàn này? Chỉ xóa khi không có khách, đơn pending hoặc đặt bàn còn hiệu lực. Lịch sử được giữ nguyên.');">
+                                    <form method="POST" action="{{ route('admin.tables.destroy', $table) }}" onsubmit="return confirm('Bạn có chắc muốn xóa mềm bàn này? Chỉ xóa khi không có khách hoặc đơn pending. Lịch sử được giữ nguyên.');">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="cafe-btn-icon cafe-btn-icon--danger" aria-label="Xóa bàn {{ $table->table_code }}">
                                             <x-internal.icon name="trash" size="15" />

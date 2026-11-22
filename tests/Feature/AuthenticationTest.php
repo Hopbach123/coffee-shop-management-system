@@ -34,16 +34,16 @@ class AuthenticationTest extends TestCase
         Route::middleware(['web', 'auth:web'])->get('/auth-test/protected', fn () => 'Protected');
     }
 
-    public function test_public_navigation_uses_real_reservation_and_delivery_cart_routes(): void
+    public function test_public_navigation_uses_real_delivery_cart_routes_without_reservation_links(): void
     {
         $this->withoutVite();
-        $this->get('/')->assertOk()->assertSee(route('reservation.create'), false)
-            ->assertSee('class="nav-cart"', false)->assertSee('nav-cart-count">0', false);
+        $this->get('/')->assertOk()->assertSee('class="nav-cart"', false)
+            ->assertSee('nav-cart-count">0', false)->assertDontSee('Đặt bàn');
         $this->withSession([
             'customer_order_cart' => ['first' => ['quantity' => 2], 'second' => ['quantity' => 1]],
             'customer_cart' => [1 => 10],
         ])->get('/')
-            ->assertOk()->assertSee(route('reservation.create'), false)->assertSee(route('cart.index'), false)->assertSee('nav-cart-count">3', false);
+            ->assertOk()->assertSee(route('cart.index'), false)->assertSee('nav-cart-count">3', false)->assertDontSee('Đặt bàn');
     }
 
     private function user(string $role = 'staff', string $status = 'active'): User

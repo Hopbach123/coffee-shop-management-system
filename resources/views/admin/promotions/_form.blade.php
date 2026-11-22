@@ -22,6 +22,16 @@
         @error('description') <p class="cafe-field-error" id="description-error">{{ $message }}</p> @enderror
     </div>
 
+    <div class="promotion-image-field">
+        <label for="image">Ảnh banner</label>
+        <input id="image" class="cafe-input" name="image" type="file" accept="image/jpeg,image/png,image/webp" @error('image') aria-invalid="true" aria-describedby="image-error" @enderror>
+        <p class="promotion-image-help">Tùy chọn. JPG, PNG hoặc WebP, tối đa 5 MB. Ảnh mới chỉ thay thế ảnh cũ sau khi lưu thành công.</p>
+        @error('image') <p class="cafe-field-error" id="image-error">{{ $message }}</p> @enderror
+        @if ($promotion?->imageUrl())
+            <img class="promotion-image-preview" src="{{ $promotion->imageUrl() }}" alt="" aria-hidden="true">
+        @endif
+    </div>
+
     <div class="v5-form-grid">
         <div>
             <label for="discount_type" style="display:block;font-size:.85rem;font-weight:600;color:var(--cafe-text-secondary);margin-bottom:.35rem;">Loại giảm giá *</label>

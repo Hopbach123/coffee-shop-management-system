@@ -1,5 +1,12 @@
 -- After importing seed_data.sql, every invalid_count must be 0.
 -- V2 requires the online pickup migrations. These checks include presence, not only error counts.
+SELECT 'seed_image_references' AS check_name, COUNT(*) AS invalid_count
+FROM (
+    SELECT image FROM promotions WHERE code IN ('DEMO-V1-10','DEMO-V1-FIXED','DEMO-V1-EXPIRED','DEMO-V1-FUTURE','DEMO-V1-INACTIVE','DEMO-V1-LIMIT')
+    UNION ALL SELECT image FROM products WHERE slug IN ('demo-v1-product-1','demo-v1-product-2','demo-v1-product-3','demo-v1-unavailable')
+) AS seed_images
+WHERE image IS NULL OR image NOT LIKE 'images/%';
+
 SELECT 'v2_fixture_presence' AS check_name,
     ABS(6 - (SELECT COUNT(*) FROM online_order_requests WHERE request_code IN ('DEMO-V2-ONLINE-PENDING','DEMO-V2-SCHEDULED-PENDING','DEMO-V2-ONLINE-ACCEPTED','DEMO-V2-SCHEDULED-PAID','DEMO-V2-REJECTED','DEMO-V2-CANCELLED')))
     + ABS(2 - (SELECT COUNT(*) FROM orders WHERE order_code IN ('DEMO-V2-ONLINE-ORDER','DEMO-V2-SCHEDULED-ORDER')))

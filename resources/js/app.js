@@ -3,6 +3,7 @@ import { initializeCatalogView } from './admin/catalog-view.js';
 import { initializeTableMenu } from './staff/table-menu.js';
 import { initializeEstimatePrint } from './staff/estimate-print.js';
 import { initializeStatusRefresh } from './admin/table-status.js';
+import './public/storefront-advisor.js';
 
 initializeTableMenu();
 initializeEstimatePrint();

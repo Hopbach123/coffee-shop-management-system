@@ -12,6 +12,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductRecipe;
 use App\Models\ProductVariant;
+use App\Models\Promotion;
 use App\Models\Topping;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -126,6 +127,7 @@ class CustomerOrderWorkflowTest extends TestCase
         });
         (require database_path('migrations/2026_10_27_000002_add_delivery_fee_to_orders_table.php'))->up();
         (require database_path('migrations/2026_10_27_000003_create_customer_order_requests_tables.php'))->up();
+        (require database_path('migrations/2026_11_22_000001_add_promotion_snapshot_to_customer_order_requests.php'))->up();
         (require database_path('migrations/2026_11_18_000001_add_finance_receipt_keys_to_payments_table.php'))->up();
         $this->withoutVite();
     }
@@ -186,6 +188,68 @@ class CustomerOrderWorkflowTest extends TestCase
         $this->post(route('customer-orders.store'), $payload)->assertRedirect(route('customer-orders.show', $record->reference));
         $this->assertDatabaseCount('customer_order_requests', 1);
         $this->get(route('customer-orders.show', $record->reference))->assertOk()->assertSee('Chưa thanh toán')->assertDontSee($record->access_token_hash);
+    }
+
+    public function test_customer_can_apply_one_eligible_promotion_and_staff_rechecks_snapshot_on_acceptance(): void
+    {
+        Promotion::forceCreate([
+            'code' => 'CAFE10', 'name' => 'Ten percent', 'discount_type' => 'percentage',
+            'discount_value' => '10.00', 'max_discount' => '5000.00', 'minimum_order' => '50000.00',
+            'start_at' => now()->subHour(), 'end_at' => now()->addHour(), 'usage_limit' => 3,
+            'used_count' => 0, 'status' => 'active',
+        ]);
+        [$payload] = $this->startGuestRequest();
+        $this->post(route('customer-orders.promotion.apply'), ['promotion_code' => 'cafe10'])->assertRedirect(route('customer-orders.create'));
+        $this->get(route('customer-orders.create'))->assertOk()->assertSee('CAFE10');
+        $payload['submission_key'] = session('customer_order_attempt.key');
+        $this->post(route('customer-orders.store'), $payload)->assertSessionHasNoErrors();
+        $record = CustomerOrderRequest::sole();
+        $this->assertSame('CAFE10', $record->promotion_code);
+        $this->assertSame('5000.00', $record->promotion_discount);
+        $this->assertSame('80000.60', $record->quoted_total);
+
+        $this->actingAs($this->actor())->post(route('staff.customer-orders.accept', $record))->assertSessionHasNoErrors();
+        $order = Order::sole();
+        $this->assertSame('80000.60', $order->total_amount);
+        $this->assertDatabaseHas('order_promotions', ['order_id' => $order->id, 'promotion_code' => 'CAFE10', 'discount_amount' => '5000.00']);
+    }
+
+    public function test_guest_can_view_and_save_an_active_public_promotion_without_consuming_usage(): void
+    {
+        $promotion = Promotion::forceCreate([
+            'code' => 'PUBLIC10', 'name' => 'Public ten', 'discount_type' => 'fixed',
+            'discount_value' => '10000.00', 'minimum_order' => '0.00', 'start_at' => now()->subHour(),
+            'end_at' => now()->addHour(), 'usage_limit' => 2, 'used_count' => 0, 'status' => 'active',
+        ]);
+        Promotion::forceCreate([
+            'code' => 'EXPIRED', 'name' => 'Expired', 'discount_type' => 'fixed',
+            'discount_value' => '10000.00', 'minimum_order' => '0.00', 'start_at' => now()->subDays(2),
+            'end_at' => now()->subHour(), 'usage_limit' => 2, 'used_count' => 0, 'status' => 'active',
+        ]);
+
+        $this->get(route('promotions.index'))->assertOk()->assertSee('PUBLIC10')->assertDontSee('EXPIRED');
+        $this->post(route('promotions.save', $promotion))->assertSessionHas('public_saved_promotion_codes', ['PUBLIC10']);
+        $this->assertSame(0, $promotion->fresh()->used_count);
+    }
+
+    public function test_acceptance_rejects_when_applied_promotion_has_changed(): void
+    {
+        $promotion = Promotion::forceCreate([
+            'code' => 'CHANGE10', 'name' => 'Change test', 'discount_type' => 'percentage',
+            'discount_value' => '10.00', 'minimum_order' => '0.00', 'start_at' => now()->subHour(),
+            'end_at' => now()->addHour(), 'status' => 'active', 'used_count' => 0,
+        ]);
+        [$payload] = $this->startGuestRequest();
+        $this->post(route('customer-orders.promotion.apply'), ['promotion_code' => 'CHANGE10']);
+        $this->get(route('customer-orders.create'))->assertOk();
+        $payload['submission_key'] = session('customer_order_attempt.key');
+        $this->post(route('customer-orders.store'), $payload)->assertSessionHasNoErrors();
+        $record = CustomerOrderRequest::sole();
+        $promotion->forceFill(['status' => 'inactive'])->saveOrFail();
+
+        $this->actingAs($this->actor())->postJson(route('staff.customer-orders.accept', $record))
+            ->assertUnprocessable()->assertJsonValidationErrors('request');
+        $this->assertDatabaseCount('orders', 0);
     }
 
     public function test_tracking_requires_the_original_session_and_expires_after_seven_days(): void

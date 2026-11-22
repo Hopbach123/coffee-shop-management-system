@@ -61,7 +61,7 @@
     {{-- Trạng thái bàn --}}
     <section class="cafe-card" style="padding:1.25rem;" aria-labelledby="table-status-title">
         <h2 id="table-status-title" style="font-size:1rem;font-weight:700;color:var(--cafe-text-primary);margin-bottom:.35rem;">Trạng thái bàn hiện tại</h2>
-        <p style="font-size:.8rem;color:var(--cafe-text-secondary);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--cafe-border);">Không xác nhận khả dụng cho thời điểm đặt bàn trong tương lai.</p>
+        <p style="font-size:.8rem;color:var(--cafe-text-secondary);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--cafe-border);">Trạng thái được tổng hợp từ khu vực, bàn và đơn tại chỗ đang xử lý.</p>
         <dl class="dashboard-orders__statuses" style="display:flex;flex-direction:column;gap:.6rem;margin:0;">
             @foreach ($tableStatistics['by_status'] as $status => $count)
                 <div style="display:flex;justify-content:space-between;align-items:center;">

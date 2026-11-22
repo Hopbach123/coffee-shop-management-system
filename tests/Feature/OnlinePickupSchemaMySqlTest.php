@@ -158,7 +158,12 @@ class OnlinePickupSchemaMySqlTest extends TestCase
         foreach (['online_order_requests', 'online_order_request_items', 'online_order_request_item_toppings'] as $table) {
             $this->assertTrue(Schema::hasTable($table));
         }
-        $this->assertSame(0, Artisan::call('migrate:rollback', ['--database' => 'online_schema_test', '--step' => 4, '--force' => true]));
+        // Roll back through the online-purchase migration before asserting the
+        // legacy shape. Calculate the depth so later additive migrations do not
+        // silently make this test stop short of the schema it is checking.
+        $onlinePurchaseMigration = '2026_10_26_000004_add_online_purchase_fields_to_orders_table';
+        $rollbackDepth = DB::table('migrations')->where('migration', '>=', $onlinePurchaseMigration)->count();
+        $this->assertSame(0, Artisan::call('migrate:rollback', ['--database' => 'online_schema_test', '--step' => $rollbackDepth, '--force' => true]));
         $this->assertFalse(Schema::hasColumn('orders', 'purchase_type'));
         $actor = DB::table('users')->insertGetId(['name' => 'Schema fixture', 'email' => 'schema@example.test', 'password' => 'not-a-login-fixture', 'role' => 'staff']);
         $category = DB::table('categories')->insertGetId(['name' => 'Coffee']);
@@ -174,8 +179,9 @@ class OnlinePickupSchemaMySqlTest extends TestCase
         $upgraded = (array) DB::table('orders')->find($orderId);
         $this->assertSame('counter', $upgraded['purchase_type']);
         $this->assertNull($upgraded['online_request_id']);
-        unset($upgraded['purchase_type'], $upgraded['online_request_id']);
-        $this->assertSame($legacyRow, $upgraded);
+        // Later additive migrations legitimately append defaulted columns. The
+        // pre-upgrade values themselves must remain byte-for-byte unchanged.
+        $this->assertSame($legacyRow, array_intersect_key($upgraded, $legacyRow));
         foreach ((array) $legacyPayment as $column => $value) {
             $this->assertSame($value, DB::table('payments')->first()->$column, 'Legacy receipt changed: '.$column);
         }

@@ -4,9 +4,15 @@
 
 File hiện tại chứa baseline DEMO-V1 và fixtures DEMO-V2 trong cùng transaction. Phải chạy đủ bốn migration online ngày 26/10 trước khi import. Chỉ thử bộ mới trên database development riêng đã migrate, không reset coffee_shop đang dùng.
 
+## Ảnh fixture menu và khuyến mãi — 21/11/2026
+
+`seed_data.sql` hiện tham chiếu các ảnh cục bộ versioned dưới `public/images/`: mỗi sản phẩm fixture có một ảnh riêng tại `public/images/products/`, cùng ảnh danh mục và ba banner khuyến mãi tại `public/images/promotions/`. Migration `2026_11_21_000001_add_image_to_promotions_table.php` phải được áp dụng trước khi import, vì cột `promotions.image` là nullable và chỉ phục vụ hiển thị; không thay đổi điều kiện áp mã, số tiền hoặc snapshot lịch sử đơn.
+
+Sau import, chạy `verify_seed_data.sql`. Check `seed_image_references` chỉ xác minh các path fixture trong database; MySQL không thể xác nhận file web trên đĩa. Khi nghiệm thu UI, kiểm tra bốn file món `demo-latte.png`, `demo-ca-phe-sua.png`, `demo-tra-sua.png`, `demo-tra-tam-het.png` từ `/images/products/` và ba banner khuyến mãi từ `/images/promotions/` được web server phục vụ.
+
 Phần V2 thêm 6 requests (online/hẹn pending, online accepted, hẹn prepaid, rejected, cancelled), 7 request items, 1 request topping, 2 Orders takeaway, 3 sold items, 1 sold topping và 1 Payment bank_transfer paid. Tổng bộ mới có 9 Orders, 10 Order Items, 5 Payments; stock/29 log kho V1 không đổi vì các món V2 chưa preparing. Ba kiểu mua là counter/scheduled/online. Không shipper/gateway. Token DEMO-V2-TRACK-1 đến 6 là fixture công khai, SQL chỉ lưu SHA-256 hash; không dùng token này cho đơn thật.
 
-Seed dùng timezone UTC cho session và mật khẩu fixture DemoCoffee123! cho lần tạo mới. Không thay mật khẩu local khi chạy lại. **DB có marker V1 hoặc email demo sẽ bỏ qua cả bộ insert, không tự thêm V2 vào dữ liệu cũ.** Nếu thiếu V2, kết quả cuối báo V2 NOT IMPORTED; verifier presence sẽ báo invalid_count > 0. Không xóa marker/email để ép import; cần database dev riêng hoặc task nâng cấp fixture có review.
+Seed dùng timezone UTC cho session và mật khẩu fixture demo cho lần tạo mới. Không thay mật khẩu local khi chạy lại. Khi V1 đã tồn tại, V1 vẫn không bị ghi đè: chỉ các đường dẫn ảnh còn `NULL` của record demo mới được backfill và V2 chỉ được thêm nếu sáu fixture V2 chưa có đủ khóa phụ thuộc V1. Lần chạy lại sau khi V2 đủ chỉ báo `Existing dataset`; không tạo dòng trùng. Nếu thiếu các khóa V1 bắt buộc, kết quả cuối báo `V2 NOT IMPORTED`; không xóa marker/email để ép import.
 
 verify_seed_data.sql hiện có 12 checks, gồm presence V2, liên kết request/Order, totals/snapshots và Payment. Tất cả phải bằng 0 ngay sau fresh import; DB trống hoặc bộ thiếu không còn có thể được coi là PASS. Các kiểm tra fixture ban đầu không phải invariant runtime: prepaid scenario và recipe hiện tại có thể đổi hợp lệ khi vận hành. Không dùng kết quả đó để tự sửa ledger quá khứ. Baseline V1 được giữ để đối chiếu, chưa chuyển toàn bộ verifier thành audit production.
 
@@ -55,7 +61,7 @@ Nếu còn pending, review đúng target rồi chạy `& $php artisan migrate`. 
 2. Chọn `coffee_shop`; mở Query và chạy `SELECT DATABASE();` để xác nhận.
 3. Load SQL file → chọn `database/seed_data.sql`, encoding UTF-8.
 4. Bật chế độ **dừng khi gặp lỗi** rồi chạy **toàn bộ file** trong cùng connection, không chỉ chạy một đoạn bôi chọn.
-5. Kết quả cuối là `IMPORTED: DEMO-V1, 18 business tables`, hoặc `SKIPPED` nếu đã có dữ liệu mẫu.
+5. Kết quả cuối là `IMPORTED: DEMO-V1, 18 business tables` với DB mới; DB đã có V1 có thể báo `SKIPPED` nhưng vẫn bổ sung V2/ảnh thiếu theo quy tắc an toàn ở trên. Sau lần chạy thứ hai phải báo `Existing dataset` và không tạo bản ghi trùng.
 6. Refresh bảng để xem dữ liệu. Mở/chạy `database/verify_seed_data.sql`; mọi `invalid_count` phải bằng **0** ngay sau import.
 
 Nếu có lỗi, dừng và chạy `ROLLBACK;` trong **cùng connection**. Không tiếp tục tới COMMIT. Công cụ bỏ qua lỗi rồi tiếp tục có thể commit bộ dữ liệu thiếu.

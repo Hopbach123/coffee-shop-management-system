@@ -10,6 +10,30 @@ use Illuminate\Support\Facades\DB;
 
 class PromotionService
 {
+    /**
+     * Quote a public checkout code without reserving its quota. Usage is
+     * consumed only by the existing successful-payment transaction.
+     *
+     * @return array{code: string, discount: string}
+     */
+    public function previewForCustomerSubtotal(string $code, string $subtotal): array
+    {
+        $promotion = $this->resolve($code);
+
+        if ($promotion->status !== 'active'
+            || now()->lt($promotion->start_at)
+            || now()->gt($promotion->end_at)
+            || $this->cents($subtotal) < $this->cents($promotion->minimum_order)
+            || ($promotion->usage_limit !== null && $promotion->used_count >= $promotion->usage_limit)) {
+            throw new DomainException('Mã khuyến mãi không còn đủ điều kiện áp dụng.');
+        }
+
+        return [
+            'code' => $promotion->code,
+            'discount' => $this->calculateDiscount($promotion, $subtotal),
+        ];
+    }
+
     /** Preview an eligible code without reserving quota or changing the order. */
     public function previewDiscount(Order $order, string $code): string
     {

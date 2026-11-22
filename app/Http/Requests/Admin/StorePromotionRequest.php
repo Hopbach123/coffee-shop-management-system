@@ -29,6 +29,7 @@ class StorePromotionRequest extends FormRequest
             'code' => ['required', 'string', 'max:50', Rule::unique('promotions', 'code')],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'discount_type' => ['required', Rule::in(['percentage', 'fixed'])],
             'discount_value' => ['required', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
             'max_discount' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],

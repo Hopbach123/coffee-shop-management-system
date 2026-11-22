@@ -6,6 +6,36 @@
     <h1 id="checkout-title">Thông tin giao món</h1>
     <p>Không cần tài khoản. Quán sẽ tiếp nhận yêu cầu và liên hệ qua thông tin bạn cung cấp.</p>
     @include('public.cart._notices')
+    <section class="customer-cart-promotion" aria-labelledby="checkout-promotion-title">
+        <div>
+            <p class="coffee-eyebrow">Ưu đãi</p>
+            <h2 id="checkout-promotion-title">Mã khuyến mãi</h2>
+            <p>Chỉ áp dụng một mã. Giá và điều kiện sẽ được quán kiểm tra lại trước khi nhận đơn.</p>
+        </div>
+        @if($quote['promotion_code'])
+            <div class="customer-cart-promotion__active">
+                <strong>{{ $quote['promotion_code'] }}</strong>
+                <span>Giảm {{ $quote['promotion_discount_label'] }}</span>
+                <form method="POST" action="{{ route('customer-orders.promotion.remove') }}">@csrf @method('DELETE')
+                    <x-public.button type="submit" variant="secondary">Bỏ mã</x-public.button>
+                </form>
+            </div>
+        @else
+            <form method="POST" action="{{ route('customer-orders.promotion.apply') }}" class="customer-cart-promotion__form">
+                @csrf
+                <label for="promotion-code">Nhập mã</label>
+                <input id="promotion-code" name="promotion_code" maxlength="50" value="{{ old('promotion_code') }}" placeholder="Ví dụ: CAFE10" required>
+                <x-public.button type="submit" variant="secondary">Áp dụng</x-public.button>
+            </form>
+            @if($savedPromotionCodes !== [])
+                <p class="customer-cart-promotion__saved">Mã đã lưu:
+                    @foreach($savedPromotionCodes as $code)
+                        <a href="{{ route('customer-orders.create', ['promotion' => $code]) }}">{{ $code }}</a>@if(! $loop->last), @endif
+                    @endforeach
+                </p>
+            @endif
+        @endif
+    </section>
     <div class="customer-cart-layout">
         <form method="POST" action="{{ route('customer-orders.store') }}" class="customer-cart-form">
             @csrf<input type="hidden" name="submission_key" value="{{ $submissionKey }}">
@@ -18,6 +48,7 @@
             <x-public.button type="submit" :disabled="$quote['total'] === null">Gửi yêu cầu giao món</x-public.button>
         </form>
         <aside class="customer-cart-summary"><h2>Kiểm tra yêu cầu</h2>
+            @if($quote['promotion_code'])<p>Giảm giá ({{ $quote['promotion_code'] }}): −{{ $quote['promotion_discount_label'] }}</p>@endif
             @foreach($quote['items'] as $line)<p><strong>{{ $line['name'] }} · {{ $line['variant_name'] }} × {{ $line['quantity'] }}</strong><br>{{ $line['subtotal_label'] ?? $line['error'] }}</p>@foreach($line['toppings'] as $row)<p>+ {{ $row['name'] }} × {{ $row['quantity'] }} · {{ $row['amount_label'] }}</p>@endforeach @endforeach
             <p>Tiền món: {{ $quote['subtotal_label'] ?? 'Cần kiểm tra lại món' }}</p><p>Phí giao: {{ $quote['delivery_fee_label'] }}</p>
             <p class="customer-cart-summary__amount">Tổng: {{ $quote['total_label'] ?? 'Chưa thể gửi' }}</p>

@@ -44,7 +44,7 @@ class FixedAdminSidebarTest extends TestCase
                 $this->assertStringContainsString(e($item['label']), $html);
             }
         }
-        $this->assertSame(12, $count);
+        $this->assertSame(11, $count);
         $this->assertStringNotContainsString(route('admin.menus.index'), $html);
         $this->assertStringNotContainsString(route('staff.home'), $html);
         $this->assertStringContainsString('Chọn nguyên liệu để nhập kho', $html);
@@ -61,7 +61,6 @@ class FixedAdminSidebarTest extends TestCase
             'admin.ingredients.adjustment.create' => 'admin.ingredients.index',
             'admin.ingredients.history' => 'admin.ingredients.index',
             'admin.products.edit' => 'admin.products.index',
-            'admin.reservations.show' => 'admin.reservations.index',
         ] as $current => $parent) {
             $route = Route::getRoutes()->getByName($current);
             request()->setRouteResolver(fn () => $route);

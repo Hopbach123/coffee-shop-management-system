@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="description" content="A warm, independent coffeehouse experience shaped around careful craft and quiet moments.">
         <title>@yield('title', 'Maison du Café')</title>
         @if (is_file(public_path('build/manifest.json')))

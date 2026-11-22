@@ -4,10 +4,10 @@
 
 @section('content')
     {{-- Warm Editorial Hero Banner (matching design mockup) --}}
-    <section style="background: linear-gradient(135deg, #2C1B14 0%, #4B3024 60%, #30241E 100%); color: #ffffff; padding: 48px 0 40px; margin-bottom: 24px; position: relative; overflow: hidden;">
+    <section class="public-menu-hero" style="background: linear-gradient(135deg, #2C1B14 0%, #4B3024 60%, #30241E 100%); color: #ffffff; padding: 48px 0 40px; margin-bottom: 24px; position: relative; overflow: hidden;">
         <div style="position: absolute; right: -40px; top: -40px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(173, 117, 71, 0.25) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
-        <div class="coffee-container" style="display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; flex-wrap: wrap; gap: 24px;">
-            <div style="max-width: 580px;">
+        <div class="coffee-container public-menu-hero__inner" style="display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; flex-wrap: wrap; gap: 24px;">
+            <div class="public-menu-hero__copy" style="max-width: 580px;">
                 <span style="display: inline-block; padding: 4px 12px; background: rgba(173, 117, 71, 0.3); border: 1px solid rgba(173, 117, 71, 0.5); border-radius: 9999px; font-size: 0.8125rem; font-weight: 600; color: #E7D8BF; margin-bottom: 12px; letter-spacing: 0.05em; text-transform: uppercase;">
                     Maison du Café · Premium Coffee Boutique
                 </span>
@@ -23,7 +23,7 @@
                     </a>
                 </div>
             </div>
-            <div style="width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); display: grid; place-items: center; color: #E7D8BF; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="public-menu-hero__mark" style="width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); display: grid; place-items: center; color: #E7D8BF; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
                 <x-internal.icon name="coffee" size="64" />
             </div>
         </div>

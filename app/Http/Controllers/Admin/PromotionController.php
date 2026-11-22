@@ -8,6 +8,9 @@ use App\Http\Requests\Admin\UpdatePromotionRequest;
 use App\Models\Promotion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
 use Illuminate\View\View;
 
 class PromotionController extends Controller
@@ -35,9 +38,18 @@ class PromotionController extends Controller
     public function store(StorePromotionRequest $request): RedirectResponse
     {
         $promotion = new Promotion;
-        $promotion->fill($request->safe()->except('status'));
+        $newImagePath = $this->storeImage($request);
+        $promotion->fill($request->safe()->except(['status', 'image']));
         $promotion->status = $request->validated('status');
-        $promotion->save();
+        $promotion->image = $newImagePath;
+
+        try {
+            $promotion->save();
+        } catch (Throwable $exception) {
+            $this->deleteManagedImage($newImagePath);
+
+            throw $exception;
+        }
 
         return redirect()->route('admin.promotions.index')->with('success', 'Đã tạo khuyến mãi.');
     }
@@ -49,9 +61,25 @@ class PromotionController extends Controller
 
     public function update(UpdatePromotionRequest $request, Promotion $promotion): RedirectResponse
     {
-        $promotion->fill($request->safe()->except('status'));
+        $oldImagePath = $promotion->image;
+        $newImagePath = $request->hasFile('image') ? $this->storeImage($request) : null;
+        $promotion->fill($request->safe()->except(['status', 'image']));
         $promotion->status = $request->validated('status');
-        $promotion->save();
+        if ($newImagePath !== null) {
+            $promotion->image = $newImagePath;
+        }
+
+        try {
+            $promotion->save();
+        } catch (Throwable $exception) {
+            $this->deleteManagedImage($newImagePath);
+
+            throw $exception;
+        }
+
+        if ($newImagePath !== null && Promotion::isManagedImagePath($oldImagePath)) {
+            $this->deleteManagedImage($oldImagePath);
+        }
 
         return redirect()->route('admin.promotions.index')->with('success', 'Đã cập nhật khuyến mãi.');
     }
@@ -69,5 +97,30 @@ class PromotionController extends Controller
         $promotion->delete();
 
         return redirect()->route('admin.promotions.index')->with('success', 'Đã xóa khuyến mãi.');
+    }
+
+    private function storeImage(StorePromotionRequest $request): ?string
+    {
+        /** @var UploadedFile|null $image */
+        $image = $request->file('image');
+
+        if ($image === null) {
+            return null;
+        }
+
+        $path = $image->store('promotions', 'public');
+
+        if ($path === false) {
+            throw new \RuntimeException('Promotion image could not be stored.');
+        }
+
+        return $path;
+    }
+
+    private function deleteManagedImage(?string $path): void
+    {
+        if (Promotion::isManagedImagePath($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 }

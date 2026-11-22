@@ -5,13 +5,11 @@ use App\Http\Controllers\Public\OrderTrackingController;
 use App\Models\OnlineOrderRequest;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Reservation;
 use App\Models\User;
 use App\Services\OnlineRequestSubmissionService;
 use App\Services\OrderService;
 use App\Services\PaymentService;
 use App\Services\PromotionService;
-use App\Services\ReservationCancellationService;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -61,12 +59,6 @@ try {
     $actor = User::findOrFail($input['actor']);
     $order = isset($input['order']) ? Order::findOrFail($input['order']) : null;
     $sales = app(OrderService::class);
-    if ($input['command'] === 'reservation_cancel') {
-        $reservation = Reservation::findOrFail($input['reservation']);
-        app(ReservationCancellationService::class)->cancel($reservation, 'confirmed');
-        echo json_encode(['outcome' => 'success', 'id' => $reservation->id], JSON_THROW_ON_ERROR)."\n";
-        exit(0);
-    }
     if ($input['command'] === 'stale_complete') {
         config(['database.connections.qa_observer' => $input['connection']]);
         $deadline = microtime(true) + 15;
