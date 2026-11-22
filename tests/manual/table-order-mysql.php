@@ -64,7 +64,7 @@ try {
             throw new RuntimeException('Model connection isolation failed.');
         }
     }
-    foreach (['0001_01_01_000000_create_users_table.php', '2026_08_14_000001_create_customers_table.php', '2026_08_14_000002_create_areas_table.php', '2026_08_14_000003_create_categories_table.php', '2026_08_14_000006_create_cafe_tables_table.php', '2026_08_14_000007_create_products_table.php', '2026_08_16_000014_create_product_variants_table.php', '2026_08_16_000015_create_reservations_table.php', '2026_08_16_000016_create_orders_table.php', '2026_08_16_000017_create_order_items_table.php'] as $migration) {
+    foreach (['0001_01_01_000000_create_users_table.php', '2026_08_14_000001_create_customers_table.php', '2026_08_14_000002_create_areas_table.php', '2026_08_14_000003_create_categories_table.php', '2026_08_14_000006_create_cafe_tables_table.php', '2026_08_14_000007_create_products_table.php', '2026_08_16_000014_create_product_variants_table.php', '2026_08_16_000015_create_reservations_table.php', '2026_08_16_000016_create_orders_table.php', '2026_08_16_000017_create_order_items_table.php', '2026_08_16_000019_create_payments_table.php'] as $migration) {
         (require database_path('migrations/'.$migration))->up();
     }
     $actor = User::forceCreate(['name' => 'Test Admin', 'email' => 'probe@example.test', 'password' => 'test-only-password', 'role' => 'admin', 'status' => 'active']);
@@ -95,7 +95,7 @@ try {
 } catch (Throwable $exception) {
     $failed = true;
     echo 'FAIL isolated MySQL probe: '.get_class($exception).PHP_EOL;
-    if ($exception instanceof DomainException) {
+    if ($exception instanceof DomainException || $exception instanceof \Illuminate\Database\QueryException) {
         echo $exception->getMessage().PHP_EOL;
     }
 } finally {

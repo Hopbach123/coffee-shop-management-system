@@ -7,7 +7,7 @@ return [
         'admin.categories.index', 'admin.products.index', 'admin.product-variants.index',
         'admin.toppings.index', 'admin.promotions.index', 'admin.ingredients.index',
         'admin.areas.index', 'admin.tables.index', 'admin.customers.index',
-        'admin.users.index', 'admin.reservations.index',
+        'admin.users.index',
         'admin.finance.index',
     ],
     'icons' => ['grid', 'layers', 'coffee', 'box', 'plus', 'gift', 'tag', 'chart', 'table', 'users', 'bag', 'calendar', 'receipt'],
@@ -22,7 +22,6 @@ return [
         'admin.tables.index' => ['admin.tables.create', 'admin.tables.edit'],
         'admin.customers.index' => ['admin.customers.create', 'admin.customers.edit'],
         'admin.users.index' => ['admin.users.create', 'admin.users.edit'],
-        'admin.reservations.index' => ['admin.reservations.create', 'admin.reservations.show'],
         'admin.menus.index' => ['admin.menus.create', 'admin.menus.edit'],
     ],
 ];

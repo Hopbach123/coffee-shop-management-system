@@ -146,6 +146,8 @@ class CartController extends Controller
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => ['required', 'regex:/^[0-9+().\s-]{9,20}$/'],
             'pickup_at' => ['nullable', 'date_format:Y-m-d\TH:i'],
+            'payment_option' => ['nullable', 'in:on_receipt,bank_transfer_prepaid'],
+            'prepaid_transfer_declaration' => ['nullable'],
             'payment_preference' => ['nullable', 'in:cash,bank_transfer'],
             'payment_timing' => ['nullable', 'in:on_receipt,prepaid'],
             'note' => ['nullable', 'string', 'max:500'],
@@ -154,10 +156,30 @@ class CartController extends Controller
         ]);
 
         $purchaseType = $data['purchase_type'] ?? ($request->filled('pickup_at') ? 'scheduled' : 'online');
-        $paymentPreference = $data['payment_preference'] ?? 'cash';
-        $paymentTiming = $data['payment_timing'] ?? 'on_receipt';
-        if ($paymentTiming === 'prepaid') {
+        // `payment_option` is the public checkout contract.  It intentionally
+        // cannot create a Payment: a staff member must verify the bank receipt
+        // through the Finance flow before an Order becomes paid.
+        $paymentOption = $data['payment_option'] ?? null;
+        if ($paymentOption === 'bank_transfer_prepaid') {
+            $declared = filter_var($data['prepaid_transfer_declaration'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            if (! $declared) {
+                throw ValidationException::withMessages([
+                    'prepaid_transfer_declaration' => 'Vui lòng xác nhận bạn hiểu quán sẽ kiểm tra giao dịch trước khi ghi nhận đã thanh toán.',
+                ]);
+            }
+
             $paymentPreference = 'bank_transfer';
+            $paymentTiming = 'prepaid';
+        } elseif ($paymentOption === 'on_receipt') {
+            $paymentPreference = 'cash';
+            $paymentTiming = 'on_receipt';
+        } else {
+            // Preserve the older HTTP/API contract for existing clients and tests.
+            $paymentPreference = $data['payment_preference'] ?? 'cash';
+            $paymentTiming = $data['payment_timing'] ?? 'on_receipt';
+            if ($paymentTiming === 'prepaid') {
+                $paymentPreference = 'bank_transfer';
+            }
         }
 
         $pickupAt = null;

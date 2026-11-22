@@ -7,7 +7,8 @@ use App\Http\Controllers\Public\CustomerOrderController;
 use App\Http\Controllers\Public\CartController;
 use App\Http\Controllers\Public\MenuController;
 use App\Http\Controllers\Public\OrderTrackingController;
-use App\Http\Controllers\Public\ReservationController;
+use App\Http\Controllers\Public\PromotionController;
+use App\Http\Controllers\Public\StorefrontAdvisorController;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -22,12 +23,17 @@ Route::get('/', function () {
 Route::get('/menu', [MenuController::class, 'index'])->name('menu.index');
 Route::get('/menu/search/results', [MenuController::class, 'search'])->name('menu.search');
 Route::get('/menu/{product:slug}', [MenuController::class, 'show'])->name('menu.show');
+Route::get('/promotions', [PromotionController::class, 'index'])->name('promotions.index');
+Route::post('/promotions/{promotion}/save', [PromotionController::class, 'save'])->name('promotions.save');
+Route::post('/advisor/messages', [StorefrontAdvisorController::class, 'reply'])->middleware('throttle:storefront-advisor')->name('storefront-advisor.reply');
 
 Route::get('/cart', [CustomerCartController::class, 'index'])->name('cart.index');
 Route::post('/cart/items', [CustomerCartController::class, 'store'])->name('cart.items.store');
 Route::patch('/cart/items/{line}', [CustomerCartController::class, 'update'])->whereUuid('line')->name('cart.items.update');
 Route::delete('/cart/items/{line}', [CustomerCartController::class, 'destroy'])->whereUuid('line')->name('cart.items.destroy');
 Route::get('/cart/checkout', [CustomerOrderController::class, 'create'])->name('customer-orders.create');
+Route::post('/cart/checkout/promotion', [CustomerOrderController::class, 'applyPromotion'])->name('customer-orders.promotion.apply');
+Route::delete('/cart/checkout/promotion', [CustomerOrderController::class, 'removePromotion'])->name('customer-orders.promotion.remove');
 Route::post('/customer-orders', [CustomerOrderController::class, 'store'])->middleware('throttle:customer-orders')->name('customer-orders.store');
 Route::get('/customer-orders/{reference}', [CustomerOrderController::class, 'show'])->name('customer-orders.show');
 
@@ -38,9 +44,6 @@ Route::patch('/cart', [CartController::class, 'update'])->name('cart.update');
 Route::get('/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
 Route::post('/checkout', [CartController::class, 'place'])->name('cart.place');
 Route::get('/checkout/confirmation', [CartController::class, 'confirmation'])->name('cart.confirmation');
-Route::get('/reservation', [ReservationController::class, 'create'])->name('reservation.create');
-Route::post('/reservation', [ReservationController::class, 'store'])->name('reservation.store');
-Route::get('/reservation/confirmation', [ReservationController::class, 'confirmation'])->name('reservation.confirmation');
 Route::get('/orders/track/{token}', [OrderTrackingController::class, 'show'])->name('orders.track');
 
 Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'role:admin'])->group(base_path('routes/admin.php'));

@@ -46,7 +46,8 @@ class CustomerPickupFlowTest extends TestCase
     {
         $variant = $this->variant();
         $this->get(route('menu.show', $variant->product->slug))->assertOk()
-            ->assertSee(route('cart.add'), false)->assertSee(route('cart.items.store'), false);
+            ->assertSee(route('cart.items.store'), false)
+            ->assertDontSee('action="'.route('cart.add').'"', false);
         $deliveryDraft = ['delivery-line' => ['quantity' => 3]];
         $this->withSession(['customer_order_cart' => $deliveryDraft])
             ->post(route('cart.add'), ['variant_id' => $variant->id, 'quantity' => 2, 'unit_price' => '0.01'])

@@ -763,7 +763,7 @@ class OrderService
         }
     }
 
-    /** Match Reservation's area -> table -> Order order before a lifecycle releases a table. */
+    /** Match the area -> table -> Order lock order before a lifecycle releases a table. */
     private function lockLifecycleOrder(Order $order): ?Order
     {
         $snapshot = Order::query()->find($order->getKey());

@@ -28,6 +28,10 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(5)->by('session:'.hash('sha256', $request->session()->getId())),
             Limit::perMinute(20)->by('ip:'.hash('sha256', (string) $request->ip())),
         ]);
+        RateLimiter::for('storefront-advisor', fn (Request $request): array => [
+            Limit::perMinute(12)->by('session:'.hash('sha256', $request->session()->getId())),
+            Limit::perMinute(40)->by('ip:'.hash('sha256', (string) $request->ip())),
+        ]);
         Relation::enforceMorphMap([
             'order_item' => OrderItem::class,
         ]);

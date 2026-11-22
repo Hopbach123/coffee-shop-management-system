@@ -1,5 +1,19 @@
 # Coffee Shop Management System – Requirements
 
+## Approved scope change — Reservation removed (22/11/2026)
+
+The application no longer accepts or operates table reservations. Public, Admin, and Staff reservation routes, menus, screens, and reservation workflow services are removed. Tables remain only for dine-in POS operations. The `reservations` table, model, and nullable historical `orders.reservation_id` link remain read-compatible so existing data is not destructively removed; no new seed fixture or application workflow creates a reservation.
+
+## Approved extension — Public promotion checkout and Staff approval (22/11/2026)
+
+Customer may browse active public promotions, copy or save a code in the browser session, and apply at most one code to the public delivery checkout. Viewing, copying, saving, or attempting a code never consumes quota. The server recalculates eligibility, subtotal, discount, delivery fee, and final total; the browser never supplies an authoritative amount. A submitted request snapshots the selected code and discount. On Staff acceptance, the server repeats the catalog and promotion check; if the resulting quote differs, acceptance stops and Staff must contact the customer rather than silently changing the price.
+
+Promotion quota remains consumed exactly once in the existing successful-payment transaction. A concurrent final-use race therefore permits only the payment that acquires the promotion lock; no quota is reserved by checkout or Staff acceptance. Bank-transfer-prepaid orders require Staff confirmation of actual received funds before preparation. COD remains unpaid until delivery confirmation and actual collection. An Order completes only after all non-cancelled items are served and its payment is confirmed. No gateway, split/partial payment, automatic refund, or voucher stacking is added by this extension.
+
+### Public storefront advisor (22/11/2026)
+
+The public chat widget may read the currently sellable menu and active public promotions to suggest links. It must never create or change a cart, Order, Payment, promotion quota, or price. If an optional AI provider is configured, it receives only the visitor message plus this public catalogue; returned record IDs are checked again by the server and all internal links are generated locally. Without a provider key, the advisor remains a deterministic catalogue helper. The checkout remains the only place that validates and applies a promotion.
+
 ## Approved extension — Finance/Sales receipts (17/11/2026)
 
 Owner cho phép tích hợp Finance cash/bank trước served, không bắt buộc paid trước preparing. Finance chỉ ghi nhận thực thu/receipt, không tự preparing/consume/completed. Cash nhận đủ tổng server và trả tiền thừa; bank nhận chính xác tổng, Staff xác minh thực nhận và nhập bank reference. Operation key có replay/payload conflict, một paid mỗi Order, bank reference không tái sử dụng tại quán. Sales giao khi paid, hoàn tất khi mọi món served; không sửa tổng sau thu. Không split/partial/gateway/COD/refund tự động. Receipt metadata lưu bằng migration mới; chưa áp dụng lên DB dự án trong task.

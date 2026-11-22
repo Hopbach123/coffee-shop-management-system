@@ -69,7 +69,7 @@
             </div>
             <div>
                 <small style="color: var(--cafe-text-muted, #7c716a); display: block;">Khách hàng</small>
-                <strong>{{ $order->customer?->name ?? ($order->reservation?->customer_name ?? 'Khách vãng lai') }}</strong>
+                <strong>{{ $order->customer?->name ?? 'Khách vãng lai' }}</strong>
             </div>
             <div>
                 <small style="color: var(--cafe-text-muted, #7c716a); display: block;">Thời gian hoàn tất</small>

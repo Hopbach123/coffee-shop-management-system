@@ -790,6 +790,40 @@ class OnlineOrderWorkflowTest extends TestCase
         return ['purchase_type' => 'online', 'customer_name' => 'HTTP Customer', 'customer_phone' => '0901234567'];
     }
 
+    public function test_customer_prepaid_selection_creates_only_a_pending_request_until_staff_confirms_payment(): void
+    {
+        [, $variant] = $this->createProductWithVariant();
+        $this->post(route('cart.add'), ['variant_id' => $variant->id, 'quantity' => 1])->assertSessionHasNoErrors();
+        $this->get(route('cart.checkout'))->assertOk();
+
+        $this->post(route('cart.place'), $this->submitPayload() + [
+            'payment_option' => 'bank_transfer_prepaid',
+            'prepaid_transfer_declaration' => '1',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('online_order_requests', [
+            'payment_preference' => 'bank_transfer',
+            'payment_timing' => 'prepaid',
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_customer_cannot_select_prepaid_without_acknowledging_staff_verification(): void
+    {
+        [, $variant] = $this->createProductWithVariant();
+        $this->post(route('cart.add'), ['variant_id' => $variant->id, 'quantity' => 1])->assertSessionHasNoErrors();
+        $this->get(route('cart.checkout'))->assertOk();
+
+        $this->postJson(route('cart.place'), $this->submitPayload() + [
+            'payment_option' => 'bank_transfer_prepaid',
+        ])->assertUnprocessable()->assertJsonValidationErrors('prepaid_transfer_declaration');
+
+        $this->assertDatabaseCount('online_order_requests', 0);
+        $this->assertDatabaseCount('payments', 0);
+    }
+
     public function test_submit_retry_is_bound_to_same_intent_and_changed_contact_is_rejected(): void
     {
         [, $variant] = $this->createProductWithVariant();

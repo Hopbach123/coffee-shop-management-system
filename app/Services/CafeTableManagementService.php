@@ -29,11 +29,9 @@ class CafeTableManagementService
             if ($target === 'available' && ($area === null || $area->trashed() || $area->status !== 'active')) {
                 throw new DomainException('Chỉ giải phóng hoặc mở lại bàn trong khu vực đang hoạt động và chưa xóa.');
             }
-            $reservation = $current->reservations()->whereIn('status', ['pending', 'confirmed', 'arrived'])
-                ->where('reservation_end_at', '>', now())->orderBy('id')->lockForUpdate()->first(['id']);
             $order = $current->orders()->where('status', 'pending')->orderBy('id')->lockForUpdate()->first(['id']);
-            if ($reservation !== null || $order !== null) {
-                throw new DomainException('Không thể đổi trạng thái khi có đơn pending hoặc đặt bàn còn hiệu lực.');
+            if ($order !== null) {
+                throw new DomainException('Không thể đổi trạng thái khi có đơn pending.');
             }
             $current->status = $target;
             if (! $current->save()) {
@@ -55,15 +53,9 @@ class CafeTableManagementService
             if ($destination === null || ($moving && $destination->status !== 'active')) {
                 throw new DomainException('Khu vực không hợp lệ hoặc không còn hoạt động. Vui lòng chọn lại.');
             }
-            $reservations = $current->reservations()->whereIn('status', ['pending', 'confirmed', 'arrived'])
-                ->where('reservation_end_at', '>', now())->orderBy('id')->lockForUpdate()->get();
             $pendingOrder = $current->orders()->where('status', 'pending')->orderBy('id')->lockForUpdate()->first(['id']);
-            if ($moving && ($current->status === 'occupied' || $pendingOrder !== null || $reservations->isNotEmpty())) {
-                throw new DomainException('Không thể chuyển khu vực khi bàn đang có khách, có đơn pending hoặc đặt bàn còn hiệu lực.');
-            }
-            if ((int) $attributes['capacity'] < (int) $current->capacity
-                && (int) $attributes['capacity'] < (int) ($reservations->max('guest_count') ?? 0)) {
-                throw new DomainException('Không thể giảm sức chứa dưới số khách của đặt bàn còn hiệu lực.');
+            if ($moving && ($current->status === 'occupied' || $pendingOrder !== null)) {
+                throw new DomainException('Không thể chuyển khu vực khi bàn đang có khách hoặc có đơn pending.');
             }
             $current->fill(array_intersect_key($attributes, array_flip(['area_id', 'table_code', 'table_name', 'capacity'])))->save();
         }, 3);
@@ -78,11 +70,9 @@ class CafeTableManagementService
             if (! in_array($current->status, ['available', 'maintenance'], true)) {
                 throw new DomainException('Không thể xóa bàn đang có khách hoặc có trạng thái không cho phép.');
             }
-            $reservation = $current->reservations()->whereIn('status', ['pending', 'confirmed', 'arrived'])
-                ->where('reservation_end_at', '>', now())->orderBy('id')->lockForUpdate()->first(['id']);
             $order = $current->orders()->where('status', 'pending')->orderBy('id')->lockForUpdate()->first(['id']);
-            if ($reservation !== null || $order !== null) {
-                throw new DomainException('Không thể xóa bàn có đơn pending hoặc đặt bàn còn hiệu lực.');
+            if ($order !== null) {
+                throw new DomainException('Không thể xóa bàn có đơn pending.');
             }
             if (! $current->delete()) {
                 throw new DomainException('Không thể xóa bàn.');

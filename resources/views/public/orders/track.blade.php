@@ -155,6 +155,9 @@
                                     <span style="color: var(--coffee-caramel);">Chưa thanh toán</span>
                                 @endif
                             </strong>
+                            @if($orderRequest->payment_timing === 'prepaid' && ! $order?->isPaidInFull())
+                                <small style="display: block; color: var(--coffee-caramel); margin-top: 4px; line-height: 1.4;">Bạn đã chọn chuyển khoản trước. Quán đang chờ nhân viên đối chiếu giao dịch; vui lòng không chuyển lại lần hai.</small>
+                            @endif
                         </div>
                     </div>
                 </div>

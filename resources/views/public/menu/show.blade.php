@@ -49,7 +49,6 @@
                         </ul>
                     @endif
                     @include('public.cart._add-form')
-                    @include('public.cart._pickup-form')
                     <x-public.button href="{{ route('menu.index') }}" variant="outline">Quay lại thực đơn</x-public.button>
                 </div>
             </div>

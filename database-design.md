@@ -211,6 +211,7 @@ Version 1 has no points or total_spent column; loyalty and derived aggregates ar
 | code | VARCHAR(50) | NN, no default, UQ | Promotion code |
 | name | VARCHAR(255) | NN, no default | Name |
 | description | TEXT | NULL, default NULL | Description |
+| image | VARCHAR(255) | NULL, default NULL | Optional local display asset; it does not affect promotion eligibility, value, or snapshots |
 | discount_type | ENUM(percentage, fixed) | NN, no default | Discount method |
 | discount_value | DECIMAL(12,2) | NN, no default | Percentage or fixed value |
 | max_discount | DECIMAL(12,2) | NULL, default NULL | Percentage cap |

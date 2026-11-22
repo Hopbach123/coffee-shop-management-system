@@ -96,6 +96,6 @@
 @endif
 
 <div class="cafe-notice cafe-notice--info" style="margin-top:1.25rem;">
-    <strong>Quy định nghiệp vụ:</strong> Yêu cầu nhận món (scheduled pickup) là thỏa thuận hẹn lấy tại quán, không phải đặt bàn (reservation) và chưa trừ kho hay thu tiền. Khi khách đến nhận, nhân viên tiến hành xác thực và tạo đơn POS chính thức.
+    <strong>Quy định nghiệp vụ:</strong> Yêu cầu nhận món (scheduled pickup) là thỏa thuận hẹn lấy tại quán và chưa trừ kho hay thu tiền. Khi khách đến nhận, nhân viên tiến hành xác thực và tạo đơn POS chính thức.
 </div>
 @endsection

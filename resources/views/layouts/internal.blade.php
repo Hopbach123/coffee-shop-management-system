@@ -27,8 +27,7 @@
                 ['route'=>'staff.customer-orders.index','text'=>'Đơn giao từ web','icon'=>'receipt'],
                 ['route'=>'staff.online-requests.index','text'=>'Yêu cầu online / Đặt hẹn','icon'=>'box'],
                 ['route'=>'staff.brewing.index','text'=>'Pha chế','icon'=>'chef'],
-                ['route'=>'staff.tables.index','text'=>'Sơ đồ bàn','icon'=>'table'],
-                ['route'=>'staff.reservations.index','text'=>'Đặt bàn','icon'=>'calendar']
+                ['route'=>'staff.tables.index','text'=>'Sơ đồ bàn','icon'=>'table']
             ]],
         ];
     @endphp

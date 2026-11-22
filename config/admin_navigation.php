@@ -14,10 +14,9 @@ return [
     ['id' => 'inventory', 'label' => 'Nguyên liệu & kho', 'hint' => 'Chọn nguyên liệu để nhập kho, kiểm kê hoặc xem lịch sử.', 'items' => [
         ['label' => 'Nguyên liệu & tồn kho', 'route' => 'admin.ingredients.index', 'icon' => 'box', 'active' => ['admin.ingredients.*']],
     ]],
-    ['id' => 'tables', 'label' => 'Không gian & đặt bàn', 'items' => [
+    ['id' => 'tables', 'label' => 'Không gian quán', 'items' => [
         ['label' => 'Khu vực quán', 'route' => 'admin.areas.index', 'icon' => 'layers', 'active' => ['admin.areas.*']],
         ['label' => 'Quản lý bàn', 'route' => 'admin.tables.index', 'icon' => 'table', 'active' => ['admin.tables.*']],
-        ['label' => 'Đặt bàn', 'route' => 'admin.reservations.index', 'icon' => 'calendar', 'active' => ['admin.reservations.*']],
     ]],
     ['id' => 'customers', 'label' => 'Khách hàng & ưu đãi', 'items' => [
         ['label' => 'Khách hàng', 'route' => 'admin.customers.index', 'icon' => 'users', 'active' => ['admin.customers.*']],

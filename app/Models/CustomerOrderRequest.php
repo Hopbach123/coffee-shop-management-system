@@ -14,7 +14,7 @@ class CustomerOrderRequest extends Model
 
     protected function casts(): array
     {
-        return ['quoted_subtotal' => 'decimal:2', 'delivery_fee' => 'decimal:2', 'quoted_total' => 'decimal:2',
+        return ['quoted_subtotal' => 'decimal:2', 'promotion_discount' => 'decimal:2', 'delivery_fee' => 'decimal:2', 'quoted_total' => 'decimal:2',
             'access_expires_at' => 'datetime', 'handled_at' => 'datetime', 'dispatched_at' => 'datetime',
             'delivered_at' => 'datetime', 'order_id' => 'integer', 'handled_by' => 'integer'];
     }

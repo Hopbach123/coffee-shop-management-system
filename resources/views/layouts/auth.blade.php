@@ -45,7 +45,6 @@
                     <a href="{{ route('home') }}" class="auth-nav-item">TRANG CHỦ</a>
                     <a href="{{ route('home') }}#story" class="auth-nav-item">VỀ MAISON</a>
                     <a href="{{ route('menu.index') }}" class="auth-nav-item">THỰC ĐƠN</a>
-                    <a href="{{ Route::has('reservation.create') ? route('reservation.create') : route('home').'#reservation' }}" class="auth-nav-item">ĐẶT BÀN</a>
                     <a href="{{ route('login') }}" class="auth-nav-item auth-nav-item--active">ĐĂNG NHẬP</a>
                 </nav>
             </div>

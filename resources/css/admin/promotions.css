@@ -1,2 +1,11 @@
 .promotion-table-wrap { overflow-x: auto; }
 [data-promotion-max-discount][hidden] { display: none; }
+
+.promotion-image-field { display: grid; gap: .5rem; }
+.promotion-image-field > label { color: var(--cafe-text-secondary); font-size: .85rem; font-weight: 600; }
+.promotion-image-help { color: var(--cafe-text-secondary); font-size: .8rem; margin: 0; }
+.promotion-image-preview { border: 1px solid var(--cafe-border); border-radius: .75rem; height: 8rem; object-fit: cover; width: min(100%, 20rem); }
+.v5-promo-banner { isolation: isolate; overflow: hidden; position: relative; }
+.v5-promo-banner__image { height: 100%; inset: 0; object-fit: cover; position: absolute; width: 100%; z-index: -2; }
+.v5-promo-banner--with-image::after { background: linear-gradient(90deg, rgba(39, 23, 15, .88), rgba(39, 23, 15, .3)); content: ''; inset: 0; position: absolute; z-index: -1; }
+.v5-promo-banner__content { position: relative; }

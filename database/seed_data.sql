@@ -40,11 +40,11 @@ INSERT INTO `areas` (`name`, `description`, `status`, `deleted_at`, `created_at`
 SET @demo_areas_3 = LAST_INSERT_ID();
 
 -- categories: 3 rows
-INSERT INTO `categories` (`name`, `description`, `image`, `display_order`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT '[DEMO] Cà phê', NULL, NULL, '1', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `categories` (`name`, `description`, `image`, `display_order`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT '[DEMO] Cà phê', NULL, 'images/coffeehouse/artisan-espresso.png', '1', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_categories_1 = LAST_INSERT_ID();
-INSERT INTO `categories` (`name`, `description`, `image`, `display_order`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT '[DEMO] Trà', NULL, NULL, '2', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `categories` (`name`, `description`, `image`, `display_order`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT '[DEMO] Trà', NULL, 'images/promotions/demo-matcha-offer.png', '2', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_categories_2 = LAST_INSERT_ID();
-INSERT INTO `categories` (`name`, `description`, `image`, `display_order`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT '[DEMO] Danh mục ẩn', NULL, NULL, '3', 'inactive', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `categories` (`name`, `description`, `image`, `display_order`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT '[DEMO] Danh mục ẩn', NULL, 'images/promotions/demo-espresso-offer.png', '3', 'inactive', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_categories_3 = LAST_INSERT_ID();
 
 -- toppings: 3 rows
@@ -94,17 +94,17 @@ INSERT INTO `ingredients` (`name`, `unit`, `current_stock`, `minimum_stock`, `co
 SET @demo_ingredients_18 = LAST_INSERT_ID();
 
 -- promotions: 6 rows
-INSERT INTO `promotions` (`code`, `name`, `description`, `discount_type`, `discount_value`, `max_discount`, `minimum_order`, `start_at`, `end_at`, `usage_limit`, `used_count`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-10', '[DEMO] Giảm 10%', NULL, 'percentage', '10.00', '20000.00', '30000.00', DATE_ADD(@demo_now, INTERVAL -2592000 SECOND), DATE_ADD(@demo_now, INTERVAL 2592000 SECOND), '100', '1', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `promotions` (`code`, `name`, `description`, `image`, `discount_type`, `discount_value`, `max_discount`, `minimum_order`, `start_at`, `end_at`, `usage_limit`, `used_count`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-10', '[DEMO] Giảm 10%', 'Giảm 10% cho đơn từ 30.000đ, tối đa 20.000đ.', 'images/promotions/demo-coffee-morning.png', 'percentage', '10.00', '20000.00', '30000.00', DATE_ADD(@demo_now, INTERVAL -2592000 SECOND), DATE_ADD(@demo_now, INTERVAL 2592000 SECOND), '100', '1', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_promotions_1 = LAST_INSERT_ID();
-INSERT INTO `promotions` (`code`, `name`, `description`, `discount_type`, `discount_value`, `max_discount`, `minimum_order`, `start_at`, `end_at`, `usage_limit`, `used_count`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-FIXED', '[DEMO] FIXED', NULL, 'fixed', '5000.00', NULL, '30000.00', DATE_ADD(@demo_now, INTERVAL -2592000 SECOND), DATE_ADD(@demo_now, INTERVAL 2592000 SECOND), '100', '0', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `promotions` (`code`, `name`, `description`, `image`, `discount_type`, `discount_value`, `max_discount`, `minimum_order`, `start_at`, `end_at`, `usage_limit`, `used_count`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-FIXED', '[DEMO] Giảm 5.000đ', 'Giảm trực tiếp 5.000đ cho đơn từ 30.000đ.', 'images/promotions/demo-espresso-offer.png', 'fixed', '5000.00', NULL, '30000.00', DATE_ADD(@demo_now, INTERVAL -2592000 SECOND), DATE_ADD(@demo_now, INTERVAL 2592000 SECOND), '100', '0', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_promotions_2 = LAST_INSERT_ID();
-INSERT INTO `promotions` (`code`, `name`, `description`, `discount_type`, `discount_value`, `max_discount`, `minimum_order`, `start_at`, `end_at`, `usage_limit`, `used_count`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-EXPIRED', '[DEMO] EXPIRED', NULL, 'fixed', '5000.00', NULL, '30000.00', DATE_ADD(@demo_now, INTERVAL -2592000 SECOND), DATE_ADD(@demo_now, INTERVAL -86400 SECOND), '100', '0', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `promotions` (`code`, `name`, `description`, `image`, `discount_type`, `discount_value`, `max_discount`, `minimum_order`, `start_at`, `end_at`, `usage_limit`, `used_count`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-EXPIRED', '[DEMO] Hết hạn', 'Fixture mã hết hạn để kiểm thử điều kiện thời gian.', 'images/promotions/demo-espresso-offer.png', 'fixed', '5000.00', NULL, '30000.00', DATE_ADD(@demo_now, INTERVAL -2592000 SECOND), DATE_ADD(@demo_now, INTERVAL -86400 SECOND), '100', '0', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_promotions_3 = LAST_INSERT_ID();
-INSERT INTO `promotions` (`code`, `name`, `description`, `discount_type`, `discount_value`, `max_discount`, `minimum_order`, `start_at`, `end_at`, `usage_limit`, `used_count`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-FUTURE', '[DEMO] FUTURE', NULL, 'fixed', '5000.00', NULL, '30000.00', DATE_ADD(@demo_now, INTERVAL 432000 SECOND), DATE_ADD(@demo_now, INTERVAL 2592000 SECOND), '100', '0', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `promotions` (`code`, `name`, `description`, `image`, `discount_type`, `discount_value`, `max_discount`, `minimum_order`, `start_at`, `end_at`, `usage_limit`, `used_count`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-FUTURE', '[DEMO] Sắp mở', 'Fixture mã chưa đến thời gian áp dụng.', 'images/promotions/demo-matcha-offer.png', 'fixed', '5000.00', NULL, '30000.00', DATE_ADD(@demo_now, INTERVAL 432000 SECOND), DATE_ADD(@demo_now, INTERVAL 2592000 SECOND), '100', '0', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_promotions_4 = LAST_INSERT_ID();
-INSERT INTO `promotions` (`code`, `name`, `description`, `discount_type`, `discount_value`, `max_discount`, `minimum_order`, `start_at`, `end_at`, `usage_limit`, `used_count`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-INACTIVE', '[DEMO] INACTIVE', NULL, 'fixed', '5000.00', NULL, '30000.00', DATE_ADD(@demo_now, INTERVAL -2592000 SECOND), DATE_ADD(@demo_now, INTERVAL 2592000 SECOND), '100', '0', 'inactive', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `promotions` (`code`, `name`, `description`, `image`, `discount_type`, `discount_value`, `max_discount`, `minimum_order`, `start_at`, `end_at`, `usage_limit`, `used_count`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-INACTIVE', '[DEMO] Tạm dừng', 'Fixture mã đang tạm dừng.', 'images/promotions/demo-coffee-morning.png', 'fixed', '5000.00', NULL, '30000.00', DATE_ADD(@demo_now, INTERVAL -2592000 SECOND), DATE_ADD(@demo_now, INTERVAL 2592000 SECOND), '100', '0', 'inactive', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_promotions_5 = LAST_INSERT_ID();
-INSERT INTO `promotions` (`code`, `name`, `description`, `discount_type`, `discount_value`, `max_discount`, `minimum_order`, `start_at`, `end_at`, `usage_limit`, `used_count`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-LIMIT', '[DEMO] LIMIT', NULL, 'fixed', '5000.00', NULL, '30000.00', DATE_ADD(@demo_now, INTERVAL -2592000 SECOND), DATE_ADD(@demo_now, INTERVAL 2592000 SECOND), '0', '0', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `promotions` (`code`, `name`, `description`, `image`, `discount_type`, `discount_value`, `max_discount`, `minimum_order`, `start_at`, `end_at`, `usage_limit`, `used_count`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-LIMIT', '[DEMO] Đã dùng hết', 'Fixture mã đã chạm giới hạn lượt dùng.', 'images/promotions/demo-espresso-offer.png', 'fixed', '5000.00', NULL, '30000.00', DATE_ADD(@demo_now, INTERVAL -2592000 SECOND), DATE_ADD(@demo_now, INTERVAL 2592000 SECOND), '0', '0', 'active', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_promotions_6 = LAST_INSERT_ID();
 
 -- cafe_tables: 5 rows
@@ -120,13 +120,13 @@ INSERT INTO `cafe_tables` (`area_id`, `table_code`, `table_name`, `capacity`, `s
 SET @demo_cafe_tables_5 = LAST_INSERT_ID();
 
 -- products: 4 rows
-INSERT INTO `products` (`category_id`, `name`, `slug`, `description`, `image`, `status`, `is_featured`, `deleted_at`, `created_at`, `updated_at`) SELECT @demo_categories_1, '[DEMO] Latte', 'demo-v1-product-1', 'Sản phẩm mẫu để kiểm thử', NULL, 'available', '1', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `products` (`category_id`, `name`, `slug`, `description`, `image`, `status`, `is_featured`, `deleted_at`, `created_at`, `updated_at`) SELECT @demo_categories_1, '[DEMO] Latte', 'demo-v1-product-1', 'Sản phẩm mẫu để kiểm thử', 'images/products/demo-latte-v2.png', 'available', '1', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_products_1 = LAST_INSERT_ID();
-INSERT INTO `products` (`category_id`, `name`, `slug`, `description`, `image`, `status`, `is_featured`, `deleted_at`, `created_at`, `updated_at`) SELECT @demo_categories_1, '[DEMO] Cà phê sữa', 'demo-v1-product-2', 'Sản phẩm mẫu để kiểm thử', NULL, 'available', '0', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `products` (`category_id`, `name`, `slug`, `description`, `image`, `status`, `is_featured`, `deleted_at`, `created_at`, `updated_at`) SELECT @demo_categories_1, '[DEMO] Cà phê sữa', 'demo-v1-product-2', 'Sản phẩm mẫu để kiểm thử', 'images/products/demo-ca-phe-sua-v2.png', 'available', '0', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_products_2 = LAST_INSERT_ID();
-INSERT INTO `products` (`category_id`, `name`, `slug`, `description`, `image`, `status`, `is_featured`, `deleted_at`, `created_at`, `updated_at`) SELECT @demo_categories_2, '[DEMO] Trà sữa', 'demo-v1-product-3', 'Sản phẩm mẫu để kiểm thử', NULL, 'available', '0', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `products` (`category_id`, `name`, `slug`, `description`, `image`, `status`, `is_featured`, `deleted_at`, `created_at`, `updated_at`) SELECT @demo_categories_2, '[DEMO] Trà sữa', 'demo-v1-product-3', 'Sản phẩm mẫu để kiểm thử', 'images/products/demo-tra-sua-v2.png', 'available', '0', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_products_3 = LAST_INSERT_ID();
-INSERT INTO `products` (`category_id`, `name`, `slug`, `description`, `image`, `status`, `is_featured`, `deleted_at`, `created_at`, `updated_at`) SELECT @demo_categories_2, '[DEMO] Trà tạm hết', 'demo-v1-unavailable', NULL, NULL, 'unavailable', '0', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `products` (`category_id`, `name`, `slug`, `description`, `image`, `status`, `is_featured`, `deleted_at`, `created_at`, `updated_at`) SELECT @demo_categories_2, '[DEMO] Trà tạm hết', 'demo-v1-unavailable', 'Món minh họa trạng thái tạm hết.', 'images/products/demo-tra-tam-het-v2.png', 'unavailable', '0', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_products_4 = LAST_INSERT_ID();
 
 -- product_variants: 7 rows
@@ -144,20 +144,6 @@ INSERT INTO `product_variants` (`product_id`, `name`, `sku`, `price`, `status`, 
 SET @demo_product_variants_6 = LAST_INSERT_ID();
 INSERT INTO `product_variants` (`product_id`, `name`, `sku`, `price`, `status`, `deleted_at`, `created_at`, `updated_at`) SELECT @demo_products_4, 'Tiêu chuẩn', 'DEMO-V1-OFF', '25000.00', 'unavailable', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_product_variants_7 = LAST_INSERT_ID();
-
--- reservations: 6 rows
-INSERT INTO `reservations` (`customer_id`, `table_id`, `customer_name`, `customer_phone`, `guest_count`, `reservation_start_at`, `reservation_end_at`, `note`, `status`, `created_by`, `created_at`, `updated_at`) SELECT @demo_customers_1, NULL, '[DEMO] Khách đặt bàn', '0000000000', '2', DATE_ADD(@demo_now, INTERVAL 86400 SECOND), DATE_ADD(@demo_now, INTERVAL 93600 SECOND), 'DEMO-V1 pending', 'pending', NULL, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
-SET @demo_reservations_1 = LAST_INSERT_ID();
-INSERT INTO `reservations` (`customer_id`, `table_id`, `customer_name`, `customer_phone`, `guest_count`, `reservation_start_at`, `reservation_end_at`, `note`, `status`, `created_by`, `created_at`, `updated_at`) SELECT @demo_customers_1, @demo_cafe_tables_4, '[DEMO] Khách đặt bàn', '0000000000', '2', DATE_ADD(@demo_now, INTERVAL 172800 SECOND), DATE_ADD(@demo_now, INTERVAL 180000 SECOND), 'DEMO-V1 confirmed', 'confirmed', @demo_users_2, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
-SET @demo_reservations_2 = LAST_INSERT_ID();
-INSERT INTO `reservations` (`customer_id`, `table_id`, `customer_name`, `customer_phone`, `guest_count`, `reservation_start_at`, `reservation_end_at`, `note`, `status`, `created_by`, `created_at`, `updated_at`) SELECT @demo_customers_1, @demo_cafe_tables_4, '[DEMO] Khách đặt bàn', '0000000000', '2', DATE_ADD(@demo_now, INTERVAL -1800 SECOND), DATE_ADD(@demo_now, INTERVAL 5400 SECOND), 'DEMO-V1 arrived', 'arrived', @demo_users_2, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
-SET @demo_reservations_3 = LAST_INSERT_ID();
-INSERT INTO `reservations` (`customer_id`, `table_id`, `customer_name`, `customer_phone`, `guest_count`, `reservation_start_at`, `reservation_end_at`, `note`, `status`, `created_by`, `created_at`, `updated_at`) SELECT @demo_customers_1, @demo_cafe_tables_4, '[DEMO] Khách đặt bàn', '0000000000', '2', DATE_ADD(@demo_now, INTERVAL -259200 SECOND), DATE_ADD(@demo_now, INTERVAL -252000 SECOND), 'DEMO-V1 completed', 'completed', @demo_users_2, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
-SET @demo_reservations_4 = LAST_INSERT_ID();
-INSERT INTO `reservations` (`customer_id`, `table_id`, `customer_name`, `customer_phone`, `guest_count`, `reservation_start_at`, `reservation_end_at`, `note`, `status`, `created_by`, `created_at`, `updated_at`) SELECT @demo_customers_1, @demo_cafe_tables_4, '[DEMO] Khách đặt bàn', '0000000000', '2', DATE_ADD(@demo_now, INTERVAL -345600 SECOND), DATE_ADD(@demo_now, INTERVAL -338400 SECOND), 'DEMO-V1 cancelled', 'cancelled', @demo_users_2, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
-SET @demo_reservations_5 = LAST_INSERT_ID();
-INSERT INTO `reservations` (`customer_id`, `table_id`, `customer_name`, `customer_phone`, `guest_count`, `reservation_start_at`, `reservation_end_at`, `note`, `status`, `created_by`, `created_at`, `updated_at`) SELECT @demo_customers_1, @demo_cafe_tables_4, '[DEMO] Khách đặt bàn', '0000000000', '2', DATE_ADD(@demo_now, INTERVAL -432000 SECOND), DATE_ADD(@demo_now, INTERVAL -424800 SECOND), 'DEMO-V1 no_show', 'no_show', @demo_users_2, DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
-SET @demo_reservations_6 = LAST_INSERT_ID();
 
 -- product_recipes: 12 rows
 INSERT INTO `product_recipes` (`variant_id`, `ingredient_id`, `quantity`, `created_at`, `updated_at`) SELECT @demo_product_variants_1, @demo_ingredients_1, '20.000', DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
@@ -186,7 +172,7 @@ INSERT INTO `product_recipes` (`variant_id`, `ingredient_id`, `quantity`, `creat
 SET @demo_product_recipes_12 = LAST_INSERT_ID();
 
 -- orders: 7 rows
-INSERT INTO `orders` (`order_code`, `table_id`, `customer_id`, `user_id`, `reservation_id`, `order_type`, `status`, `subtotal`, `discount_amount`, `tax_amount`, `total_amount`, `note`, `ordered_at`, `completed_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-PAID-CASH', @demo_cafe_tables_4, @demo_customers_1, @demo_users_2, @demo_reservations_4, 'dine_in', 'completed', '70000.00', '7000.00', '0.00', '63000.00', 'Dữ liệu mẫu PAID-CASH', DATE_ADD(@demo_now, INTERVAL -259200 SECOND), DATE_ADD(@demo_now, INTERVAL -257400 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
+INSERT INTO `orders` (`order_code`, `table_id`, `customer_id`, `user_id`, `reservation_id`, `order_type`, `status`, `subtotal`, `discount_amount`, `tax_amount`, `total_amount`, `note`, `ordered_at`, `completed_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-PAID-CASH', @demo_cafe_tables_4, @demo_customers_1, @demo_users_2, NULL, 'dine_in', 'completed', '70000.00', '7000.00', '0.00', '63000.00', 'Dữ liệu mẫu PAID-CASH', DATE_ADD(@demo_now, INTERVAL -259200 SECOND), DATE_ADD(@demo_now, INTERVAL -257400 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_orders_1 = LAST_INSERT_ID();
 INSERT INTO `orders` (`order_code`, `table_id`, `customer_id`, `user_id`, `reservation_id`, `order_type`, `status`, `subtotal`, `discount_amount`, `tax_amount`, `total_amount`, `note`, `ordered_at`, `completed_at`, `created_at`, `updated_at`) SELECT 'DEMO-V1-PAID-BANK', NULL, @demo_customers_2, @demo_users_2, NULL, 'takeaway', 'completed', '60000.00', '0.00', '0.00', '60000.00', 'Dữ liệu mẫu PAID-BANK', DATE_ADD(@demo_now, INTERVAL -172800 SECOND), DATE_ADD(@demo_now, INTERVAL -171000 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND), DATE_ADD(@demo_now, INTERVAL 0 SECOND) WHERE @demo_new;
 SET @demo_orders_2 = LAST_INSERT_ID();
@@ -296,41 +282,97 @@ INSERT INTO `order_item_toppings` (`order_item_id`, `topping_id`, `topping_name`
 SET @demo_order_item_toppings_1 = LAST_INSERT_ID();
 
 -- DEMO-V2: request fixtures. Tracking tokens below are public development fixtures only.
-INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,payment_timing,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-ONLINE-PENDING','online','[DEMO] Khách lấy sớm','0900000001',NULL,'pending','cash','on_receipt','DEMO-V2-SUBMIT-1',SHA2('DEMO-V2-TRACK-1',256),@demo_now,@demo_now WHERE @demo_new;
+-- V2 is independently idempotent so an existing V1 fixture can be safely upgraded.
+SET @demo_v2_existing = EXISTS(SELECT 1 FROM online_order_requests WHERE request_code = 'DEMO-V2-SCHEDULED-PAID');
+SET @demo_v2_dependencies = EXISTS(SELECT 1 FROM users WHERE email = 'staff-demo@example.test')
+    AND EXISTS(SELECT 1 FROM product_variants WHERE sku = 'DEMO-V1-SKU-0-0')
+    AND EXISTS(SELECT 1 FROM product_variants WHERE sku = 'DEMO-V1-SKU-0-1')
+    AND EXISTS(SELECT 1 FROM toppings WHERE name LIKE '[DEMO] Kem%');
+SET @demo_v2_new = NOT @demo_v2_existing AND @demo_v2_dependencies;
+
+-- Backfill only missing image references for the stable demo records; never overwrite a local change.
+UPDATE promotions
+SET image = CASE code
+    WHEN 'DEMO-V1-10' THEN 'images/promotions/demo-coffee-morning.png'
+    WHEN 'DEMO-V1-FIXED' THEN 'images/promotions/demo-espresso-offer.png'
+    WHEN 'DEMO-V1-EXPIRED' THEN 'images/promotions/demo-espresso-offer.png'
+    WHEN 'DEMO-V1-FUTURE' THEN 'images/promotions/demo-matcha-offer.png'
+    WHEN 'DEMO-V1-INACTIVE' THEN 'images/promotions/demo-coffee-morning.png'
+    WHEN 'DEMO-V1-LIMIT' THEN 'images/promotions/demo-espresso-offer.png'
+END
+WHERE code IN ('DEMO-V1-10','DEMO-V1-FIXED','DEMO-V1-EXPIRED','DEMO-V1-FUTURE','DEMO-V1-INACTIVE','DEMO-V1-LIMIT')
+  AND image IS NULL;
+UPDATE products
+SET image = CASE slug
+    WHEN 'demo-v1-product-1' THEN 'images/products/demo-latte-v2.png'
+    WHEN 'demo-v1-product-2' THEN 'images/products/demo-ca-phe-sua-v2.png'
+    WHEN 'demo-v1-product-3' THEN 'images/products/demo-tra-sua-v2.png'
+    WHEN 'demo-v1-unavailable' THEN 'images/products/demo-tra-tam-het-v2.png'
+END
+WHERE slug IN ('demo-v1-product-1','demo-v1-product-2','demo-v1-product-3','demo-v1-unavailable')
+  AND image IS NULL;
+
+-- Upgrade only the former bundled demo paths; never replace a user-managed image.
+UPDATE products
+SET image = CASE slug
+    WHEN 'demo-v1-product-1' THEN 'images/products/demo-latte-v2.png'
+    WHEN 'demo-v1-product-2' THEN 'images/products/demo-ca-phe-sua-v2.png'
+    WHEN 'demo-v1-product-3' THEN 'images/products/demo-tra-sua-v2.png'
+    WHEN 'demo-v1-unavailable' THEN 'images/products/demo-tra-tam-het-v2.png'
+END
+WHERE slug IN ('demo-v1-product-1','demo-v1-product-2','demo-v1-product-3','demo-v1-unavailable')
+  AND image IN (
+      'images/coffeehouse/artisan-espresso.png',
+      'images/coffeehouse/hero-coffeehouse.png',
+      'images/promotions/demo-matcha-offer.png',
+      'images/products/demo-latte.png',
+      'images/products/demo-ca-phe-sua.png',
+      'images/products/demo-tra-sua.png',
+      'images/products/demo-tra-tam-het.png'
+  );
+
+-- Resolve stable IDs after the V1 insert block so V2 works both on a fresh and an upgraded fixture database.
+SET @demo_users_2 = (SELECT id FROM users WHERE email = 'staff-demo@example.test' LIMIT 1);
+SET @demo_products_1 = (SELECT id FROM products WHERE slug = 'demo-v1-product-1' LIMIT 1);
+SET @demo_product_variants_1 = (SELECT id FROM product_variants WHERE sku = 'DEMO-V1-SKU-0-0' LIMIT 1);
+SET @demo_product_variants_2 = (SELECT id FROM product_variants WHERE sku = 'DEMO-V1-SKU-0-1' LIMIT 1);
+SET @demo_toppings_1 = (SELECT id FROM toppings WHERE name LIKE '[DEMO] Kem%' ORDER BY id LIMIT 1);
+
+INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,payment_timing,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-ONLINE-PENDING','online','[DEMO] Khách lấy sớm','0900000001',NULL,'pending','cash','on_receipt','DEMO-V2-SUBMIT-1',SHA2('DEMO-V2-TRACK-1',256),@demo_now,@demo_now WHERE @demo_v2_new;
 SET @demo_request_1 = LAST_INSERT_ID();
-INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,payment_timing,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-SCHEDULED-PENDING','scheduled','[DEMO] Khách hẹn lấy','0900000002',DATE_ADD(@demo_now,INTERVAL 1 DAY),'pending','bank_transfer','prepaid','DEMO-V2-SUBMIT-2',SHA2('DEMO-V2-TRACK-2',256),@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,payment_timing,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-SCHEDULED-PENDING','scheduled','[DEMO] Khách hẹn lấy','0900000002',DATE_ADD(@demo_now,INTERVAL 1 DAY),'pending','bank_transfer','prepaid','DEMO-V2-SUBMIT-2',SHA2('DEMO-V2-TRACK-2',256),@demo_now,@demo_now WHERE @demo_v2_new;
 SET @demo_request_2 = LAST_INSERT_ID();
-INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,payment_timing,accepted_by,accepted_at,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-ONLINE-ACCEPTED','online','[DEMO] Khách online đã nhận đơn','0900000003',NULL,'accepted','cash','on_receipt',@demo_users_2,@demo_now,'DEMO-V2-SUBMIT-3',SHA2('DEMO-V2-TRACK-3',256),@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,payment_timing,accepted_by,accepted_at,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-ONLINE-ACCEPTED','online','[DEMO] Khách online đã nhận đơn','0900000003',NULL,'accepted','cash','on_receipt',@demo_users_2,@demo_now,'DEMO-V2-SUBMIT-3',SHA2('DEMO-V2-TRACK-3',256),@demo_now,@demo_now WHERE @demo_v2_new;
 SET @demo_request_3 = LAST_INSERT_ID();
-INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,payment_timing,accepted_by,accepted_at,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-SCHEDULED-PAID','scheduled','[DEMO] Khách hẹn trả trước','0900000004',DATE_ADD(@demo_now,INTERVAL 1 DAY),'accepted','bank_transfer','prepaid',@demo_users_2,@demo_now,'DEMO-V2-SUBMIT-4',SHA2('DEMO-V2-TRACK-4',256),@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,payment_timing,accepted_by,accepted_at,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-SCHEDULED-PAID','scheduled','[DEMO] Khách hẹn trả trước','0900000004',DATE_ADD(@demo_now,INTERVAL 1 DAY),'accepted','bank_transfer','prepaid',@demo_users_2,@demo_now,'DEMO-V2-SUBMIT-4',SHA2('DEMO-V2-TRACK-4',256),@demo_now,@demo_now WHERE @demo_v2_new;
 SET @demo_request_4 = LAST_INSERT_ID();
-INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,rejection_reason,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-REJECTED','online','[DEMO] Yêu cầu bị từ chối','0900000005',NULL,'rejected','cash','Quán chưa thể nhận thêm đơn','DEMO-V2-SUBMIT-5',SHA2('DEMO-V2-TRACK-5',256),@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,rejection_reason,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-REJECTED','online','[DEMO] Yêu cầu bị từ chối','0900000005',NULL,'rejected','cash','Quán chưa thể nhận thêm đơn','DEMO-V2-SUBMIT-5',SHA2('DEMO-V2-TRACK-5',256),@demo_now,@demo_now WHERE @demo_v2_new;
 SET @demo_request_5 = LAST_INSERT_ID();
-INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-CANCELLED','scheduled','[DEMO] Khách hủy trước duyệt','0900000006',DATE_ADD(@demo_now,INTERVAL 1 DAY),'cancelled','cash','DEMO-V2-SUBMIT-6',SHA2('DEMO-V2-TRACK-6',256),@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_requests (request_code,purchase_type,contact_name,contact_phone,pickup_at,status,payment_preference,submission_key,tracking_token_hash,created_at,updated_at) SELECT 'DEMO-V2-CANCELLED','scheduled','[DEMO] Khách hủy trước duyệt','0900000006',DATE_ADD(@demo_now,INTERVAL 1 DAY),'cancelled','cash','DEMO-V2-SUBMIT-6',SHA2('DEMO-V2-TRACK-6',256),@demo_now,@demo_now WHERE @demo_v2_new;
 SET @demo_request_6 = LAST_INSERT_ID();
 
-INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_1,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_new;
-INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_2,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_new;
-INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_3,@demo_product_variants_1,2,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_1,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_v2_new;
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_2,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_v2_new;
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_3,@demo_product_variants_1,2,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_v2_new;
 SET @demo_web_item_3 = LAST_INSERT_ID();
-INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,note,created_at,updated_at) SELECT @demo_request_3,@demo_product_variants_2,1,'[DEMO] Latte','Lớn',40000,'Ít ngọt',@demo_now,@demo_now WHERE @demo_new;
-INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_4,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_new;
-INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_5,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_new;
-INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_6,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_new;
-INSERT INTO online_order_request_item_toppings (request_item_id,topping_id,quantity,topping_name,price,created_at,updated_at) SELECT @demo_web_item_3,@demo_toppings_1,2,'[DEMO] Kem sữa',5000,@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,note,created_at,updated_at) SELECT @demo_request_3,@demo_product_variants_2,1,'[DEMO] Latte','Lớn',40000,'Ít ngọt',@demo_now,@demo_now WHERE @demo_v2_new;
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_4,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_v2_new;
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_5,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_v2_new;
+INSERT INTO online_order_request_items (request_id,variant_id,quantity,product_name,variant_name,unit_price,created_at,updated_at) SELECT @demo_request_6,@demo_product_variants_1,1,'[DEMO] Latte','Nhỏ',30000,@demo_now,@demo_now WHERE @demo_v2_new;
+INSERT INTO online_order_request_item_toppings (request_item_id,topping_id,quantity,topping_name,price,created_at,updated_at) SELECT @demo_web_item_3,@demo_toppings_1,2,'[DEMO] Kem sữa',5000,@demo_now,@demo_now WHERE @demo_v2_new;
 
 -- Accepted requests create pending takeaway Orders; prepaid does not mean completed.
-INSERT INTO orders (order_code,user_id,order_type,purchase_type,online_request_id,status,subtotal,total_amount,ordered_at,created_at,updated_at) SELECT 'DEMO-V2-ONLINE-ORDER',@demo_users_2,'takeaway','online',@demo_request_3,'pending',110000,110000,@demo_now,@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO orders (order_code,user_id,order_type,purchase_type,online_request_id,status,subtotal,total_amount,ordered_at,created_at,updated_at) SELECT 'DEMO-V2-ONLINE-ORDER',@demo_users_2,'takeaway','online',@demo_request_3,'pending',110000,110000,@demo_now,@demo_now,@demo_now WHERE @demo_v2_new;
 SET @demo_web_order_1 = LAST_INSERT_ID();
-INSERT INTO order_items (order_id,product_id,variant_id,product_name,variant_name,quantity,unit_price,topping_amount,subtotal,status,created_at,updated_at) SELECT @demo_web_order_1,@demo_products_1,@demo_product_variants_1,'[DEMO] Latte','Nhỏ',2,30000,10000,70000,'pending',@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO order_items (order_id,product_id,variant_id,product_name,variant_name,quantity,unit_price,topping_amount,subtotal,status,created_at,updated_at) SELECT @demo_web_order_1,@demo_products_1,@demo_product_variants_1,'[DEMO] Latte','Nhỏ',2,30000,10000,70000,'pending',@demo_now,@demo_now WHERE @demo_v2_new;
 SET @demo_web_sold_item = LAST_INSERT_ID();
-INSERT INTO order_item_toppings (order_item_id,topping_id,topping_name,price,quantity,created_at,updated_at) SELECT @demo_web_sold_item,@demo_toppings_1,'[DEMO] Kem sữa',5000,2,@demo_now,@demo_now WHERE @demo_new;
-INSERT INTO order_items (order_id,product_id,variant_id,product_name,variant_name,quantity,unit_price,topping_amount,subtotal,note,status,created_at,updated_at) SELECT @demo_web_order_1,@demo_products_1,@demo_product_variants_2,'[DEMO] Latte','Lớn',1,40000,0,40000,'Ít ngọt','pending',@demo_now,@demo_now WHERE @demo_new;
-INSERT INTO orders (order_code,user_id,order_type,purchase_type,online_request_id,status,subtotal,total_amount,ordered_at,created_at,updated_at) SELECT 'DEMO-V2-SCHEDULED-ORDER',@demo_users_2,'takeaway','scheduled',@demo_request_4,'pending',30000,30000,@demo_now,@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO order_item_toppings (order_item_id,topping_id,topping_name,price,quantity,created_at,updated_at) SELECT @demo_web_sold_item,@demo_toppings_1,'[DEMO] Kem sữa',5000,2,@demo_now,@demo_now WHERE @demo_v2_new;
+INSERT INTO order_items (order_id,product_id,variant_id,product_name,variant_name,quantity,unit_price,topping_amount,subtotal,note,status,created_at,updated_at) SELECT @demo_web_order_1,@demo_products_1,@demo_product_variants_2,'[DEMO] Latte','Lớn',1,40000,0,40000,'Ít ngọt','pending',@demo_now,@demo_now WHERE @demo_v2_new;
+INSERT INTO orders (order_code,user_id,order_type,purchase_type,online_request_id,status,subtotal,total_amount,ordered_at,created_at,updated_at) SELECT 'DEMO-V2-SCHEDULED-ORDER',@demo_users_2,'takeaway','scheduled',@demo_request_4,'pending',30000,30000,@demo_now,@demo_now,@demo_now WHERE @demo_v2_new;
 SET @demo_web_order_2 = LAST_INSERT_ID();
-INSERT INTO order_items (order_id,product_id,variant_id,product_name,variant_name,quantity,unit_price,topping_amount,subtotal,status,created_at,updated_at) SELECT @demo_web_order_2,@demo_products_1,@demo_product_variants_1,'[DEMO] Latte','Nhỏ',1,30000,0,30000,'pending',@demo_now,@demo_now WHERE @demo_new;
-INSERT INTO payments (order_id,payment_code,payment_method,amount,status,paid_at,created_by,created_at,updated_at) SELECT @demo_web_order_2,'DEMO-V2-PREPAID','bank_transfer',30000,'paid',@demo_now,@demo_users_2,@demo_now,@demo_now WHERE @demo_new;
+INSERT INTO order_items (order_id,product_id,variant_id,product_name,variant_name,quantity,unit_price,topping_amount,subtotal,status,created_at,updated_at) SELECT @demo_web_order_2,@demo_products_1,@demo_product_variants_1,'[DEMO] Latte','Nhỏ',1,30000,0,30000,'pending',@demo_now,@demo_now WHERE @demo_v2_new;
+INSERT INTO payments (order_id,payment_code,payment_method,amount,status,paid_at,created_by,created_at,updated_at) SELECT @demo_web_order_2,'DEMO-V2-PREPAID','bank_transfer',30000,'paid',@demo_now,@demo_users_2,@demo_now,@demo_now WHERE @demo_v2_new;
 
 COMMIT;
 SELECT DATABASE() AS target_database, CASE WHEN @demo_existing THEN 'SKIPPED: DEMO-V1 already imported; existing data preserved' WHEN @demo_account_collision THEN 'SKIPPED: demo emails exist but dataset marker missing; inspect before importing' ELSE 'IMPORTED: DEMO-V1, 18 business tables' END AS import_result;
-SELECT CASE WHEN @demo_new THEN 'IMPORTED: DEMO-V2 pickup fixtures' WHEN EXISTS(SELECT 1 FROM online_order_requests WHERE request_code = 'DEMO-V2-SCHEDULED-PAID') THEN 'Existing dataset: run verify_seed_data.sql to check completeness' ELSE 'V2 NOT IMPORTED: existing V1 preserved; use a fresh development database or a separately reviewed upgrade' END AS online_fixture_result;
+SELECT CASE WHEN @demo_v2_new THEN 'IMPORTED: DEMO-V2 pickup fixtures' WHEN @demo_v2_existing THEN 'Existing dataset: run verify_seed_data.sql to check completeness' ELSE 'V2 NOT IMPORTED: baseline dependencies are missing; inspect before importing' END AS online_fixture_result;

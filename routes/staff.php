@@ -47,7 +47,6 @@ Route::middleware('role:admin,staff')->group(function (): void {
 
     Route::get('/tables', [WorkspaceController::class, 'tables'])->name('tables.index');
     Route::get('/brewing', [WorkspaceController::class, 'brewing'])->name('brewing.index');
-    Route::get('/reservations', [WorkspaceController::class, 'reservations'])->name('reservations.index');
     Route::get('/pickup-requests', [WorkspaceController::class, 'pickups'])->name('pickups.index');
     Route::patch('/pickup-requests/{pickupRequest}', [WorkspaceController::class, 'updatePickup'])->name('pickups.update');
 });
